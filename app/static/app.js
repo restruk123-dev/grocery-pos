@@ -6,6 +6,9 @@ const {
 } = React;
 const API_BASE = '/api/v1';
 
+// Global fallback for lang
+var lang = (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
+
 // ------------------- I18N TRANSLATIONS -------------------
 const TRANSLATIONS = {
   uz: {
@@ -319,7 +322,17 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
 
   // Language state: 'uz' (default) or 'ru'
-  const [lang, setLang] = useState(() => localStorage.getItem('pos_lang') || 'uz');
+  const [lang, setLang] = useState(() => {
+    try {
+      return localStorage.getItem('pos_lang') || 'uz';
+    } catch (e) {
+      return 'uz';
+    }
+  });
+  if (typeof window !== 'undefined') {
+    window.pos_lang = lang;
+    window.setPosLang = setLang;
+  }
 
   // Mobile Network QR Modal state
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
@@ -340,7 +353,12 @@ function App() {
 
   // Apply language persistence
   useEffect(() => {
-    localStorage.setItem('pos_lang', lang);
+    try {
+      localStorage.setItem('pos_lang', lang);
+    } catch (e) {}
+    if (typeof window !== 'undefined') {
+      window.pos_lang = lang;
+    }
   }, [lang]);
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -459,7 +477,10 @@ function App() {
     token: token,
     notify: notify,
     isOwner: isOwner,
-    t: t
+    t: t,
+    lang: lang,
+    setLang: setLang,
+    toggleLang: toggleLang
   }), activeTab === 'debts' && /*#__PURE__*/React.createElement(DebtsScreen, {
     token: token,
     notify: notify,
@@ -664,8 +685,21 @@ function PosScreen({
   token,
   notify,
   isOwner,
-  t
+  t,
+  lang: propLang,
+  setLang: propSetLang,
+  toggleLang: propToggleLang
 }) {
+  const lang = propLang || (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
+  const setLang = propSetLang || (typeof window !== 'undefined' && window.setPosLang) || ((val) => {
+    try {
+      const next = typeof val === 'function' ? val(lang) : val;
+      localStorage.setItem('pos_lang', next);
+      if (typeof window !== 'undefined') window.pos_lang = next;
+      window.location.reload();
+    } catch (e) {}
+  });
+  const toggleLang = propToggleLang || (() => setLang(prev => prev === 'uz' ? 'ru' : 'uz'));
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [products, setProducts] = useState([]);
@@ -729,7 +763,7 @@ function PosScreen({
         const langCode = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
         recognition.lang = langCode;
         recognition.interimResults = false;
-        continuous = false;
+        recognition.continuous = false;
 
         recognition.onresult = e => {
           const transcript = e.results[0][0].transcript;

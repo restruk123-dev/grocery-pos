@@ -2,6 +2,9 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 const API_BASE = '/api/v1';
 
+// Global fallback for lang
+var lang = (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
+
 // ------------------- I18N TRANSLATIONS -------------------
 const TRANSLATIONS = {
   uz: {
@@ -606,7 +609,7 @@ function App() {
 
       {/* Main Content Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4">
-        {activeTab === 'pos' && <PosScreen token={token} notify={notify} isOwner={isOwner} t={t} />}
+        {activeTab === 'pos' && <PosScreen token={token} notify={notify} isOwner={isOwner} t={t} lang={lang} setLang={setLang} toggleLang={toggleLang} />}
         {activeTab === 'debts' && <DebtsScreen token={token} notify={notify} t={t} />}
         {activeTab === 'catalog' && <CatalogScreen token={token} notify={notify} isOwner={isOwner} t={t} />}
         {activeTab === 'suppliers' && isOwner && <SuppliersScreen token={token} notify={notify} t={t} />}
@@ -910,7 +913,17 @@ function ZReportModal({ onClose, t }) {
 }
 
 // ------------------- POS TERMINAL SCREEN -------------------
-function PosScreen({ token, notify, isOwner, t }) {
+function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSetLang, toggleLang: propToggleLang }) {
+  const lang = propLang || (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
+  const setLang = propSetLang || (typeof window !== 'undefined' && window.setPosLang) || ((val) => {
+    try {
+      const next = typeof val === 'function' ? val(lang) : val;
+      localStorage.setItem('pos_lang', next);
+      if (typeof window !== 'undefined') window.pos_lang = next;
+      window.location.reload();
+    } catch (e) {}
+  });
+  const toggleLang = propToggleLang || (() => setLang(prev => prev === 'uz' ? 'ru' : 'uz'));
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [products, setProducts] = useState([]);
@@ -1424,7 +1437,7 @@ function PosScreen({ token, notify, isOwner, t }) {
             <button
               onClick={() => holdCurrentCart()}
               className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm sm:text-base flex items-center justify-center gap-2"
-              title={lang === 'uz' ? 'Hozirgi chekni saqlash va Keyingi mijozga o'tish / Сохранить текущий чек и перевести следующего клиента' : 'Сохранить текущий чек и перевести следующего клиента'}
+              title={lang === 'uz' ? "Hozirgi chekni saqlash va Keyingi mijozga o'tish / Сохранить текущий чек и перевести следующего клиента" : 'Сохранить текущий чек и перевести следующего клиента'}
             >
               <span>📌</span>
               <span>Hold ({formatMoney(cartTotal)})</span>
