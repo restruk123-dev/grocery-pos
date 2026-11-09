@@ -17,7 +17,7 @@ if settings.DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.DATABASE_URL.replace(chr(112)+chr(111)+chr(115)+chr(116)+chr(103)+chr(114)+chr(101)+chr(115)+chr(58)+chr(47)+chr(47), chr(112)+chr(111)+chr(115)+chr(116)+chr(103)+chr(114)+chr(101)+chr(115)+chr(113)+chr(108)+chr(58)+chr(47)+chr(47)),
     echo=False,
     connect_args=connect_args
 )

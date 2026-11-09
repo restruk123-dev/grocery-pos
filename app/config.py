@@ -12,7 +12,7 @@ def resolve_database_url() -> str:
     """
     env_url = os.getenv("DATABASE_URL")
     if env_url and env_url.startswith("postgres://"):
-        env_url = env_url.replace("postgres://", "postgreql://", 1)
+        env_url = env_url.replace("postgres://", "postgresql://", 1)
     if env_url:
         return env_url
 
