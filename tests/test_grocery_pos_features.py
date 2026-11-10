@@ -309,3 +309,22 @@ def test_voice_command_actions(session):
     assert res_debt.status_code == 200
     assert res_debt.json()["action"] == "open_debt"
     assert res_debt.json()["data"]["amount"] == 30000.0
+
+
+def test_scan_image_barcode(session):
+    import io, qrcode
+    qr = qrcode.make('4780009999999')
+    buf = io.BytesIO()
+    qr.save(buf, format='PNG')
+    buf.seek(0)
+
+    res = client.post(
+        '/api/v1/pos/scan-image',
+        files={'file': ('test_qr.png', buf.getvalue(), 'image/png')}
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data['success'] is True
+    assert data['barcode'] == '4780009999999'
+    assert data['product'] is not None
+    assert data['product']['name'] == 'Test Non'

@@ -1,9 +1,17 @@
 import uuid
+import io
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
+
+try:
+    import zxingcpp
+    from PIL import Image
+    HAS_ZXING = True
+except ImportError:
+    HAS_ZXING = False
 
 from ..database import get_session
 from ..models import (
@@ -248,3 +256,69 @@ def hold_resume(
     session: Session = Depends(get_session),
 ):
     return {"cart_items": [], "message": "Hold ochildi / Hold восстановлен"}
+
+
+@router.post("/scan-image", response_model=dict)
+async def scan_barcode_from_image(
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+):
+    """
+    Decodes 1D / 2D barcode from an uploaded image or camera snapshot using zxing-cpp.
+    Matches with product catalog if barcode exists.
+    """
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Empty image file / Bo'sh rasm fayli")
+
+    barcode_text = None
+    barcode_format = None
+
+    if HAS_ZXING:
+        try:
+            image = Image.open(io.BytesIO(contents))
+            if image.mode not in ("RGB", "L"):
+                image = image.convert("RGB")
+
+            results = zxingcpp.read_barcodes(image)
+            if not results:
+                for angle in (90, 180, 270):
+                    rotated = image.rotate(angle, expand=True)
+                    results = zxingcpp.read_barcodes(rotated)
+                    if results:
+                        break
+
+            if results and len(results) > 0:
+                barcode_text = results[0].text
+                barcode_format = str(results[0].format)
+        except Exception:
+            pass
+
+    if not barcode_text:
+        return {
+            "success": False,
+            "barcode": None,
+            "message": "Barcode not recognized / Shtrixkod aniqlanmadi",
+        }
+
+    product = session.exec(select(Product).where(Product.barcode == barcode_text)).first()
+    product_dict = None
+    if product:
+        product_dict = {
+            "id": product.id,
+            "barcode": product.barcode,
+            "name": product.name,
+            "sale_price": product.sale_price,
+            "purchase_price": product.purchase_price,
+            "stock_quantity": product.stock_quantity,
+            "unit": product.unit,
+            "category_id": product.category_id,
+        }
+
+    return {
+        "success": True,
+        "barcode": barcode_text,
+        "format": barcode_format,
+        "product": product_dict,
+        "message": f"Barcode recognized: {barcode_text}",
+    }

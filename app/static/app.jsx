@@ -1253,17 +1253,163 @@ function CashierSwitchModal({ token, currentUserId, onClose, onSwitch, notify, t
   );
 }
 
-// ------------------- CAMERA BARCODE SCANNER MODAL (HTML5QRCODE) ------------
+// ------------------- CAMERA BARCODE SCANNER MODAL (MULTI-TIER SCANNER) ------------
 function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
   const [torchOn, setTorchOn] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [canZoom, setCanZoom] = useState(false);
+  const [canTorch, setCanTorch] = useState(false);
   const [facingMode, setFacingMode] = useState('environment');
-  const scannerRef = useRef(null);
+  const [engineType, setEngineType] = useState('initializing'); // 'hardware' | 'html5' | 'camera_error'
+  const [manualBarcode, setManualBarcode] = useState('');
+  const [showNumpad, setShowNumpad] = useState(false);
+  const [photoProcessing, setPhotoProcessing] = useState(false);
+
+  const videoRef = useRef(null);
+  const html5QrRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const activeTrackRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const isScannedRef = useRef(false);
+  const fileInputRef = useRef(null);
+
+  const triggerSuccess = (code) => {
+    if (!code || isScannedRef.current) return;
+    isScannedRef.current = true;
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = 880;
+      gain.gain.value = 0.3;
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.12);
+    } catch (e) {}
+    if (navigator.vibrate) {
+      try { navigator.vibrate([100, 50, 100]); } catch (e) {}
+    }
+    onScan(code.trim());
+  };
+
+  const inspectTrack = (track) => {
+    activeTrackRef.current = track;
+    if (track && track.getCapabilities) {
+      try {
+        const caps = track.getCapabilities();
+        if (caps.torch) setCanTorch(true);
+        if (caps.zoom) setCanZoom(true);
+      } catch (e) {}
+    }
+  };
 
   useEffect(() => {
-    let html5QrCode = null;
-    let isStopped = false;
+    isScannedRef.current = false;
+    let isMounted = true;
+    let nativeDetector = null;
+    let html5Instance = null;
+
+    const stopAllStreams = () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(tr => {
+          try { tr.stop(); } catch (e) {}
+        });
+        mediaStreamRef.current = null;
+      }
+      if (html5Instance && html5Instance.isScanning) {
+        try {
+          html5Instance.stop().then(() => html5Instance.clear()).catch(() => {});
+        } catch (e) {}
+      }
+    };
 
     const startScanner = async () => {
+      // LEVEL 1: Check Native window.BarcodeDetector
+      const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+
+      if (hasBarcodeDetector) {
+        try {
+          const desiredFormats = ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'];
+          let supported = desiredFormats;
+          if (window.BarcodeDetector.getSupportedFormats) {
+            try {
+              const avail = await window.BarcodeDetector.getSupportedFormats();
+              supported = desiredFormats.filter(f => avail.includes(f));
+            } catch (e) {}
+          }
+          nativeDetector = new window.BarcodeDetector({ formats: supported.length ? supported : ['qr_code'] });
+
+          let stream = null;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: { ideal: facingMode },
+                width: { ideal: 1920, min: 1280 },
+                height: { ideal: 1080, min: 720 },
+                advanced: [{ focusMode: 'continuous' }]
+              },
+              audio: false
+            });
+          } catch (resErr) {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  facingMode: facingMode,
+                  advanced: [{ focusMode: 'continuous' }]
+                },
+                audio: false
+              });
+            } catch (e2) {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facingMode },
+                audio: false
+              });
+            }
+          }
+
+          if (!isMounted) {
+            stream.getTracks().forEach(t => t.stop());
+            return;
+          }
+
+          mediaStreamRef.current = stream;
+          const track = stream.getVideoTracks()[0];
+          inspectTrack(track);
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+          }
+
+          setEngineType('hardware');
+
+          const detectLoop = async () => {
+            if (!isMounted || isScannedRef.current) return;
+            if (videoRef.current && videoRef.current.readyState >= 2) {
+              try {
+                const barcodes = await nativeDetector.detect(videoRef.current);
+                if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                  triggerSuccess(barcodes[0].rawValue);
+                  return;
+                }
+              } catch (e) {}
+            }
+            animFrameRef.current = requestAnimationFrame(detectLoop);
+          };
+          detectLoop();
+          return;
+        } catch (err) {
+          console.warn('Native BarcodeDetector init failed, falling back to Html5Qrcode:', err);
+          stopAllStreams();
+        }
+      }
+
+      // LEVEL 2: Html5Qrcode fallback
       try {
         if (window.Html5Qrcode) {
           const formats = window.Html5QrcodeSupportedFormats ? [
@@ -1271,116 +1417,354 @@ function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
             window.Html5QrcodeSupportedFormats.EAN_8,
             window.Html5QrcodeSupportedFormats.CODE_128,
             window.Html5QrcodeSupportedFormats.CODE_39,
-            window.Html5QrcodeSupportedFormats.QR_CODE,
             window.Html5QrcodeSupportedFormats.UPC_A,
             window.Html5QrcodeSupportedFormats.UPC_E,
-            window.Html5QrcodeSupportedFormats.DATA_MATRIX
+            window.Html5QrcodeSupportedFormats.QR_CODE
           ] : undefined;
 
-          html5QrCode = new window.Html5Qrcode('qr-reader', {
+          html5Instance = new window.Html5Qrcode('qr-reader', {
             formatsToSupport: formats,
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true
+            },
             verbose: false
           });
-          scannerRef.current = html5QrCode;
+          html5QrRef.current = html5Instance;
+
           const config = {
-            fps: 20,
-            qrbox: { width: 280, height: 180 },
+            fps: 15,
+            qrbox: { width: 300, height: 140 },
             aspectRatio: 1.333333
           };
-          await html5QrCode.start(
-            { facingMode: facingMode },
-            config,
-            (decodedText) => {
-              if (decodedText && !isStopped) {
-                isStopped = true;
-                onScan(decodedText);
-              }
-            },
-            () => {}
-          );
+
+          try {
+            await html5Instance.start(
+              {
+                facingMode: facingMode,
+                width: { min: 1280, ideal: 1920 },
+                height: { min: 720, ideal: 1080 },
+                advanced: [{ focusMode: 'continuous' }]
+              },
+              config,
+              (decodedText) => triggerSuccess(decodedText),
+              () => {}
+            );
+          } catch (strictErr) {
+            await html5Instance.start(
+              { facingMode: facingMode },
+              config,
+              (decodedText) => triggerSuccess(decodedText),
+              () => {}
+            );
+          }
+
+          if (isMounted) {
+            setEngineType('html5');
+            const el = document.querySelector('#qr-reader video');
+            if (el && el.srcObject) {
+              const tr = el.srcObject.getVideoTracks()[0];
+              inspectTrack(tr);
+            }
+          }
         }
       } catch (err) {
-        console.error('Camera Scanner Error:', err);
-        notify(lang === 'uz' ? "Kamera ochilmadi: " + err.message : 'Ошибка камеры: ' + err.message, 'error');
+        console.error('Html5Qrcode start error:', err);
+        if (isMounted) {
+          setEngineType('camera_error');
+          notify(lang === 'uz' ? "Kameraga ulanib bo'lmadi: " + err.message : 'Ошибка камеры: ' + err.message, 'error');
+        }
       }
     };
 
     startScanner();
 
     return () => {
-      isStopped = true;
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => html5QrCode.clear()).catch(e => console.error(e));
-      }
+      isMounted = false;
+      stopAllStreams();
     };
   }, [facingMode]);
 
   const toggleTorch = async () => {
     try {
-      if (scannerRef.current && scannerRef.current.applyVideoConstraints) {
-        const next = !torchOn;
-        await scannerRef.current.applyVideoConstraints({ advanced: [{ torch: next }] });
+      const next = !torchOn;
+      if (activeTrackRef.current && activeTrackRef.current.applyConstraints) {
+        await activeTrackRef.current.applyConstraints({ advanced: [{ torch: next }] });
+        setTorchOn(next);
+      } else if (html5QrRef.current && html5QrRef.current.applyVideoConstraints) {
+        await html5QrRef.current.applyVideoConstraints({ advanced: [{ torch: next }] });
         setTorchOn(next);
       }
     } catch (e) {
-      console.error('Torch error:', e);
+      console.warn('Torch toggle error:', e);
+    }
+  };
+
+  const toggleZoom = async () => {
+    try {
+      if (!activeTrackRef.current) return;
+      const caps = activeTrackRef.current.getCapabilities ? activeTrackRef.current.getCapabilities() : {};
+      if (!caps.zoom) return;
+      const maxZ = Math.min(caps.zoom.max || 3, 3);
+      const nextZ = zoomLevel >= maxZ ? 1 : Math.min(zoomLevel + 1, maxZ);
+      await activeTrackRef.current.applyConstraints({ advanced: [{ zoom: nextZ }] });
+      setZoomLevel(nextZ);
+    } catch (e) {
+      console.warn('Zoom error:', e);
     }
   };
 
   const flipCamera = () => {
+    setTorchOn(false);
     setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setPhotoProcessing(true);
+
+    try {
+      // Step A: Native BarcodeDetector on image
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          const detector = new window.BarcodeDetector({
+            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code']
+          });
+          const bitmap = await createImageBitmap(file);
+          const results = await detector.detect(bitmap);
+          if (results && results.length > 0 && results[0].rawValue) {
+            triggerSuccess(results[0].rawValue);
+            setPhotoProcessing(false);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // Step B: Html5Qrcode.scanFile
+      if (window.Html5Qrcode) {
+        try {
+          const tempScanner = html5QrRef.current || new window.Html5Qrcode('qr-reader-temp', { verbose: false });
+          const text = await tempScanner.scanFile(file, false);
+          if (text) {
+            triggerSuccess(text);
+            setPhotoProcessing(false);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // Step C: Server-side zxing-cpp API (/api/v1/pos/scan-image)
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE}/pos/scan-image`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success && data.barcode) {
+        triggerSuccess(data.barcode);
+        setPhotoProcessing(false);
+        return;
+      }
+
+      notify(
+        lang === 'uz'
+          ? "Shtrixkod rasmda aniqlanmadi. Iltimos yaqinroq va yorug'roq rasm oling yoki qo'lda kiriting."
+          : "Штрихкод на фото не распознан. Сделайте фото ближе и четче или введите вручную.",
+        'warn'
+      );
+    } catch (err) {
+      console.error('Photo scan error:', err);
+      notify(lang === 'uz' ? "Rasm skanerida xatolik" : "Ошибка обработки фото", 'error');
+    } finally {
+      setPhotoProcessing(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-3 backdrop-blur-md">
-      <div className="bg-slate-900 border border-emerald-500/50 rounded-3xl w-full max-w-md p-4 text-white shadow-2xl relative overflow-hidden flex flex-col items-center">
+      <div className="bg-slate-900 border border-emerald-500/50 rounded-3xl w-full max-w-md p-4 text-white shadow-2xl relative overflow-hidden flex flex-col items-center max-h-[95vh] overflow-y-auto">
+        {/* Header */}
         <div className="w-full flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <span className="text-xl">📷</span>
-            <span className="font-bold text-sm text-emerald-400">
-              {lang === 'uz' ? 'Shtrixkod skaneri (EAN-13 / QR / 1D)' : 'Сканер штрихкодов (EAN-13 / QR)'}
-            </span>
+            <div>
+              <div className="font-bold text-sm text-emerald-400">
+                {lang === 'uz' ? 'Shtrixkod skaneri (EAN-13 / QR / 1D)' : 'Сканер штрихкодов (EAN-13 / QR / 1D)'}
+              </div>
+              <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${engineType === 'hardware' ? 'bg-emerald-400 animate-pulse' : engineType === 'html5' ? 'bg-blue-400' : 'bg-amber-400'}`}></span>
+                {engineType === 'hardware'
+                  ? (lang === 'uz' ? '⚡ Apparat tezlashuvi (Hardware AI)' : '⚡ Аппаратный AI сканер (60 FPS)')
+                  : engineType === 'html5'
+                  ? (lang === 'uz' ? '🎥 HD Video skaner' : '🎥 HD Видео сканер')
+                  : (lang === 'uz' ? "Rasm yoki qo'lda kiritish" : 'Фото или ручной ввод')}
+              </div>
+            </div>
           </div>
           <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:text-white text-lg">✕</button>
         </div>
 
-        <div className="relative w-full rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center">
-          <div id="qr-reader" className="w-full h-full"></div>
-          {/* Target Box Reticle */}
-          <div className="absolute inset-8 border-2 border-emerald-400/80 rounded-2xl pointer-events-none flex items-center justify-center">
+        {/* Viewfinder Camera Box */}
+        <div className="relative w-full rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center border border-slate-800">
+          {/* Native BarcodeDetector Video Element */}
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            autoPlay
+            className={`w-full h-full object-cover ${engineType === 'hardware' ? 'block' : 'hidden'}`}
+          />
+          {/* Html5Qrcode Reader Container */}
+          <div
+            id="qr-reader"
+            className={`w-full h-full ${engineType !== 'hardware' ? 'block' : 'hidden'}`}
+          />
+
+          {/* Hidden helper for Html5Qrcode scanFile fallback */}
+          <div id="qr-reader-temp" style={{ display: 'none' }} />
+
+          {/* Target Reticle (Horizontal Barcode Viewfinder) */}
+          <div className="absolute inset-x-8 inset-y-12 border-2 border-emerald-400/90 rounded-2xl pointer-events-none flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
             <div className="laser-line"></div>
-            <div className="text-[10px] text-emerald-300 font-mono absolute bottom-2 bg-black/60 px-2 py-0.5 rounded">
-              {lang === 'uz' ? "Shtrixkodni ramkaga to'g'rilang" : 'Наведите на штрихкод'}
+            <div className="text-[10px] text-emerald-300 font-mono absolute bottom-2 bg-black/70 px-2 py-0.5 rounded backdrop-blur-sm">
+              {lang === 'uz' ? "Shtrixkodni ramkaga to'g'rilang" : "Наведите штрихкод в рамку"}
             </div>
           </div>
+
+          {/* Photo processing overlay */}
+          {photoProcessing && (
+            <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center gap-2 backdrop-blur-sm z-20">
+              <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-xs font-bold text-emerald-300">
+                {lang === 'uz' ? "Rasm tahlil qilinmoqda..." : "Распознавание штрихкода с фото..."}
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="w-full flex items-center justify-around gap-2 mt-3 pt-2 border-t border-slate-800">
+        {/* Quick Camera Controls: Torch, Zoom, Flip */}
+        <div className="w-full flex items-center justify-between gap-1.5 mt-2.5">
           <button
             type="button"
             onClick={toggleTorch}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition ${
-              torchOn ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl text-xs font-bold transition ${
+              torchOn
+                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
             <span>🔦</span>
-            <span>{torchOn ? (lang === 'uz' ? "Fonarni o'chirish" : 'Выкл фонарик') : (lang === 'uz' ? 'Fonar (Chiroq)' : 'Вкл фонарик')}</span>
+            <span>{torchOn ? (lang === 'uz' ? "O'chirish" : 'Выкл свет') : (lang === 'uz' ? 'Fonar' : 'Вспышка')}</span>
           </button>
+
+          {canZoom && (
+            <button
+              type="button"
+              onClick={toggleZoom}
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+            >
+              <span>🔍</span>
+              <span>{zoomLevel}x Zoom</span>
+            </button>
+          )}
 
           <button
             type="button"
             onClick={flipCamera}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+            className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
           >
             <span>🔄</span>
-            <span>{lang === 'uz' ? "Kamera almashtirish" : 'Сменить камеру'}</span>
+            <span>{lang === 'uz' ? 'Kamera' : 'Камера'}</span>
           </button>
+        </div>
+
+        {/* LEVEL 3: 📸 High-Definition Photo Snapshot Button */}
+        <div className="w-full mt-2.5">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handlePhotoUpload}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+            disabled={photoProcessing}
+            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-3 rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2 touch-target active:scale-[0.98]"
+          >
+            <span className="text-base">📸</span>
+            <span>{lang === 'uz' ? "Shtrixkodni rasmga olish (100% aniqlik)" : "📸 Сделать фото штрихкода (100% четкость)"}</span>
+          </button>
+        </div>
+
+        {/* LEVEL 4: Manual Barcode Input & Touch Numpad */}
+        <div className="w-full mt-2.5 pt-2 border-t border-slate-800">
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={manualBarcode}
+              onChange={(e) => setManualBarcode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && manualBarcode.trim()) {
+                  e.preventDefault();
+                  triggerSuccess(manualBarcode.trim());
+                }
+              }}
+              placeholder={lang === 'uz' ? "Shtrixkod (raqamlarni yozing)..." : "Штрихкод вручную (цифры)..."}
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (manualBarcode.trim()) triggerSuccess(manualBarcode.trim());
+              }}
+              disabled={!manualBarcode.trim()}
+              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold px-3 py-2 rounded-xl text-xs transition"
+            >
+              {lang === 'uz' ? "Kiritish" : "ОК"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowNumpad(prev => !prev)}
+              className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition ${
+                showNumpad
+                  ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+              }`}
+              title="Numpad"
+            >
+              🔢
+            </button>
+          </div>
+
+          {/* Quick Touch Numpad */}
+          {showNumpad && (
+            <div className="grid grid-cols-3 gap-1.5 mt-2 p-2 bg-slate-950/80 rounded-xl border border-slate-800 animate-fadeIn">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '00', '⌫'].map(btn => (
+                <button
+                  key={btn}
+                  type="button"
+                  onClick={() => {
+                    if (btn === '⌫') setManualBarcode(prev => prev.slice(0, -1));
+                    else setManualBarcode(prev => prev + btn);
+                  }}
+                  className="bg-slate-800 hover:bg-slate-700 active:bg-emerald-600 text-white font-bold font-mono py-2 rounded-lg text-sm transition touch-target"
+                >
+                  {btn}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
 
 // ------------------- CREATE / EDIT PRODUCT MODAL -------------------
 function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, notify, t, lang }) {
