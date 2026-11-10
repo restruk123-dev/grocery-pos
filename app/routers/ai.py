@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, time
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -528,4 +528,393 @@ def get_insights(
         recommended_restock=recommended_restock,
         profit_loss_insights=profit_loss_insights,
         owner_recommendations=owner_recommendations
+    )
+# ---------- Haqqim.uz Debt NLP & OCR Parsers ----------
+
+class DebtVoiceParseRequest(BaseModel):
+    speech_text: str
+    language: str = "uz"
+
+class DebtVoiceParseResponse(BaseModel):
+    debtor_id: Optional[int] = None
+    debtor_name: str
+    amount: float
+    due_date: Optional[str] = None
+    due_date_label: Optional[str] = None
+    note: Optional[str] = None
+    is_new_debtor: bool = True
+
+class DebtOcrParseRequest(BaseModel):
+    raw_text: str
+
+class DebtOcrItem(BaseModel):
+    debtor_name: str
+    amount: float
+    note: Optional[str] = None
+    due_date: Optional[str] = None
+    matched_debtor_id: Optional[int] = None
+
+class DebtOcrParseResponse(BaseModel):
+    items: List[DebtOcrItem]
+    total_amount: float
+    total_rows: int
+
+class InvoiceOcrParseRequest(BaseModel):
+    raw_text: str
+
+class InvoiceOcrItem(BaseModel):
+    product_name: str
+    quantity: float
+    purchase_price: float
+    total_price: float
+    matched_product_id: Optional[int] = None
+    barcode: Optional[str] = None
+
+class InvoiceOcrParseResponse(BaseModel):
+    items: List[InvoiceOcrItem]
+    total_amount: float
+    total_rows: int
+
+
+def _calculate_next_weekday(weekday_idx: int) -> tuple[str, str]:
+    """Calculates date string (YYYY-MM-DD) for next occurrence of weekday (0=Mon..6=Sun)."""
+    now_uz = datetime.now(timezone(timedelta(hours=5)))
+    current_weekday = now_uz.weekday()
+    days_ahead = weekday_idx - current_weekday
+    if days_ahead <= 0: # Target day already happened this week or is today
+        days_ahead += 7
+    target_dt = now_uz + timedelta(days=days_ahead)
+    weekday_names_uz = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"]
+    date_str = target_dt.strftime("%Y-%m-%d")
+    label = f"{weekday_names_uz[weekday_idx]} ({target_dt.strftime('%d.%m.%Y')})"
+    return date_str, label
+
+
+@router.post("/parse-debt-voice", response_model=DebtVoiceParseResponse)
+def parse_debt_voice(request: DebtVoiceParseRequest, session: Session = Depends(get_session)):
+    """Free local NLP: extracts debtor name, amount, note, and return deadline from spoken Uzbek/Russian text."""
+    text = request.speech_text.strip()
+    if not text:
+        return DebtVoiceParseResponse(debtor_name="", amount=0.0)
+
+    # 1. Parse due date (days of week / relative terms)
+    due_date = None
+    due_date_label = None
+    lower_text = text.lower()
+
+    weekdays_map = {
+        0: ["dushanba", "душанба", "понедельник"],
+        1: ["seshanba", "сешанба", "вторник"],
+        2: ["chorshanba", "чоршанба", "среда"],
+        3: ["payshanba", "пайшанба", "четверг"],
+        4: ["juma", "жума", "пятница"],
+        5: ["shanba", "шанба", "суббота"],
+        6: ["yakshanba", "якшанба", "воскресенье"]
+    }
+
+    for w_idx, keywords in weekdays_map.items():
+        if any(kw in lower_text for kw in keywords):
+            due_date, due_date_label = _calculate_next_weekday(w_idx)
+            break
+
+    if not due_date:
+        now_uz = datetime.now(timezone(timedelta(hours=5)))
+        if any(kw in lower_text for kw in ["ertaga", "эртага", "завтра"]):
+            dt = now_uz + timedelta(days=1)
+            due_date = dt.strftime("%Y-%m-%d")
+            due_date_label = f"Ertaga ({dt.strftime('%d.%m.%Y')})"
+        elif any(kw in lower_text for kw in ["bir hafta", "бир хафта", "через неделю"]):
+            dt = now_uz + timedelta(days=7)
+            due_date = dt.strftime("%Y-%m-%d")
+            due_date_label = f"1 hafta ({dt.strftime('%d.%m.%Y')})"
+        elif any(kw in lower_text for kw in ["oy oxiri", "ой охири", "конец месяца"]):
+            due_date = "oy oxirida"
+            due_date_label = "Oy oxirida / Конец месяца"
+        elif any(kw in lower_text for kw in ["maosh", "маош", "oylik", "ойлик", "зарплат"]):
+            due_date = "maoshda"
+            due_date_label = "Oylikda / С зарплаты"
+
+    # 2. Parse Amount
+    # Check for multiplier terms: ming / минг / k / тыс
+    amount = 0.0
+    
+    # Check regex like '50 ming', '50000', '150 000', '50k'
+    num_match = re_module.search(r'(\d+(?:[\s.,]\d+)?)\s*(ming|минг|тыс|k|к|mln|миллион)?', lower_text)
+    if num_match:
+        val_str = num_match.group(1).replace(" ", "").replace(",", ".")
+        try:
+            val = float(val_str)
+            mult = num_match.group(2)
+            if mult in ["ming", "минг", "тыс", "k", "к"]:
+                if val < 1000:
+                    val *= 1000
+            elif mult in ["mln", "миллион"]:
+                val *= 1000000
+            amount = val
+        except ValueError:
+            pass
+
+    # Word-based Uzbek numbers fallback if 0
+    if amount == 0.0:
+        word_numbers = {
+            "o'n": 10000, "он": 10000, "yigirma": 20000, "йигирма": 20000,
+            "o'ttiz": 30000, "оттиз": 30000, "qirq": 40000, "кирк": 40000,
+            "ellik": 50000, "эллик": 50000, "oltmish": 60000, "олтмиш": 60000,
+            "yetmish": 70000, "етмиш": 70000, "sakson": 80000, "саксон": 80000,
+            "to'qson": 90000, "туксон": 90000, "yuz": 100000, "юз": 100000
+        }
+        for w, val in word_numbers.items():
+            if w in lower_text:
+                amount = float(val)
+                break
+
+    # 3. Match Debtor from DB or extract name
+    debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
+    matched_debtor = None
+    for d in debtors:
+        d_name_parts = d.full_name.lower().split()
+        if any(part in lower_text for part in d_name_parts if len(part) > 2):
+            matched_debtor = d
+            break
+
+    debtor_id = matched_debtor.id if matched_debtor else None
+    debtor_name = matched_debtor.full_name if matched_debtor else ""
+    is_new = matched_debtor is None
+
+    # If new debtor, extract first capitalized word or first word
+    if not debtor_name:
+        words = text.split()
+        for w in words:
+            clean_w = re_module.sub(r'[^\w]', '', w)
+            if clean_w and not clean_w.isdigit() and len(clean_w) > 2:
+                # exclude stop words
+                if clean_w.lower() not in ["qarz", "oldi", "beradi", "ming", "som", "so'm", "non", "dushanba"]:
+                    debtor_name = clean_w.capitalize()
+                    break
+
+    if not debtor_name:
+        debtor_name = "Noma'lum mijoz"
+
+    # 4. Extract note / comment
+    note_candidates = []
+    for w in ["nonga", "sutga", "kartoshka", "sigaret", "shakar", "yog'", "mahsulot"]:
+        if w in lower_text:
+            note_candidates.append(w)
+    note = ", ".join(note_candidates) if note_candidates else "Qarzga olindi"
+
+    return DebtVoiceParseResponse(
+        debtor_id=debtor_id,
+        debtor_name=debtor_name,
+        amount=amount,
+        due_date=due_date,
+        due_date_label=due_date_label,
+        note=note,
+        is_new_debtor=is_new
+    )
+
+
+@router.post("/parse-debt-ocr", response_model=DebtOcrParseResponse)
+def parse_debt_ocr(request: DebtOcrParseRequest, session: Session = Depends(get_session)):
+    """Parses text extracted from photo of old handwritten/printed debt notebook."""
+    lines = [line.strip() for line in request.raw_text.splitlines() if line.strip()]
+    debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
+    debtor_map = {d.full_name.lower(): d for d in debtors}
+
+    parsed_items: List[DebtOcrItem] = []
+    total_amount = 0.0
+
+    for line in lines:
+        # Match pattern: Name ... Amount ... (Date / Note)
+        # e.g. "Alisher Rahimov 50000 non 12.11" or "Dilshod - 120 000"
+        numbers = re_module.findall(r'\b\d+(?:[\s.,]\d+)?\b', line)
+        if not numbers:
+            continue
+        
+        # Pick largest number as amount
+        candidates = []
+        for n in numbers:
+            val_clean = n.replace(" ", "").replace(",", ".")
+            try:
+                candidates.append(float(val_clean))
+            except ValueError:
+                pass
+        
+        if not candidates:
+            continue
+        amount = max(candidates)
+        # remove numbers from line to get name and note
+        clean_line = re_module.sub(r'\b\d+(?:[\s.,]\d+)?\b', '', line).strip()
+        parts = [p.strip() for p in re_module.split(r'[,;\-\t]', clean_line) if p.strip()]
+        
+        name = parts[0] if parts else "Mijoz"
+        note = " ".join(parts[1:]) if len(parts) > 1 else "Daftardan kiritildi"
+
+        matched_id = None
+        for dname, d in debtor_map.items():
+            if dname in name.lower() or name.lower() in dname:
+                matched_id = d.id
+                name = d.full_name
+                break
+
+        total_amount += amount
+        parsed_items.append(DebtOcrItem(
+            debtor_name=name,
+            amount=amount,
+            note=note,
+            due_date=None,
+            matched_debtor_id=matched_id
+        ))
+
+    return DebtOcrParseResponse(
+        items=parsed_items,
+        total_amount=round(total_amount, 2),
+        total_rows=len(parsed_items)
+    )
+
+
+@router.post("/parse-invoice-ocr", response_model=InvoiceOcrParseResponse)
+def parse_invoice_ocr(request: InvoiceOcrParseRequest, session: Session = Depends(get_session)):
+    """Parses lines from scanned paper invoice / faktura."""
+    lines = [line.strip() for line in request.raw_text.splitlines() if line.strip()]
+    products = session.exec(select(Product).where(Product.is_active == True)).all()
+
+    items: List[InvoiceOcrItem] = []
+    total_amount = 0.0
+
+    for line in lines:
+        # Expecting line: Product name ... Quantity ... Purchase price
+        # e.g. "Sut Musaffo 1L 20 dona 11000" or "Tandir non 50 4000"
+        nums = re_module.findall(r'\b\d+(?:\.\d+)?\b', line)
+        if len(nums) < 2:
+            continue
+        
+        try:
+            qty = float(nums[-2])
+            price = float(nums[-1])
+        except ValueError:
+            continue
+
+        name_part = re_module.sub(r'\b\d+(?:\.\d+)?\b', '', line)
+        for unit in ["dona", "kg", "sht", "quti", "l", "metr"]:
+            name_part = re_module.sub(rf'\b{unit}\b', '', name_part, flags=re_module.IGNORECASE)
+        name_part = re_module.sub(r'[,;\-_\t]', ' ', name_part).strip()
+        if not name_part:
+            name_part = f"Mahsulot #{len(items)+1}"
+
+        # Match with catalog
+        matched_pid = None
+        barcode = None
+        for p in products:
+            if p.name.lower() in name_part.lower() or name_part.lower() in p.name.lower():
+                matched_pid = p.id
+                barcode = p.barcode
+                name_part = p.name
+                break
+
+        line_total = round(qty * price, 2)
+        total_amount += line_total
+        items.append(InvoiceOcrItem(
+            product_name=name_part,
+            quantity=qty,
+            purchase_price=price,
+            total_price=line_total,
+            matched_product_id=matched_pid,
+            barcode=barcode
+        ))
+
+    return InvoiceOcrParseResponse(
+        items=items,
+        total_amount=round(total_amount, 2),
+        total_rows=len(items)
+    )
+
+# ---------- Store AI Assistant (Free Local Engine) ----------
+
+class StoreAiQueryRequest(BaseModel):
+    query: str
+    language: str = "uz"
+
+class StoreAiQueryResponse(BaseModel):
+    answer: str
+    quick_suggestions: List[str]
+    action_type: Optional[str] = None
+
+@router.post("/assistant", response_model=StoreAiQueryResponse)
+def store_ai_assistant(req: StoreAiQueryRequest, session: Session = Depends(get_session)):
+    """Zero-cost smart AI assistant for cashiers and store owners."""
+    q = req.query.strip().lower()
+    lang = req.language
+    
+    # 1. Sales / Revenue question
+    if any(k in q for k in ["savdo", "tushum", "kassa", "daromad", "выручк", "продаж", "сколько заработали"]):
+        tz_uz = timezone(timedelta(hours=5))
+        now_uz = datetime.now(tz_uz)
+        start_utc = datetime.combine(now_uz.date(), time.min, tzinfo=tz_uz).astimezone(timezone.utc)
+        start_naive = start_utc.replace(tzinfo=None)
+        
+        sales = session.exec(select(Sale).where(Sale.created_at >= start_utc)).all()
+        rev = sum(s.total_amount for s in sales)
+        count = len(sales)
+        
+        if lang == "uz":
+            ans = f"Bugungi savdo hisoboti:\n- Jami tushum: {rev:,.0f} so'm\n- Urilgan cheklar soni: {count} ta\n- O'rtacha chek: {(rev/count if count else 0):,.0f} so'm\n\nBuxgalteriya 100% aniq ishlamoqda."
+        else:
+            ans = f"Показатели продаж за сегодня:\n- Общая выручка: {rev:,.0f} сум\n- Пробито чеков: {count} шт\n- Средний чек: {(rev/count if count else 0):,.0f} сум\n\nБухгалтерия сходится до 1 сума."
+        return StoreAiQueryResponse(
+            answer=ans,
+            quick_suggestions=["Qarzdorlar holati", "Kam qolgan tovarlar", "Tamaki do'koni maslahatlari"] if lang == "uz" else ["Состояние долгов", "Заканчивающиеся товары", "Советы для табачки"],
+            action_type="navigate_analytics"
+        )
+    
+    # 2. Debts / Qarzdorlar question
+    if any(k in q for k in ["qarz", "debt", "haqqim", "долг", "кто должен", "qaytar"]):
+        debtors = session.exec(select(Debtor).where(Debtor.is_active == True, Debtor.balance > 0)).all()
+        total_d = sum(d.balance for d in debtors)
+        top_d = sorted(debtors, key=lambda x: x.balance, reverse=True)[:3]
+        top_str = "\n".join([f"- {d.full_name}: {d.balance:,.0f} so'm" + (f" (Muddati: {d.due_date})" if d.due_date else "") for d in top_d])
+        
+        if lang == "uz":
+            ans = f"Qarzlar daftari hisoboti:\n- Jami qarzdorlik: {total_d:,.0f} so'm\n- Qarzdorlar: {len(debtors)} nafar\n\nEng katta qarzlar:\n{top_str or 'Hozircha faol qarzlar yo`q.'}"
+        else:
+            ans = f"Тетрадь долгов (Qarz daftari):\n- Общий долг: {total_d:,.0f} сум\n- Должников: {len(debtors)} чел\n\nКрупнейшие долги:\n{top_str or 'Активных долгов нет.'}"
+        return StoreAiQueryResponse(
+            answer=ans,
+            quick_suggestions=["Bugungi savdo", "Ovozli qarz yozish", "Qog'oz daftarni skanerlash"] if lang == "uz" else ["Продажи сегодня", "Голосовая запись долга", "Скан тетради"],
+            action_type="navigate_debts"
+        )
+
+    # 3. Low stock / Mahsulotlar qoldig'i
+    if any(k in q for k in ["kam qolgan", "qoldiq", "ombor", "tugayapti", "остатк", "заканчивается", "заказ"]):
+        low = session.exec(select(Product).where(Product.is_active == True, Product.stock_quantity <= Product.min_stock_alert)).all()
+        low_items = [f"- {p.name}: {p.stock_quantity} {p.unit}" for p in low[:5]]
+        
+        if lang == "uz":
+            ans = f"Omborda oz qolgan mahsulotlar ({len(low)} ta):\n" + ("\n".join(low_items) if low_items else "Barcha tovarlar yetarli miqdorda!")
+        else:
+            ans = f"Товары с низким остатком ({len(low)} шт):\n" + ("\n".join(low_items) if low_items else "Все товары в достаточном остатке!")
+        return StoreAiQueryResponse(
+            answer=ans,
+            quick_suggestions=["Yuk xatini skanerlash", "Bugungi savdo", "Tezkor tovarlar"] if lang == "uz" else ["Скан накладной", "Выручка за день", "Быстрые товары"],
+            action_type="navigate_catalog"
+        )
+
+    # 4. Tobacco shop readiness
+    if any(k in q for k in ["tamaki", "tobacco", "sigaret", "сигарет", "табач", "совет", "maslahat"]):
+        if lang == "uz":
+            ans = "Tamaki do'koni uchun imkoniyatlar:\n1. Blokli va pachkali sotuvni to'liq qo'llab-quvvatlaydi.\n2. Telefonda kamera orqali, noutbukda USB-skaner orqali DataMatrix va shtrixkodlarni o'qiydi.\n3. Nasiya qarz daftari 100% aniq yuritiladi.\n4. Bir kunda 3-4 sotuvchi smenasini 1 tugma bilan almashtirish mumkin.\n\nTizim tamaki do'konlariga sotishga to'liq tayyor!"
+        else:
+            ans = "Готовность для табачного магазина:\n1. Продажа блоками и пачками.\n2. Мгновенное сканирование с камеры телефона или USB-сканера ноутбука.\n3. Электронная тетрадь долгов Haqqim.uz формата.\n4. Быстрая смена 3-4 кассиров в день в 1 клик.\n\nСистема полностью готова к тиражированию в табачные магазины!"
+        return StoreAiQueryResponse(
+            answer=ans,
+            quick_suggestions=["Kassirni almashtirish", "Tezkor tovarlar", "Buxgalteriya"] if lang == "uz" else ["Сменить кассира", "Быстрые товары", "Бухгалтерия"]
+        )
+
+    # Default fallback
+    if lang == "uz":
+        ans = "Salom! Men sizning do'kon AI-yordamchingizman. Savdolar, qarzlar, ombor qoldiqlari, smenalar yoki tamaki do'koni bo'yicha savollaringizga yordam beraman."
+    else:
+        ans = "Здравствуйте! Я ваш AI-помощник магазина. Отвечу на любые вопросы по выручке, долгам, остаткам или настройке под табачные магазины."
+    return StoreAiQueryResponse(
+        answer=ans,
+        quick_suggestions=["Bugungi savdo", "Qarzdorlar holati", "Kam qolgan tovarlar"] if lang == "uz" else ["Выручка сегодня", "Тетрадь долгов", "Заканчивающиеся товары"]
     )

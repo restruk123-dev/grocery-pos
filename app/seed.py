@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from .config import settings
 from .auth import hash_password
 from .models import (
-    User, UserRole, Category, Product, Debtor, Supplier,
+    User, UserRole, Category, Product, Debtor, Supplier, SystemSetting,
     DebtTransaction, DebtTransactionType, Expense, ExpenseCategory
 )
 
@@ -174,18 +174,24 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
         session.add(owner)
         stats["users"] += 1
 
-    cashier = session.exec(select(User).where(User.username == settings.DEFAULT_CASHIER_USERNAME)).first()
-    if not cashier:
-        cashier = User(
-            username=settings.DEFAULT_CASHIER_USERNAME,
-            hashed_password=hash_password(settings.DEFAULT_CASHIER_PASSWORD),
-            full_name="Aziza (Kassir / Кассир)",
-            role=UserRole.CASHIER,
-            is_active=True,
-            created_at=now_utc
-        )
-        session.add(cashier)
-        stats["users"] += 1
+    cashiers_seed = [
+        (settings.DEFAULT_CASHIER_USERNAME, settings.DEFAULT_CASHIER_PASSWORD, "Aziza Karimova (1-smena)"),
+        ("cashier2", "cashier123", "Bobur Mirzayev (2-smena)"),
+        ("cashier3", "cashier123", "Malika Usmonova (3-smena)")
+    ]
+    for c_user, c_pass, c_name in cashiers_seed:
+        c_exist = session.exec(select(User).where(User.username == c_user)).first()
+        if not c_exist:
+            c_inst = User(
+                username=c_user,
+                hashed_password=hash_password(c_pass),
+                full_name=c_name,
+                role=UserRole.CASHIER,
+                is_active=True,
+                created_at=now_utc
+            )
+            session.add(c_inst)
+            stats["users"] += 1
 
     session.commit()
 
@@ -243,7 +249,11 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
                 session.add(tx)
                 session.commit()
 
-    # 5. Seed 2000 SKU Products
+    # 5. Seed 2000 SKU Products (Skip if owner cleared test catalog)
+    cleared_setting = session.get(SystemSetting, 'catalog_cleared')
+    if cleared_setting and cleared_setting.value == 'true':
+        return stats
+
     existing_count = session.exec(select(Product)).all()
     current_count = len(existing_count)
     if current_count < target_sku_count:

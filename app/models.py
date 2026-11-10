@@ -36,6 +36,11 @@ class InvoiceStatus(str, enum.Enum):
 
 # ----------------- Database Models -----------------
 
+class SystemSetting(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    value: str = Field(default="")
+    updated_at: datetime = Field(default_factory=utc_now)
+
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(unique=True, index=True)
@@ -56,7 +61,7 @@ class Product(SQLModel, table=True):
     barcode: str = Field(unique=True, index=True)
     name: str = Field(index=True)
     category_id: Optional[int] = Field(default=None, foreign_key="category.id")
-    unit: str = Field(default="шт")  # шт, кг, л, уп
+    unit: str = Field(default="dona")  # dona, kg, l, quti, metr
     purchase_price: float = Field(default=0.0)  # себестоимость
     sale_price: float = Field(default=0.0)      # цена продажи
     stock_quantity: float = Field(default=0.0)  # текущий остаток
@@ -70,6 +75,7 @@ class Debtor(SQLModel, table=True):
     full_name: str = Field(index=True)
     phone: Optional[str] = Field(default=None, index=True)
     note: Optional[str] = None
+    due_date: Optional[str] = Field(default=None, nullable=True) # Muddat / Срок возврата
     balance: float = Field(default=0.0) # Положительный баланс = клиент должен магазину
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utc_now)
@@ -82,6 +88,7 @@ class DebtTransaction(SQLModel, table=True):
     transaction_type: DebtTransactionType
     sale_id: Optional[int] = Field(default=None, foreign_key="sale.id", nullable=True)
     note: Optional[str] = None
+    due_date: Optional[str] = Field(default=None, nullable=True) # Muddat / Срок возврата
     created_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=utc_now)
 

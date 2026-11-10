@@ -7,13 +7,46 @@ const {
 const API_BASE = '/api/v1';
 
 // Global fallback for lang
-var lang = (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
+var lang = typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang') || 'uz';
 
 // ------------------- I18N TRANSLATIONS -------------------
 const TRANSLATIONS = {
   uz: {
     appName: "GroceryStore POS",
     appSubtitle: "Do'kon savdosi & Buxgalteriya",
+    switchCashierBtn: "Smena / Kassir",
+    cashierSwitchTitle: "Smenadagi kassirni tanlang (1-bosish)",
+    installAppBtn: "Ilovani o'rnatish",
+    installedMsg: "Ilova smartfoningizga o'rnatildi!",
+    cameraScannerBtn: "Kamera skaner",
+    torchOn: "Fonar (Yoqish)",
+    torchOff: "Fonar (O'chirish)",
+    barcodeScanned: "Shtrixkod o'qildi",
+    scaleWeightDetected: "Tarozidan tortilgan vazn aniqlandi",
+    voiceSearchBtn: "Ovoz",
+    voiceListening: "Eshitilmoqda... gapiring",
+    quickItemsTitle: "Tezkor tovarlar (Shtrixkodsiz)",
+    toggleAllCatalog: "Barcha tovarlar",
+    instantCashBtn: "Naqd (Aniq)",
+    instantCardBtn: "Karta (Humo/Uzcard)",
+    instantDebtBtn: "Qarzga",
+    saleSuccessToast: "Savdo muvaffaqiyatli saqlandi!",
+    printReceiptOptional: "Chekni chop etish",
+    voiceDebtBtn: "Ovozli qarz yozish",
+    voiceDebtPrompt: "Masalan: «Alisher 50 ming so'm nonga oldi, dushanba beradi»",
+    scanPaperNotebookBtn: "Qog'oz daftardan rasm olish",
+    ocrPreviewTitle: "Daftardan o'qilgan qarzlar predprosmotri",
+    importAllDebts: "Barchasini qarzlar daftariga kiritish",
+    dueDateLabel: "Qaytarish muddati",
+    scanInvoiceBtn: "Faktura / Yuk xatini skanerlash",
+    invoiceOcrTitle: "Faktura qatorlari predprosmotri",
+    importInvoiceBtn: "Omborga qabul qilish",
+    clearCatalogBtn: "Test tovarlarni tozalash / Toza varaqdan boshlash",
+    clearCatalogWarning: "Rostdan ham barcha test tovarlar va cheklarni tozalamoqchimisiz? Kechki savdo uchun toza baza tayyorlanadi.",
+    reseedCatalogBtn: "2000 ta demo tovarlarni qaytarish",
+    tabAiAssistant: "AI Yordamchi",
+    aiAssistantTitle: "Do'kon AI-yordamchisi",
+    aiPlaceholder: "Savolingizni yozing (masalan: Bugun qancha savdo bo'ldi? yoki Tamaki do'koni maslahatlari)...",
     ownerRole: "Ega (Xo'jayin)",
     cashierRole: "Kassir",
     tabPos: "📱 Kassa (POS)",
@@ -52,7 +85,7 @@ const TRANSLATIONS = {
     cashReceivedLabel: "Berilgan naqd pul (so'm):",
     changeLabel: "Qaytim:",
     exactAmount: "Aniq summa",
-    cardSwipePrompt: "Bank kartasini to'lov terminaliga tekkizing",
+    cardSwipePrompt: "Bank kartasini tolov terminaliga tekkizing",
     selectDebtorLabel: "Qarzdor mijozni tanlang:",
     newDebtorBtn: "+ Yangi mijoz qo'shish",
     debtorNameLabel: "Mijoz F.I.Sh. *",
@@ -85,7 +118,7 @@ const TRANSLATIONS = {
     addDebtBtn: "Qarz qo'shish",
     historyBtn: "Tarix",
     currentDebtBalance: "Qarz qoldig'i:",
-    payDebtModalTitle: "Qarz to'lovini qabul qilish",
+    payDebtModalTitle: "Qarz tolovini qabul qilish",
     paymentAmountLabel: "To'lov summasi (so'm) *",
     addDebtModalTitle: "Qo'shimcha qarz yozish",
     debtAmountLabel: "Qarz summasi (so'm) *",
@@ -149,9 +182,16 @@ const TRANSLATIONS = {
     mobileModalDesc: "Kassani telefondan ishlatish uchun ushbu QR-kodni smartfoningiz kamerasi bilan skanerlang:",
     mobileModalUrlLabel: "Yoki brauzerda to'g'ridan-to'g'ri oching:",
     mobileModalPwaHelp: "Ilovani o'rnatish: Telefonda sahifa ochilgach, brauzer menyusidan 'Bosh ekranga qo'shish' (Add to Home Screen) tugmasini bosing.",
-    themeDark: "Qorong'i mavzu",
-    themeLight: "Yorug' mavzu",
-    currency: "so'm"
+    themeDark: "Qorong'i mavju",
+    themeLight: "Yorug' mavju",
+    currency: "so'm",
+    // Quick items translations
+    quick_bread: "Tandir nona",
+    quick_tandyr_lepeshka: "Тандыр лепешка",
+    quick_sugar: "Сахар",
+    quick_potatoes: "Картофель",
+    quick_onions: "Лук",
+    quick_eggs: "Яйца"
   },
   ru: {
     appName: "GroceryStore POS",
@@ -293,7 +333,14 @@ const TRANSLATIONS = {
     mobileModalPwaHelp: "Установка на экран: В браузере телефона нажмите меню и выберите 'Добавить на главный экран' (Add to Home screen).",
     themeDark: "Темная тема",
     themeLight: "Светлая тема",
-    currency: "сум"
+    currency: "сум",
+    // Quick items translations
+    quick_bread: "Хлеб",
+    quick_tandyr_lepeshka: "Тандыр лепешка",
+    quick_sugar: "Сахар",
+    quick_potatoes: "Картофель",
+    quick_onions: "Лук",
+    quick_eggs: "Яйца"
   }
 };
 
@@ -322,21 +369,120 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
 
   // Language state: 'uz' (default) or 'ru'
-  const [lang, setLang] = useState(() => {
-    try {
-      return localStorage.getItem('pos_lang') || 'uz';
-    } catch (e) {
-      return 'uz';
-    }
-  });
-  if (typeof window !== 'undefined') {
-    window.pos_lang = lang;
-    window.setPosLang = setLang;
-  }
+  const [lang, setLang] = useState(() => localStorage.getItem('pos_lang') || 'uz');
 
   // Mobile Network QR Modal state
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
+
+  // Telegram modals
+  const [testSendOpen, setTestSendOpen] = useState(false);
+  const [zReportOpen, setZReportOpen] = useState(false);
+  const [cashierSwitchOpen, setCashierSwitchOpen] = useState(false);
+  const [storeAiOpen, setStoreAiOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [canInstall, setCanInstall] = useState(false);
+  useEffect(() => {
+    const handlePrompt = e => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setCanInstall(true);
+    };
+    window.addEventListener('beforeinstallprompt', handlePrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
+  }, []);
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const {
+      outcome
+    } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setCanInstall(false);
+      notify(lang === 'uz' ? "Ilova smartfonga o'rnatildi!" : "Приложение успешно установлено!");
+    }
+    setDeferredPrompt(null);
+  };
   const t = TRANSLATIONS[lang] || TRANSLATIONS.uz;
+
+  // Multilingual quick items (popular & weight items for 1-click add to cart)
+  const quickItems = {
+    uz: {
+      bread: {
+        name: "Tandir nona",
+        barcode: "20000101001",
+        price: 5000,
+        unit: "dona"
+      },
+      tandyr_lepeshka: {
+        name: "Тандыр лепешка",
+        barcode: "20000101002",
+        price: 3000,
+        unit: "dona"
+      },
+      sugar: {
+        name: "Сахар",
+        barcode: "20000101003",
+        price: 8000,
+        unit: "kg"
+      },
+      potatoes: {
+        name: "Картофель",
+        barcode: "20000101004",
+        price: 4000,
+        unit: "kg"
+      },
+      onions: {
+        name: "Лук",
+        barcode: "20000101005",
+        price: 3500,
+        unit: "kg"
+      },
+      eggs: {
+        name: "Яйца",
+        barcode: "20000101006",
+        price: 12000,
+        unit: "dona"
+      }
+    },
+    oz: {
+      bread: {
+        name: "Bread",
+        barcode: "20000101001",
+        price: 5000,
+        unit: "dona"
+      },
+      tandyr_lepeshka: {
+        name: "Tandyr Lavash",
+        barcode: "20000101002",
+        price: 3000,
+        unit: "dona"
+      },
+      sugar: {
+        name: "Sugar",
+        barcode: "20000101003",
+        price: 8000,
+        unit: "kg"
+      },
+      potatoes: {
+        name: "Potatoes",
+        barcode: "20000101004",
+        price: 4000,
+        unit: "kg"
+      },
+      onions: {
+        name: "Onions",
+        barcode: "20000101005",
+        price: 3500,
+        unit: "kg"
+      },
+      eggs: {
+        name: "Eggs",
+        barcode: "20000101006",
+        price: 12000,
+        unit: "dona"
+      }
+    }
+  };
 
   // Apply theme to document element
   useEffect(() => {
@@ -353,12 +499,7 @@ function App() {
 
   // Apply language persistence
   useEffect(() => {
-    try {
-      localStorage.setItem('pos_lang', lang);
-    } catch (e) {}
-    if (typeof window !== 'undefined') {
-      window.pos_lang = lang;
-    }
+    localStorage.setItem('pos_lang', lang);
   }, [lang]);
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -405,73 +546,114 @@ function App() {
   }, /*#__PURE__*/React.createElement("span", null, notification.type === 'error' ? '⚠️' : '✅'), /*#__PURE__*/React.createElement("span", null, notification.message)), networkModalOpen && /*#__PURE__*/React.createElement(NetworkQrModal, {
     onClose: () => setNetworkModalOpen(false),
     t: t
+  }), testSendOpen && /*#__PURE__*/React.createElement(TestSendModal, {
+    onClose: () => setTestSendOpen(false),
+    t: t
+  }), cashierSwitchOpen && /*#__PURE__*/React.createElement(CashierSwitchModal, {
+    token: token,
+    currentUserId: user?.id || user?.username,
+    onClose: () => setCashierSwitchOpen(false),
+    onSwitch: (newToken, newUser) => {
+      setToken(newToken);
+      setUser(newUser);
+      localStorage.setItem('pos_token', newToken);
+      localStorage.setItem('pos_user', JSON.stringify(newUser));
+    },
+    notify: notify,
+    t: t,
+    lang: lang
+  }), storeAiOpen && /*#__PURE__*/React.createElement(StoreAiModal, {
+    token: token,
+    onClose: () => setStoreAiOpen(false),
+    notify: notify,
+    t: t,
+    lang: lang,
+    onNavigate: tab => {
+      setActiveTab(tab);
+      setStoreAiOpen(false);
+    }
+  }), zReportOpen && /*#__PURE__*/React.createElement(ZReportModal, {
+    onClose: () => setZReportOpen(false),
+    t: t
   }), /*#__PURE__*/React.createElement("header", {
-    className: "sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 py-2.5 shadow-sm transition-colors duration-200"
+    className: "sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "max-w-7xl mx-auto flex items-center justify-between gap-2 flex-wrap"
+    className: "max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 py-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-3"
+    className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-2xl sm:text-3xl"
-  }, "🛒"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-base sm:text-lg text-emerald-600 dark:text-emerald-400 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, t.appName), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
-  }, isOwner ? t.ownerRole : t.cashierRole)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block"
-  }, t.appSubtitle, " • UZS (so'm)"))), /*#__PURE__*/React.createElement("nav", {
-    className: "flex items-center gap-1 overflow-x-auto py-1 scrollbar-none max-w-full"
+    className: "text-2xl"
+  }, "🛒"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400"
+  }, t.appName), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setCashierSwitchOpen(true),
+    className: "text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1 hover:bg-emerald-200 transition",
+    title: lang === 'uz' ? "Smenani almashtirish (1-bosish)" : "Быстрая смена кассира"
+  }, /*#__PURE__*/React.createElement("span", null, "👤 ", user ? user.full_name.split(' ')[0] : 'Kassir'), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px]"
+  }, "🔄")))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, canInstall && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: handleInstallApp,
+    className: "px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow flex items-center gap-1 transition animate-bounce",
+    title: lang === 'uz' ? "Ilovani smartfoningizga o'rnatish" : "Установить на рабочий стол"
+  }, /*#__PURE__*/React.createElement("span", null, "📲"), /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline"
+  }, lang === 'uz' ? "O'rnatish" : "Установить")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setStoreAiOpen(true),
+    className: "px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800 transition flex items-center gap-1 shadow-sm",
+    title: lang === 'uz' ? "Do'kon AI-Yordamchisi" : "AI-Помощник"
+  }, /*#__PURE__*/React.createElement("span", null, "🤖"), /*#__PURE__*/React.createElement("span", {
+    className: "hidden md:inline"
+  }, "AI")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setNetworkModalOpen(true),
+    className: "p-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 transition shadow-sm",
+    title: "Mobil telefon orqali ochish"
+  }, /*#__PURE__*/React.createElement("span", null, "📱")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: toggleLang,
+    className: "px-2 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 transition"
+  }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? '🇺🇿 UZ' : '🇷🇺 RU')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: toggleTheme,
+    className: "p-1.5 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700"
+  }, /*#__PURE__*/React.createElement("span", null, theme === 'dark' ? '☀️' : '🌙')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: handleLogout,
+    className: "p-1.5 rounded-xl text-xs bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800",
+    title: t.logout
+  }, /*#__PURE__*/React.createElement("span", null, "🚪")))), /*#__PURE__*/React.createElement("div", {
+    className: "border-t border-slate-200/80 dark:border-slate-800/80 px-2 py-1 bg-slate-50/80 dark:bg-slate-900/80"
+  }, /*#__PURE__*/React.createElement("nav", {
+    className: "max-w-7xl mx-auto flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('pos'),
-    className: `px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${activeTab === 'pos' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`
+    className: `px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${activeTab === 'pos' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`
   }, t.tabPos), /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('debts'),
-    className: `px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${activeTab === 'debts' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`
+    className: `px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${activeTab === 'debts' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`
   }, t.tabDebts), /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('catalog'),
-    className: `px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${activeTab === 'catalog' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`
+    className: `px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${activeTab === 'catalog' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`
   }, t.tabCatalog), isOwner && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('suppliers'),
-    className: `px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${activeTab === 'suppliers' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`
+    className: `px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${activeTab === 'suppliers' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`
   }, t.tabSuppliers), /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('expenses'),
-    className: `px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${activeTab === 'expenses' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`
+    className: `px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${activeTab === 'expenses' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`
   }, t.tabExpenses), /*#__PURE__*/React.createElement("button", {
     onClick: () => setActiveTab('analytics'),
-    className: `px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${activeTab === 'analytics' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`
-  }, t.tabAnalytics))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, isOwner && /*#__PURE__*/React.createElement("button", {
-    onClick: () => window.open('/api/backup?token=' + encodeURIComponent(token), '_blank'),
-    className: "px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900 transition flex items-center gap-1 shadow-sm",
-    title: lang === 'uz' ? "Baza zaxira nusxasini yuklab olish" : "Скачать резервную копию базы данных"
-  }, /*#__PURE__*/React.createElement("span", null, "💾"), /*#__PURE__*/React.createElement("span", {
-    className: "hidden md:inline"
-  }, t.backupBtn)), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setNetworkModalOpen(true),
-    className: "px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900 transition flex items-center gap-1 shadow-sm",
-    title: "Mobil telefon orqali ochish (QR kod)"
-  }, /*#__PURE__*/React.createElement("span", null, "📲"), /*#__PURE__*/React.createElement("span", {
-    className: "hidden md:inline"
-  }, t.mobileQrBtn)), /*#__PURE__*/React.createElement("button", {
-    onClick: toggleLang,
-    className: "px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700 transition flex items-center gap-1 shadow-sm",
-    title: lang === 'uz' ? 'Русский язык' : "O'zbek tili"
-  }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? '🇺🇿' : '🇷🇺'), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "O'zbek" : 'Рус')), /*#__PURE__*/React.createElement("button", {
-    onClick: toggleTheme,
-    className: "p-1.5 rounded-xl text-xs bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-amber-300 dark:border-slate-700 dark:hover:bg-slate-700 transition shadow-sm",
-    title: theme === 'dark' ? t.themeLight : t.themeDark
-  }, theme === 'dark' ? '☀️' : '🌙'), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 pl-1 border-l border-slate-200 dark:border-slate-800"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-semibold text-slate-700 dark:text-slate-300 hidden lg:inline"
-  }, user.full_name), /*#__PURE__*/React.createElement("button", {
-    onClick: handleLogout,
-    className: "px-2 py-1 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-xl transition font-medium",
-    title: t.logout
-  }, "🚪 ", /*#__PURE__*/React.createElement("span", {
-    className: "hidden sm:inline"
-  }, t.logout)))))), /*#__PURE__*/React.createElement("main", {
+    className: `px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${activeTab === 'analytics' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`
+  }, t.tabAnalytics)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setStoreAiOpen(true),
+    className: "px-3 py-1.5 rounded-xl text-xs font-bold text-purple-600 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/60 transition whitespace-nowrap touch-target"
+  }, "🤖 ", lang === 'uz' ? 'AI Yordamchi' : 'AI Помощник')))), /*#__PURE__*/React.createElement("main", {
     className: "flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4"
   }, activeTab === 'pos' && /*#__PURE__*/React.createElement(PosScreen, {
     token: token,
@@ -680,6 +862,951 @@ function NetworkQrModal({
   }, t.closeBtn))));
 }
 
+// ------------------- TELEGRAM MODALS -------------------
+
+function TestSendModal({
+  onClose,
+  t
+}) {
+  const [customMessage, setCustomMessage] = useState('');
+  const handleSend = async e => {
+    e.preventDefault();
+    try {
+      const message = customMessage || '🧪 Test xabari: GroceryStore POS / Test from GroceryStore POS';
+      await fetch('/api/v1/telegram/test-send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message
+        })
+      });
+      notify('Test xabari yuborildi!');
+      setTestSendOpen(false);
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleSend,
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100 mb-3"
+  }, "🧪 Test xabari"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 dark:text-slate-400 mb-4"
+  }, "Xabaringizni kiriting / Enter your message"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("textarea", {
+    value: customMessage,
+    onChange: e => setCustomMessage(e.target.value),
+    placeholder: "Xabar matni...",
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 resize-none py-3",
+    rows: 3,
+    required: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-xs font-semibold"
+  }, "Bekor qilish / Cancel"), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold shadow"
+  }, "Yuborish / Send"))));
+}
+function ZReportModal({
+  onClose,
+  t
+}) {
+  const [loading, setLoading] = useState(false);
+  const handleSend = async e => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await fetch('/api/v1/telegram/z-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      notify('Z-gesi yuborildi!');
+      setZReportOpen(false);
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleSend,
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100 mb-3"
+  }, "📊 Z-gesi"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 dark:text-slate-400 mb-4"
+  }, "Kutilgina yaxlit Z-gesini yuborish"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    disabled: loading,
+    className: "w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl shadow-lg shadow-emerald-600/30 transition"
+  }, loading ? 'Yuborilmoqda...' : 'Yuborish'))));
+}
+
+// ------------------- CASHIER SWITCH MODAL (3-4 CASHIERS) -------------------
+function CashierSwitchModal({
+  token,
+  currentUserId,
+  onClose,
+  onSwitch,
+  notify,
+  t,
+  lang
+}) {
+  const [cashiers, setCashiers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    fetchCashiers();
+  }, []);
+  const fetchCashiers = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/cashiers`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      setCashiers(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  const handleSelect = async cashierId => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/switch-cashier`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          cashier_id: cashierId
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Kassirni almashtirishda xatolik');
+      onSwitch(data.access_token, {
+        username: data.username,
+        full_name: data.full_name,
+        role: data.role
+      });
+      notify(lang === 'uz' ? `Kassir almashtirildi: ${data.full_name}` : `Смена переключена: ${data.full_name}`);
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl text-slate-800 dark:text-slate-100"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, "👥"), /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100"
+  }, t.cashierSwitchTitle || 'Kassirni tanlang (1-bosish)')), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
+  }, "✕")), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 dark:text-slate-400 mb-3"
+  }, lang === 'uz' ? 'Kun davomida smenani almashtirish uchun kassir nomini bosing:' : 'Нажмите на имя кассира для мгновенного переключения смены:'), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 max-h-72 overflow-y-auto pr-1"
+  }, cashiers.map(c => {
+    const isCurrent = c.id === currentUserId || c.username === currentUserId;
+    return /*#__PURE__*/React.createElement("button", {
+      key: c.id,
+      onClick: () => handleSelect(c.id),
+      disabled: loading,
+      className: `w-full p-3 rounded-2xl flex items-center justify-between transition border text-left touch-target ${isCurrent ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-slate-800 dark:text-slate-200'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xl"
+    }, c.role === 'owner' ? '👑' : '👩‍💼'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "text-xs font-bold"
+    }, c.full_name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-400 uppercase font-mono"
+    }, c.role, " • @", c.username))), isCurrent && /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full"
+    }, lang === 'uz' ? 'Hozirgi' : 'Текущий'));
+  }))));
+}
+
+// ------------------- CAMERA BARCODE SCANNER MODAL (HTML5QRCODE) ------------
+function CameraScannerModal({
+  onScan,
+  onClose,
+  notify,
+  t,
+  lang
+}) {
+  const [torchOn, setTorchOn] = useState(false);
+  const [facingMode, setFacingMode] = useState('environment');
+  const scannerRef = useRef(null);
+  useEffect(() => {
+    let html5QrCode = null;
+    let isStopped = false;
+    const startScanner = async () => {
+      try {
+        if (window.Html5Qrcode) {
+          html5QrCode = new window.Html5Qrcode('qr-reader');
+          scannerRef.current = html5QrCode;
+          const config = {
+            fps: 15,
+            qrbox: {
+              width: 260,
+              height: 160
+            },
+            aspectRatio: 1.333333
+          };
+          await html5QrCode.start({
+            facingMode: facingMode
+          }, config, decodedText => {
+            if (decodedText && !isStopped) {
+              onScan(decodedText);
+            }
+          }, err => {});
+        }
+      } catch (err) {
+        console.error('Camera Scanner Error:', err);
+        notify(lang === 'uz' ? "Kamera ochilmadi: " + err.message : 'Ошибка камеры: ' + err.message, 'error');
+      }
+    };
+    startScanner();
+    return () => {
+      isStopped = true;
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => html5QrCode.clear()).catch(e => console.error(e));
+      }
+    };
+  }, [facingMode]);
+  const toggleTorch = async () => {
+    try {
+      if (scannerRef.current && scannerRef.current.applyVideoConstraints) {
+        const next = !torchOn;
+        await scannerRef.current.applyVideoConstraints({
+          advanced: [{
+            torch: next
+          }]
+        });
+        setTorchOn(next);
+      }
+    } catch (e) {
+      console.error('Torch error:', e);
+    }
+  };
+  const flipCamera = () => {
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-3 backdrop-blur-md"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-900 border border-emerald-500/50 rounded-3xl w-full max-w-md p-4 text-white shadow-2xl relative overflow-hidden flex flex-col items-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex items-center justify-between pb-2 mb-2 border-b border-slate-800"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xl"
+  }, "📷"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-sm text-emerald-400"
+  }, lang === 'uz' ? 'Shtrixkod skaneri' : 'Сканер штрихкодов')), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "p-1 rounded-full text-slate-400 hover:text-white text-lg"
+  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "relative w-full rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    id: "qr-reader",
+    className: "w-full h-full"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-8 border-2 border-emerald-400/80 rounded-2xl pointer-events-none flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "laser-line"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-emerald-300 font-mono absolute bottom-2 bg-black/60 px-2 py-0.5 rounded"
+  }, lang === 'uz' ? "Shtrixkodni ramkaga to'g'rilang" : 'Наведите на штрихкод'))), /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex items-center justify-around gap-2 mt-3 pt-2 border-t border-slate-800"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: toggleTorch,
+    className: `flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition ${torchOn ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`
+  }, /*#__PURE__*/React.createElement("span", null, "🔦"), /*#__PURE__*/React.createElement("span", null, torchOn ? lang === 'uz' ? "Fonarni o'chirish" : 'Выкл фонарик' : lang === 'uz' ? 'Fonar (Chiroq)' : 'Вкл фонарик')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: flipCamera,
+    className: "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+  }, /*#__PURE__*/React.createElement("span", null, "🔄"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Kamera almashtirish" : 'Сменить камеру')))));
+}
+
+// ------------------- VOICE DEBT RECORDING MODAL (HAQQIM.UZ) ----------------
+function VoiceDebtModal({
+  token,
+  onClose,
+  onSuccess,
+  notify,
+  t,
+  lang
+}) {
+  const [speechText, setSpeechText] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [parsedData, setParsedData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      notify(lang === 'uz' ? "Brauzeringiz ovoz yozishni qo'llab-quvvatlamaydi" : 'Голосовой ввод не поддерживается', 'error');
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      recognition.interimResults = false;
+      setIsListening(true);
+      recognition.onresult = async event => {
+        setIsListening(false);
+        const text = event.results[0][0].transcript;
+        setSpeechText(text);
+        await parseVoice(text);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+    } catch (e) {
+      setIsListening(false);
+    }
+  };
+  const parseVoice = async text => {
+    if (!text.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/ai/parse-debt-voice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          speech_text: text,
+          language: lang
+        })
+      });
+      const data = await res.json();
+      setParsedData(data);
+    } catch (e) {
+      notify('NLP parsing xatosi', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleConfirm = async () => {
+    if (!parsedData || !parsedData.debtor_name || !parsedData.amount) {
+      notify('Mijoz va summa aniqlanmadi', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      let debtorId = parsedData.debtor_id;
+      if (!debtorId) {
+        const createRes = await fetch(`${API_BASE}/debts/debtors`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            full_name: parsedData.debtor_name,
+            due_date: parsedData.due_date || null,
+            note: parsedData.note || 'Ovozli yozuv',
+            initial_debt: Number(parsedData.amount)
+          })
+        });
+        const created = await createRes.json();
+        debtorId = created.id;
+      } else {
+        await fetch(`${API_BASE}/debts/debtors/${debtorId}/add-debt`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            amount: Number(parsedData.amount),
+            due_date: parsedData.due_date || null,
+            note: parsedData.note || 'Ovozli yozuv'
+          })
+        });
+      }
+      notify(lang === 'uz' ? `Qarz saqlandi: ${parsedData.debtor_name} (${formatMoney(parsedData.amount)})` : `Долг сохранен: ${parsedData.debtor_name}`);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, "🎙️"), /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100"
+  }, lang === 'uz' ? 'Ovozli qarz yozish (Haqqim.uz)' : 'Голосовая запись долга')), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
+  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mb-4"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 dark:text-slate-400 mb-3"
+  }, lang === 'uz' ? 'Mikrofonni bosing va ayting:' : 'Нажмите на микрофон и произнесите:'), /*#__PURE__*/React.createElement("div", {
+    className: "font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-4 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800"
+  }, "«Alisher 50 ming so'm nonga oldi, dushanba beradi»"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: startListening,
+    className: `w-16 h-16 rounded-full flex items-center justify-center text-2xl transition mx-auto shadow-lg ${isListening ? 'bg-rose-600 text-white animate-pulse shadow-rose-600/40' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'}`
+  }, /*#__PURE__*/React.createElement("span", null, "🎙️")), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-bold text-slate-600 dark:text-slate-300 mt-2"
+  }, isListening ? lang === 'uz' ? 'Eshitilmoqda... gapiring' : 'Слушаю... говорите' : lang === 'uz' ? 'Mikrofonni yoqish' : 'Включить микрофон')), speechText && /*#__PURE__*/React.createElement("div", {
+    className: "mb-4"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+  }, "Aytilgan matn:"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded-xl text-slate-800 dark:text-slate-200"
+  }, "\"", speechText, "\"")), parsedData && /*#__PURE__*/React.createElement("div", {
+    className: "p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl space-y-2 mb-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-bold text-emerald-800 dark:text-emerald-300 mb-1 flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", null, "✨"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Aniqlangan ma'lumotlar:" : 'Распознанные данные:')), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 text-xs"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 dark:text-slate-400"
+  }, "Mijoz: "), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-slate-900 dark:text-slate-100"
+  }, parsedData.debtor_name)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 dark:text-slate-400"
+  }, "Summa: "), /*#__PURE__*/React.createElement("span", {
+    className: "font-extrabold text-emerald-600 dark:text-emerald-400 font-mono"
+  }, formatMoney(parsedData.amount))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 dark:text-slate-400"
+  }, "Muddat: "), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-amber-600 dark:text-amber-400"
+  }, parsedData.due_date_label || parsedData.due_date || 'Belgilanmagan')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 dark:text-slate-400"
+  }, "Izoh: "), /*#__PURE__*/React.createElement("span", {
+    className: "font-medium text-slate-700 dark:text-slate-300"
+  }, parsedData.note || '-')))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+  }, t.cancelBtn), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: !parsedData || loading,
+    onClick: handleConfirm,
+    className: "flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+  }, loading ? t.saving : lang === 'uz' ? 'Qarzni yozish' : 'Записать долг'))));
+}
+
+// ------------------- PAPER DEBT NOTEBOOK OCR MODAL ------------------------
+function OcrDebtNotebookModal({
+  token,
+  onClose,
+  onSuccess,
+  notify,
+  t,
+  lang
+}) {
+  const [ocrText, setOcrText] = useState('');
+  const [parsedRows, setParsedRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
+  const handleImageUpload = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLoading(true);
+    try {
+      if (window.Tesseract) {
+        const worker = await window.Tesseract.createWorker(lang === 'uz' ? 'eng' : 'rus');
+        const ret = await worker.recognize(file);
+        await worker.terminate();
+        setOcrText(ret.data.text);
+        await parseText(ret.data.text);
+      } else {
+        notify('OCR kutubxonasi yuklanmoqda...', 'info');
+      }
+    } catch (err) {
+      console.error(err);
+      notify("Rasm matnini o'qishda xatolik", 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const parseText = async text => {
+    if (!text.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/ai/parse-debt-ocr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          raw_text: text
+        })
+      });
+      const data = await res.json();
+      setParsedRows(data.items || []);
+    } catch (err) {
+      notify('Matnni tahlil qilishda xatolik', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const updateRow = (idx, field, val) => {
+    setParsedRows(prev => {
+      const copy = [...prev];
+      copy[idx][field] = field === 'amount' ? Number(val) : val;
+      return copy;
+    });
+  };
+  const removeRow = idx => {
+    setParsedRows(prev => prev.filter((_, i) => i !== idx));
+  };
+  const handleImportAll = async () => {
+    if (parsedRows.length === 0) return;
+    setLoading(true);
+    try {
+      for (const row of parsedRows) {
+        if (!row.debtor_name || !row.amount) continue;
+        if (row.matched_debtor_id) {
+          await fetch(`${API_BASE}/debts/debtors/${row.matched_debtor_id}/add-debt`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              amount: Number(row.amount),
+              note: row.note || 'Daftardan kiritildi'
+            })
+          });
+        } else {
+          await fetch(`${API_BASE}/debts/debtors`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              full_name: row.debtor_name,
+              initial_debt: Number(row.amount),
+              note: row.note || "Qog'oz daftardan"
+            })
+          });
+        }
+      }
+      notify(lang === 'uz' ? `${parsedRows.length} ta qarz bazaga kiritildi!` : `Импортировано ${parsedRows.length} долгов!`);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, "📸"), /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100"
+  }, lang === 'uz' ? "Qog'oz daftardan rasm olish (OCR)" : 'Фото-сканер тетради долгов')), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
+  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    capture: "environment",
+    ref: fileInputRef,
+    onChange: handleImageUpload,
+    className: "hidden"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => fileInputRef.current?.click(),
+    disabled: loading,
+    className: "flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition"
+  }, /*#__PURE__*/React.createElement("span", null, "📷"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Kameradan rasmga olish / Yuklash' : 'Сделать фото / Загрузить')), loading && /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-emerald-600 font-semibold animate-pulse"
+  }, t.processing)), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto space-y-2 mb-3 pr-1"
+  }, parsedRows.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-10 text-xs text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6"
+  }, lang === 'uz' ? "Eski qog'oz daftaringiz sahifasini rasmga oling. Sun'iy intellekt mijozlar ismlari va qarz summalarini avtomatik jadvalga ajratadi." : 'Сфотографируйте страницу бумажной тетради долгов. ИИ автоматически выделит имена и суммы.') : /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-left text-xs border-collapse"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "border-b border-slate-200 dark:border-slate-800 text-slate-400"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "py-2"
+  }, "Mijoz ismi"), /*#__PURE__*/React.createElement("th", {
+    className: "py-2"
+  }, "Summa (so'm)"), /*#__PURE__*/React.createElement("th", {
+    className: "py-2"
+  }, "Izoh"), /*#__PURE__*/React.createElement("th", {
+    className: "py-2 text-right"
+  }, "O'chirish"))), /*#__PURE__*/React.createElement("tbody", {
+    className: "divide-y divide-slate-100 dark:divide-slate-800"
+  }, parsedRows.map((r, i) => /*#__PURE__*/React.createElement("tr", {
+    key: i
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 pr-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: r.debtor_name,
+    onChange: e => updateRow(i, 'debtor_name', e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs"
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 pr-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: r.amount,
+    onChange: e => updateRow(i, 'amount', e.target.value),
+    className: "w-28 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono font-bold text-emerald-600"
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 pr-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: r.note || '',
+    onChange: e => updateRow(i, 'note', e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs"
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 text-right"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeRow(i),
+    className: "text-rose-500 hover:text-rose-700 font-bold px-2 py-1"
+  }, "✕"))))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "px-4 py-2 rounded-xl text-xs font-bold text-slate-500"
+  }, t.cancelBtn), /*#__PURE__*/React.createElement("button", {
+    onClick: handleImportAll,
+    disabled: parsedRows.length === 0 || loading,
+    className: "px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+  }, lang === 'uz' ? `Barchasini kiritish (${parsedRows.length} ta)` : `Импортировать все (${parsedRows.length})`))));
+}
+
+// ------------------- INVOICE PHOTO SCANNER MODAL (KIRIM) -------------------
+function OcrInvoiceModal({
+  token,
+  suppliers,
+  onClose,
+  onSuccess,
+  notify,
+  t,
+  lang
+}) {
+  const [supplierId, setSupplierId] = useState(suppliers.length > 0 ? suppliers[0].id : '');
+  const [parsedItems, setParsedItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
+  const handleImageUpload = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLoading(true);
+    try {
+      if (window.Tesseract) {
+        const worker = await window.Tesseract.createWorker(lang === 'uz' ? 'eng' : 'rus');
+        const ret = await worker.recognize(file);
+        await worker.terminate();
+        await parseInvoiceText(ret.data.text);
+      }
+    } catch (err) {
+      notify("Fakturani o'qishda xatolik", 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const parseInvoiceText = async text => {
+    try {
+      const res = await fetch(`${API_BASE}/ai/parse-invoice-ocr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          raw_text: text
+        })
+      });
+      const data = await res.json();
+      setParsedItems(data.items || []);
+    } catch (err) {
+      notify("Faktura qatorlarini ajratib bo'lmadi", 'error');
+    }
+  };
+  const updateItem = (idx, field, val) => {
+    setParsedItems(prev => {
+      const copy = [...prev];
+      copy[idx][field] = Number(val);
+      copy[idx].total_price = Math.round(copy[idx].quantity * copy[idx].purchase_price);
+      return copy;
+    });
+  };
+  const handleSaveInvoice = async () => {
+    if (parsedItems.length === 0 || !supplierId) return;
+    setLoading(true);
+    try {
+      const payload = {
+        supplier_id: Number(supplierId),
+        items: parsedItems.map(it => ({
+          product_id: it.matched_product_id || 1,
+          quantity: Number(it.quantity),
+          purchase_price: Number(it.purchase_price)
+        })),
+        paid_amount: 0
+      };
+      const res = await fetch(`${API_BASE}/suppliers/invoices`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Yuk xatini saqlashda xatolik');
+      notify(lang === 'uz' ? 'Faktura omborga muvaffaqiyatli qabul qilindi!' : 'Накладная успешно принята на склад!');
+      onSuccess();
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, "📑"), /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100"
+  }, lang === 'uz' ? 'Faktura / Yuk xatini skanerlash' : 'Фото-сканер накладных (Kirim)')), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
+  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "text-[11px] font-semibold text-slate-500"
+  }, "Ta'minotchi:"), /*#__PURE__*/React.createElement("select", {
+    value: supplierId,
+    onChange: e => setSupplierId(e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold"
+  }, suppliers.map(s => /*#__PURE__*/React.createElement("option", {
+    key: s.id,
+    value: s.id
+  }, s.name)))), /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: "image/*",
+    capture: "environment",
+    ref: fileInputRef,
+    onChange: handleImageUpload,
+    className: "hidden"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => fileInputRef.current?.click(),
+    className: "mt-4 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow"
+  }, "📷 ", lang === 'uz' ? 'Rasmga olish' : 'Сделать фото')), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto space-y-2 mb-3 pr-1"
+  }, parsedItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-10 text-xs text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6"
+  }, lang === 'uz' ? "Qog'oz faktura / yuk xatini rasmga oling. Tovar nomlari, soni va kirim narxlari avtomatik jadvalga olinadi." : 'Сфотографируйте бумажную накладную. Товары, количество и цены будут извлечены.') : /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-left text-xs border-collapse"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "border-b border-slate-200 dark:border-slate-800 text-slate-400"
+  }, /*#__PURE__*/React.createElement("th", {
+    className: "py-2"
+  }, "Tovar"), /*#__PURE__*/React.createElement("th", {
+    className: "py-2"
+  }, "Miqdor"), /*#__PURE__*/React.createElement("th", {
+    className: "py-2"
+  }, "Kirim narxi"), /*#__PURE__*/React.createElement("th", {
+    className: "py-2"
+  }, "Jami"))), /*#__PURE__*/React.createElement("tbody", {
+    className: "divide-y divide-slate-100 dark:divide-slate-800"
+  }, parsedItems.map((it, idx) => /*#__PURE__*/React.createElement("tr", {
+    key: idx
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 pr-2 font-medium"
+  }, it.product_name), /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 pr-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: it.quantity,
+    onChange: e => updateItem(idx, 'quantity', e.target.value),
+    className: "w-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 text-xs"
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 pr-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: it.purchase_price,
+    onChange: e => updateItem(idx, 'purchase_price', e.target.value),
+    className: "w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 text-xs font-mono"
+  })), /*#__PURE__*/React.createElement("td", {
+    className: "py-1.5 font-bold font-mono text-emerald-600"
+  }, formatMoney(it.total_price))))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "px-4 py-2 rounded-xl text-xs font-bold text-slate-500"
+  }, t.cancelBtn), /*#__PURE__*/React.createElement("button", {
+    onClick: handleSaveInvoice,
+    disabled: parsedItems.length === 0 || loading,
+    className: "px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+  }, lang === 'uz' ? 'Omborga qabul qilish' : 'Принять на склад'))));
+}
+
+// ------------------- STORE AI ASSISTANT MODAL -----------------------------
+function StoreAiModal({
+  token,
+  onClose,
+  notify,
+  t,
+  lang,
+  onNavigate
+}) {
+  const [messages, setMessages] = useState([{
+    sender: 'ai',
+    text: lang === 'uz' ? "Salom! Men sizning do'kon AI-yordamchingizman. Savdolar, qarzlar, ombor qoldiqlari yoki tamaki do'koniga moslashtirish bo'yicha savollaringiz bo'lsa, so'rang!" : "Здравствуйте! Я ваш умный AI-помощник магазина. Отвечу на любые вопросы по выручке, долгам, остаткам или тиражированию кассы под табачный магазин."
+  }]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const sendQuery = async queryText => {
+    const q = queryText || input;
+    if (!q.trim()) return;
+    setMessages(prev => [...prev, {
+      sender: 'user',
+      text: q
+    }]);
+    setInput('');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/ai/assistant`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: q,
+          language: lang
+        })
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, {
+        sender: 'ai',
+        text: data.answer,
+        suggestions: data.quick_suggestions || [],
+        actionType: data.action_type
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        sender: 'ai',
+        text: 'Kechirasiz, xatolik yuz berdi.'
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 h-[600px] max-h-[90vh] flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, "🤖"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-sm text-slate-900 dark:text-slate-100"
+  }, lang === 'uz' ? "Do'kon AI-Yordamchisi" : 'AI-Помощник магазина'), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-emerald-600 font-bold"
+  }, "100% Bepul & Avtonom"))), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
+  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto space-y-3 mb-3 pr-1 text-xs"
+  }, messages.map((m, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: `flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `p-3 rounded-2xl max-w-[85%] whitespace-pre-wrap leading-relaxed ${m.sender === 'user' ? 'bg-emerald-600 text-white rounded-br-none shadow-sm' : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-200 dark:border-slate-700/60'}`
+  }, m.text), m.suggestions && m.suggestions.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5 mt-2"
+  }, m.suggestions.map((sug, idx) => /*#__PURE__*/React.createElement("button", {
+    key: idx,
+    onClick: () => sendQuery(sug),
+    className: "px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold hover:bg-emerald-100 transition"
+  }, sug))))), loading && /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-slate-400 animate-pulse"
+  }, "AI javob yozmoqda...")), /*#__PURE__*/React.createElement("form", {
+    onSubmit: e => {
+      e.preventDefault();
+      sendQuery();
+    },
+    className: "flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: input,
+    onChange: e => setInput(e.target.value),
+    placeholder: lang === 'uz' ? 'Savolingizni yozing...' : 'Напишите ваш вопрос...',
+    className: "flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    disabled: !input.trim() || loading,
+    className: "px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow disabled:opacity-40"
+  }, "Yuborish"))));
+}
+
 // ------------------- POS TERMINAL SCREEN -------------------
 function PosScreen({
   token,
@@ -690,8 +1817,8 @@ function PosScreen({
   setLang: propSetLang,
   toggleLang: propToggleLang
 }) {
-  const lang = propLang || (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
-  const setLang = propSetLang || (typeof window !== 'undefined' && window.setPosLang) || ((val) => {
+  const lang = propLang || typeof window !== 'undefined' && window.pos_lang || typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang') || 'uz';
+  const setLang = propSetLang || typeof window !== 'undefined' && window.setPosLang || (val => {
     try {
       const next = typeof val === 'function' ? val(lang) : val;
       localStorage.setItem('pos_lang', next);
@@ -699,7 +1826,6 @@ function PosScreen({
       window.location.reload();
     } catch (e) {}
   });
-  const toggleLang = propToggleLang || (() => setLang(prev => prev === 'uz' ? 'ru' : 'uz'));
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [products, setProducts] = useState([]);
@@ -707,11 +1833,75 @@ function PosScreen({
   const [barcodeQuery, setBarcodeQuery] = useState('');
   const [cart, setCart] = useState([]);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutInitialMethod, setCheckoutInitialMethod] = useState('CASH');
   const [lastReceipt, setLastReceipt] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
-  const [voiceText, setVoiceText] = useState('');
+  const [successToast, setSuccessToast] = useState(null);
+  const [directLoading, setDirectLoading] = useState(false);
+  const [scannerActive, setScannerActive] = useState(false);
+  const [showAllCatalog, setShowAllCatalog] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
   const barcodeInputRef = useRef(null);
+  const QUICK_ITEMS = [{
+    id: 'q_tandir',
+    name: "Tandir non",
+    price: 4000,
+    icon: '🫓',
+    barcode: 'NON_TANDIR'
+  }, {
+    id: 'q_buxanka',
+    name: "Buxanka non",
+    price: 3000,
+    icon: '🍞',
+    barcode: 'NON_BUXANKA'
+  }, {
+    id: 'q_paket_katta',
+    name: "Paket (katta)",
+    price: 1000,
+    icon: '🛍️',
+    barcode: 'PAKET_KAT'
+  }, {
+    id: 'q_paket_kichik',
+    name: "Paket (kichik)",
+    price: 500,
+    icon: '🛍️',
+    barcode: 'PAKET_KICH'
+  }, {
+    id: 'q_tuxum',
+    name: "Tuxum (1 dona)",
+    price: 2000,
+    icon: '🥚',
+    barcode: 'TUXUM_1'
+  }, {
+    id: 'q_lavash',
+    name: "Lavash xamiri",
+    price: 5000,
+    icon: '🌯',
+    barcode: 'LAVASH'
+  }, {
+    id: 'q_suv',
+    name: "Gazsiz suv 0.5L",
+    price: 3000,
+    icon: '💧',
+    barcode: 'SUV_05'
+  }, {
+    id: 'q_shakar',
+    name: "Shakar (1 kg)",
+    price: 9000,
+    icon: '🍚',
+    barcode: 'SHAKAR_1'
+  }, {
+    id: 'q_sigaret',
+    name: "Sigaret (Winston)",
+    price: 22000,
+    icon: '🚬',
+    barcode: 'SIG_WINSTON'
+  }, {
+    id: 'q_zajigalka',
+    name: "Zajigalka (Chaqmoq)",
+    price: 3000,
+    icon: '🔥',
+    barcode: 'ZAJIGALKA'
+  }];
   useEffect(() => {
     fetchCategories();
     fetchProducts();
@@ -728,7 +1918,7 @@ function PosScreen({
   const fetchProducts = async () => {
     try {
       const params = new URLSearchParams({
-        limit: '30'
+        limit: '24'
       });
       if (search) params.append('search', search);
       if (selectedCategory) params.append('category_id', selectedCategory.toString());
@@ -743,173 +1933,111 @@ function PosScreen({
       console.error(e);
     }
   };
-
-  // ------------------- Voice Input (Web Speech API) -------------------
-  const toggleVoiceInput = () => {
-    setIsVoiceRecording(prev => !prev);
-    if (isVoiceRecording) {
-      // Stop recognition
-      if (window.speechRecognition) {
-        window.speechRecognition.stop();
-      } else if (window.webkitSpeechRecognition) {
-        window.webkitSpeechRecognition.stop();
-      }
-      setVoiceText('');
-    } else {
-      // Start recognition
-      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        const langCode = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
-        recognition.lang = langCode;
-        recognition.interimResults = false;
-        recognition.continuous = false;
-
-        recognition.onresult = e => {
-          const transcript = e.results[0][0].transcript;
-          setVoiceText(transcript);
-          // Process the speech text for quick matching
-          processVoiceText(transcript);
-          setIsVoiceRecording(false);
-        };
-
-        recognition.onerror = e => {
-          setIsVoiceRecording(false);
-          notify(lang === 'uz' ? 'Sovg\'a ovoz olish xatoni / Ошибка распознавания голоса' : 'Ошибка распознавания речи', 'error');
-        };
-
-        recognition.onend = () => {
-          if (isVoiceRecording) {
-            recognition.start();
-          }
-        };
-
-        setIsVoiceRecording(true);
-        recognition.start();
-      } else {
-        notify(lang === 'uz' ? 'Bu brauzer Web Speech API ni qo\'llab-quvvatlamayapti / Этот браузер не поддерживает Web Speech API' : 'Этот браузер не поддерживает Web Speech API', 'error');
-      }
-    }
-  };
-
-  const processVoiceText = async (text) => {
-    setVoiceText(text);
+  const playBeep = () => {
     try {
-      const res = await fetch(`${API_BASE}/ai/voice-parse`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          speech_text: text,
-          language: lang
-        })
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        notify(err.detail || 'Voice parse xatolik', 'error');
-        return;
-      }
-      const result = await res.json();
-      
-      // Act on the parsed result
-      if (result.detected_type === 'product' && result.suggested_sku) {
-        // Find product by barcode and add to cart
-        try {
-          const prodRes = await fetch(`${API_BASE}/products/barcode/${result.suggested_sku}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (prodRes.ok) {
-            const prod = await prodRes.json();
-            addToCart(prod);
-            notify(`Savatga qo'shildi: ${prod.name} (${result.quantity || 1} ta)`);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      } else if (result.detected_type === 'debtor' && result.entity) {
-        // Find debtor and record debt
-        try {
-          const debtorRes = await fetch(`${API_BASE}/debts/debtors?full_name=${encodeURIComponent(result.entity)}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (debtorRes.ok) {
-            const debtors = await debtorRes.json();
-            if (debtors.items && debtors.items.length > 0) {
-              const debtor = debtors.items[0];
-              // Add debt to checkout
-              const cartTotal = cart.reduce((sum, item) => sum + item.product.sale_price * item.quantity, 0);
-              const payload = {
-                items: cart.map(i => ({ product_id: i.product.id, quantity: i.quantity })),
-                payment_method: 'DEBT',
-                debtor_id: debtor.id,
-                note: `${result.entity} uchun savdo`
-              };
-              const checkoutRes = await fetch(`${API_BASE}/pos/checkout`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-              });
-              if (checkoutRes.ok) {
-                const data = await checkoutRes.json();
-                notify(`Qarzga yozildi: ${data.debtor_name} uchun ${data.debt_amount} so'm`);
-                setCheckoutModalOpen(false);
-                setCart([]);
-              }
-            }
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        notify(`Sovg\'a ovoz: "${text}" / Голосовое ввод: "${text}"`, 'info');
-      }
-    } catch (err) {
-      console.error(err);
-      notify(lang === 'uz' ? 'AI parse xatoligi' : 'Ошибка AI parse', 'error');
-    }
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.frequency.value = 880;
+      gainNode.gain.value = 0.25;
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.12);
+    } catch (e) {}
   };
-
-  // Barcode Instant Lookup / Add to Cart
   const handleBarcodeSubmit = async e => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const code = barcodeQuery.trim();
     if (!code) return;
+    await processBarcode(code);
+  };
+  const processBarcode = async code => {
     try {
-      const res = await fetch(`${API_BASE}/products/barcode/${code}`, {
+      const res = await fetch(`${API_BASE}/products/barcode/${encodeURIComponent(code)}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       if (!res.ok) {
-        notify(`Shtrixkod topilmadi: ${code} / Штрихкод не найден`, 'error');
+        notify((lang === 'uz' ? "Shtrixkod topilmadi: " : "Штрихкод не найден: ") + code, 'error');
         setBarcodeQuery('');
         return;
       }
       const prod = await res.json();
-      addToCart(prod);
+      playBeep();
+      const qty = prod.detected_weight ? Number(prod.detected_weight) : 1.0;
+      addToCart(prod, qty);
+      if (prod.detected_weight) {
+        notify((lang === 'uz' ? "Tarozidan tortilgan vazn aniqlandi: " : "Вес с весов: ") + qty + " kg");
+      } else {
+        notify(prod.name);
+      }
       setBarcodeQuery('');
+      if (barcodeInputRef.current) barcodeInputRef.current.focus();
     } catch (err) {
       notify(err.message, 'error');
     }
   };
-  const addToCart = product => {
+  const startVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      notify(lang === 'uz' ? "Brauzeringiz ovozli qidiruvni qo'llab-quvvatlamaydi" : "Голосовой ввод не поддерживается браузером", 'error');
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      setVoiceListening(true);
+      notify(lang === 'uz' ? "Eshitilmoqda... tovar nomini ayting" : "Слушаю... назовите товар", 'info');
+      recognition.onresult = e => {
+        setVoiceListening(false);
+        const text = e.results[0][0].transcript;
+        setSearch(text);
+        notify((lang === 'uz' ? "Qidirilmoqda: " : "Поиск: ") + text);
+      };
+      recognition.onerror = () => {
+        setVoiceListening(false);
+      };
+      recognition.onend = () => {
+        setVoiceListening(false);
+      };
+      recognition.start();
+    } catch (err) {
+      setVoiceListening(false);
+      notify(err.message, 'error');
+    }
+  };
+  const addToCart = (product, quantity = 1.0) => {
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
         return prev.map(item => item.product.id === product.id ? {
           ...item,
-          quantity: Math.round((item.quantity + 1) * 100) / 100
+          quantity: Math.round((item.quantity + quantity) * 100) / 100
         } : item);
       }
       return [...prev, {
         product,
-        quantity: 1.0
+        quantity: Math.round(quantity * 100) / 100
       }];
     });
+  };
+  const addQuickItem = item => {
+    playBeep();
+    const virtualProduct = {
+      id: item.barcode,
+      name: item.name,
+      barcode: item.barcode,
+      sale_price: item.price,
+      purchase_price: Math.round(item.price * 0.8),
+      unit: 'dona',
+      stock_quantity: 999
+    };
+    addToCart(virtualProduct, 1.0);
+    notify(item.name + " (+1)");
   };
   const updateQuantity = (productId, delta) => {
     setCart(prev => prev.map(item => {
@@ -930,42 +2058,140 @@ function PosScreen({
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.product.sale_price * item.quantity, 0);
   }, [cart]);
+
+  // Fast 1-Click Checkout Handler
+  const handleDirectCheckout = async paymentMethod => {
+    if (cart.length === 0) return;
+    if (paymentMethod === 'DEBT') {
+      setCheckoutInitialMethod('DEBT');
+      setCheckoutModalOpen(true);
+      return;
+    }
+    setDirectLoading(true);
+    try {
+      const payload = {
+        items: cart.map(i => ({
+          product_id: typeof i.product.id === 'number' ? i.product.id : null,
+          barcode: i.product.barcode,
+          name: i.product.name,
+          price: i.product.sale_price,
+          quantity: i.quantity
+        })),
+        payment_method: paymentMethod,
+        cash_received: paymentMethod === 'CASH' ? cartTotal : 0,
+        card_amount: paymentMethod === 'CARD' ? cartTotal : 0,
+        debt_amount: 0,
+        debtor_id: null
+      };
+      const res = await fetch(`${API_BASE}/pos/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "To'lovda xatolik yuz berdi");
+      playBeep();
+      setCart([]);
+      setSuccessToast({
+        receiptNumber: data.receipt_number,
+        total: cartTotal,
+        method: paymentMethod,
+        data: data
+      });
+      setTimeout(() => setSuccessToast(null), 6000);
+      if (barcodeInputRef.current) barcodeInputRef.current.focus();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setDirectLoading(false);
+    }
+  };
   return /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, successToast && /*#__PURE__*/React.createElement("div", {
+    className: "bg-emerald-600 text-white p-3 sm:p-4 rounded-2xl shadow-xl flex items-center justify-between gap-3 animate-fade-in transition"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, "✅"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "font-extrabold text-sm sm:text-base"
+  }, lang === 'uz' ? "Savdo saqlandi: " : "Продажа сохранена: ", formatMoney(successToast.total), " (", successToast.method, ")"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-emerald-100 font-mono"
+  }, "Chek #", successToast.receiptNumber))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setLastReceipt(successToast.data);
+      setSuccessToast(null);
+    },
+    className: "bg-white text-emerald-800 hover:bg-emerald-50 px-3 py-1.5 rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", null, "🖨️"), /*#__PURE__*/React.createElement("span", null, t.printReceiptOptional || "Chekni chop etish"))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lg:col-span-7 xl:col-span-8 space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row gap-2 transition-colors duration-200"
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-sm flex flex-col sm:flex-row gap-2 transition-colors duration-200"
   }, /*#__PURE__*/React.createElement("form", {
     onSubmit: handleBarcodeSubmit,
-    className: "flex-1 flex gap-2"
+    className: "flex-1 flex gap-1.5"
   }, /*#__PURE__*/React.createElement("input", {
     ref: barcodeInputRef,
     type: "text",
-    placeholder: t.barcodeScanPlaceholder,
+    placeholder: t.barcodeScanPlaceholder || "Shtrixkodni kiriting yoki skanerlang...",
     value: barcodeQuery,
     onChange: e => setBarcodeQuery(e.target.value),
     className: "flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
   }), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition"
+  }, "↵")), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    id: "voice-input-btn",
-    className: `bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition ${isVoiceRecording ? 'animate-pulse text-rose-600' : ''}`,
-    onClick: () => toggleVoiceInput(),
-    title: lang === 'uz' ? 'Voice input / Ovoz kirish' : 'Голосовой ввод'
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs"
-  }, isVoiceRecording ? "🎤 Ovoz e'lon" : "🎤 Голос")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setScannerActive(true),
+    className: "bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target",
+    title: lang === 'uz' ? "Kamera orqali shtrixkod skaneri" : "Сканер через камеру"
+  }, /*#__PURE__*/React.createElement("span", null, "📷"), /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline"
+  }, lang === 'uz' ? "Skaner" : "Сканер")), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    className: "ml-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-900 transition rounded-xl py-1 px-2 text-xs font-medium",
-    onClick: () => setLang(prev => prev === 'uz' ? 'ru' : 'uz'),
-    title: lang === 'uz' ? 'Russian / O\'zbek' : "O'zbek / Русский"
-  }, lang === 'uz' ? '🇷🇺' : '🇺🇿')), /*#__PURE__*/React.createElement("input", {
+    onClick: startVoiceSearch,
+    className: `font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target ${voiceListening ? 'bg-rose-600 text-white animate-pulse' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`,
+    title: lang === 'uz' ? "Ovozli qidiruv (O'zbekcha / Ruscha)" : "Голосовой поиск"
+  }, /*#__PURE__*/React.createElement("span", null, "🎙️"), /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline"
+  }, lang === 'uz' ? "Ovoz" : "Голос")), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: t.searchProductPlaceholder,
+    placeholder: t.searchProductPlaceholder || "Tovar nomi bo'yicha qidirish...",
     value: search,
     onChange: e => setSearch(e.target.value),
-    className: "flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+    className: "w-full sm:w-44 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
   })), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-sm space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", null, "⚡"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Tezkor tovarlar (Shtrixkodsiz 1-bosish):" : "Быстрые товары (без штрихкода):")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setShowAllCatalog(!showAllCatalog),
+    className: "text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+  }, showAllCatalog ? lang === 'uz' ? "Yashirish" : "Скрыть каталог" : lang === 'uz' ? "Barcha tovarlar (2000+)" : "Показать все товары")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 sm:grid-cols-5 gap-1.5"
+  }, QUICK_ITEMS.map(item => /*#__PURE__*/React.createElement("button", {
+    key: item.id,
+    type: "button",
+    onClick: () => addQuickItem(item),
+    className: "bg-emerald-50/80 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-emerald-200 dark:border-slate-700 rounded-xl p-2 text-left transition flex items-center gap-2 touch-target shadow-sm"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xl"
+  }, item.icon), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate"
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 font-mono"
+  }, formatMoney(item.price))))))), (showAllCatalog || search) && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setSelectedCategory(null),
@@ -974,26 +2200,29 @@ function PosScreen({
     key: c.id,
     onClick: () => setSelectedCategory(c.id),
     className: `px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${selectedCategory === c.id ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`
-  }, c.name.split('/')[0].trim()))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 max-h-[calc(100vh-220px)] overflow-y-auto pr-1"
+  }, c.name.split('/')[0].trim()))), (showAllCatalog || search) && /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3"
   }, products.map(p => {
-    const low = p.stock_quantity <= p.min_stock_alert;
+    const low = p.stock_quantity <= 5;
     return /*#__PURE__*/React.createElement("div", {
       key: p.id,
-      onClick: () => addToCart(p),
-      className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition shadow-sm active:scale-95 touch-target select-none"
+      onClick: () => {
+        playBeep();
+        addToCart(p);
+      },
+      className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm hover:shadow-md hover:border-emerald-500 cursor-pointer transition flex flex-col justify-between"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 font-mono flex items-center justify-between"
     }, /*#__PURE__*/React.createElement("span", null, p.barcode), low && /*#__PURE__*/React.createElement("span", {
       className: "text-amber-500 font-bold"
     }, "⚠️")), /*#__PURE__*/React.createElement("h4", {
-      className: "font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 line-clamp-2 mt-1"
+      className: "font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-2 mt-1"
     }, p.name)), /*#__PURE__*/React.createElement("div", {
-      className: "mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"
+      className: "mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] text-slate-500 dark:text-slate-400"
+      className: "text-[10px] text-slate-500 dark:text-slate-400"
     }, p.stock_quantity, " ", p.unit), /*#__PURE__*/React.createElement("span", {
-      className: "font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 font-mono"
+      className: "font-extrabold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-mono"
     }, formatMoney(p.sale_price))));
   }))), /*#__PURE__*/React.createElement("div", {
     className: "lg:col-span-5 xl:col-span-4 flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm h-full max-h-[calc(100vh-140px)] sticky top-20 transition-colors duration-200"
@@ -1001,18 +2230,18 @@ function PosScreen({
     className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, "🛒"), /*#__PURE__*/React.createElement("span", null, t.cartTitle), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, "🛒"), /*#__PURE__*/React.createElement("span", null, t.cartTitle || "Savat"), /*#__PURE__*/React.createElement("span", {
     className: "text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold"
   }, cart.length)), cart.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: clearCart,
     className: "text-xs text-rose-500 hover:text-rose-600 font-semibold"
-  }, t.clearCart)), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 overflow-y-auto space-y-2 py-2 pr-1"
+  }, t.clearCart || "Tozalash")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto space-y-2 py-2 pr-1 max-h-64 sm:max-h-80"
   }, cart.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "h-48 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs"
+    className: "h-40 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-3xl mb-2"
-  }, "🧺"), /*#__PURE__*/React.createElement("p", null, t.cartEmpty)) : cart.map(item => /*#__PURE__*/React.createElement("div", {
+  }, "🧺"), /*#__PURE__*/React.createElement("p", null, t.cartEmpty || "Savat bo'sh. Tovar skanerlang yoki tezkor tugmalardan tanlang.")) : cart.map(item => /*#__PURE__*/React.createElement("div", {
     key: item.product.id,
     className: "bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-2.5 flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1037,51 +2266,95 @@ function PosScreen({
     onClick: () => removeFromCart(item.product.id),
     className: "w-7 h-7 rounded-lg text-slate-400 hover:text-rose-500 text-xs flex items-center justify-center ml-1"
   }, "✕"))))), /*#__PURE__*/React.createElement("div", {
-    className: "pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3"
+    className: "pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-semibold text-slate-500 dark:text-slate-400"
-  }, t.totalToPay), /*#__PURE__*/React.createElement("span", {
+  }, t.totalToPay || "Jami to'lov", ":"), /*#__PURE__*/React.createElement("span", {
     className: "text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono"
-  }, formatMoney(cartTotal))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setCheckoutModalOpen(true),
-    disabled: cart.length === 0,
-    className: "w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm sm:text-base flex items-center justify-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, "💳"), /*#__PURE__*/React.createElement("span", null, t.checkoutBtn, " (", formatMoney(cartTotal), ")"))), checkoutModalOpen && /*#__PURE__*/React.createElement(CheckoutModal, {
+  }, formatMoney(cartTotal))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: cart.length === 0 || directLoading,
+    onClick: () => handleDirectCheckout('CASH'),
+    className: "bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 touch-target text-xs sm:text-sm",
+    title: "1 bosishda naqd pul bilan yopish"
+  }, /*#__PURE__*/React.createElement("span", null, "💵"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Naqd (Aniq)" : "Наличные (Ровно)")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: cart.length === 0 || directLoading,
+    onClick: () => handleDirectCheckout('CARD'),
+    className: "bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 touch-target text-xs sm:text-sm",
+    title: "1 bosishda karta bilan yopish"
+  }, /*#__PURE__*/React.createElement("span", null, "💳"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Karta (Humo/Uz)" : "Карта"))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: cart.length === 0 || directLoading,
+    onClick: () => handleDirectCheckout('DEBT'),
+    className: "bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-bold py-2.5 rounded-2xl shadow-sm transition flex items-center justify-center gap-1.5 touch-target text-xs"
+  }, /*#__PURE__*/React.createElement("span", null, "📓"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qarzga yozish" : "В долг")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: cart.length === 0 || directLoading,
+    onClick: () => {
+      setCheckoutInitialMethod('CASH');
+      setCheckoutModalOpen(true);
+    },
+    className: "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-2.5 rounded-2xl border border-slate-300 dark:border-slate-700 transition flex items-center justify-center gap-1 touch-target text-xs"
+  }, /*#__PURE__*/React.createElement("span", null, "⚙️"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Boshqa to'lov..." : "Сдача / Сплит")))), scannerActive && /*#__PURE__*/React.createElement(CameraScannerModal, {
+    onScan: code => {
+      setScannerActive(false);
+      processBarcode(code);
+    },
+    onClose: () => setScannerActive(false),
+    notify: notify,
+    t: t,
+    lang: lang
+  }), checkoutModalOpen && /*#__PURE__*/React.createElement(CheckoutModal, {
     token: token,
     total: cartTotal,
     cart: cart,
+    initialMethod: checkoutInitialMethod,
     onClose: () => setCheckoutModalOpen(false),
     onSuccess: receipt => {
       setCheckoutModalOpen(false);
+      playBeep();
       setCart([]);
-      setLastReceipt(receipt);
-      notify(`Chek muvaffaqiyatli saqlandi / Чек успешно сохранен: ${receipt.receipt_number}`);
+      setSuccessToast({
+        receiptNumber: receipt.receipt_number,
+        total: cartTotal,
+        method: receipt.payment_method,
+        data: receipt
+      });
+      setTimeout(() => setSuccessToast(null), 6000);
     },
     notify: notify,
-    t: t
+    t: t,
+    lang: lang
   }), lastReceipt && /*#__PURE__*/React.createElement(ReceiptModal, {
     receipt: lastReceipt,
     onClose: () => setLastReceipt(null),
     t: t
-  })));
+  }))));
 }
-
-// ------------------- CHECKOUT MODAL (UZS DENOMINATIONS) -------------------
 function CheckoutModal({
   token,
   total,
   cart,
+  initialMethod = 'CASH',
   onClose,
   onSuccess,
   notify,
-  t
+  t,
+  lang = 'uz'
 }) {
-  const [method, setMethod] = useState('CASH'); // CASH, CARD, DEBT
+  const [method, setMethod] = useState(initialMethod); // CASH, CARD, DEBT
   const [cashReceived, setCashReceived] = useState(total);
   const [debtors, setDebtors] = useState([]);
-  const [selectedDebtor, setSelectedDebtor] = useState('');
+  const [debtorSearch, setDebtorSearch] = useState('');
+  const [selectedDebtor, setSelectedDebtor] = useState(null);
+  const [dueDate, setDueDate] = useState('');
   const [newDebtorName, setNewDebtorName] = useState('');
   const [newDebtorPhone, setNewDebtorPhone] = useState('');
   const [creatingDebtor, setCreatingDebtor] = useState(false);
@@ -1098,8 +2371,8 @@ function CheckoutModal({
       });
       const data = await res.json();
       setDebtors(data.items || []);
-      if (data.items && data.items.length > 0) {
-        setSelectedDebtor(data.items[0].id);
+      if (data.items && data.items.length > 0 && !selectedDebtor) {
+        setSelectedDebtor(data.items[0]);
       }
     } catch (e) {
       console.error(e);
@@ -1107,7 +2380,7 @@ function CheckoutModal({
   };
   const handleCreateDebtor = async () => {
     if (!newDebtorName.trim()) {
-      notify('Mijoz ismini kiriting / Введите имя клиента', 'error');
+      notify(lang === 'uz' ? "Mijoz ismini kiriting" : "Введите имя клиента", 'error');
       return;
     }
     try {
@@ -1124,10 +2397,10 @@ function CheckoutModal({
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Mijoz yaratishda xatolik');
+      if (!res.ok) throw new Error(data.detail || "Mijoz yaratishda xatolik");
       notify(`Mijoz ${data.full_name} ro'yxatdan o'tdi`);
       await fetchDebtors();
-      setSelectedDebtor(data.id);
+      setSelectedDebtor(data);
       setCreatingDebtor(false);
       setNewDebtorName('');
       setNewDebtorPhone('');
@@ -1135,11 +2408,14 @@ function CheckoutModal({
       notify(err.message, 'error');
     }
   };
+  const filteredDebtors = debtors.filter(d => {
+    if (!debtorSearch) return true;
+    const q = debtorSearch.toLowerCase();
+    return d.full_name.toLowerCase().includes(q) || d.phone && d.phone.includes(q);
+  });
   const change = Math.max(0, Math.round(Number(cashReceived) - total));
-
-  // Quick bills for Uzbek so'm (UZS): 10 000, 20 000, 50 000, 100 000, 200 000, plus exact total
   const UZS_QUICK_BILLS = [{
-    label: t.exactAmount,
+    label: t.exactAmount || "Aniq",
     value: total
   }, {
     label: '10 000',
@@ -1162,14 +2438,18 @@ function CheckoutModal({
     try {
       const payload = {
         items: cart.map(i => ({
-          product_id: i.product.id,
+          product_id: typeof i.product.id === 'number' ? i.product.id : null,
+          barcode: i.product.barcode,
+          name: i.product.name,
+          price: i.product.sale_price,
           quantity: i.quantity
         })),
         payment_method: method,
         cash_received: method === 'CASH' ? Number(cashReceived) : 0,
         card_amount: method === 'CARD' ? total : 0,
         debt_amount: method === 'DEBT' ? total : 0,
-        debtor_id: method === 'DEBT' ? Number(selectedDebtor) : null
+        debtor_id: method === 'DEBT' ? selectedDebtor ? selectedDebtor.id : null : null,
+        due_date: method === 'DEBT' ? dueDate || null : null
       };
       const res = await fetch(`${API_BASE}/pos/checkout`, {
         method: 'POST',
@@ -1180,7 +2460,7 @@ function CheckoutModal({
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'To\'lovda xatolik yuz berdi');
+      if (!res.ok) throw new Error(data.detail || "To'lovda xatolik yuz berdi");
       onSuccess(data);
     } catch (err) {
       notify(err.message, 'error');
@@ -1189,14 +2469,14 @@ function CheckoutModal({
     }
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm"
+    className: "fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm animate-fade-in"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl text-slate-800 dark:text-slate-100 transition-colors duration-200"
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl text-slate-800 dark:text-slate-100 transition-colors duration-200 max-h-[90vh] overflow-y-auto"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-base sm:text-lg font-bold flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, "💳 ", t.checkoutTitle), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, "💳 ", t.checkoutTitle || "To'lov"), /*#__PURE__*/React.createElement("span", {
     className: "text-emerald-600 dark:text-emerald-400 font-extrabold font-mono"
   }, formatMoney(total))), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
@@ -1206,20 +2486,20 @@ function CheckoutModal({
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setMethod('CASH'),
-    className: `py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${method === 'CASH' ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`
-  }, "💵 ", t.methodCash), /*#__PURE__*/React.createElement("button", {
+    className: `py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${method === 'CASH' ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'}`
+  }, "💵 ", t.methodCash || "Naqd"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setMethod('CARD'),
-    className: `py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${method === 'CARD' ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`
-  }, "💳 ", t.methodCard), /*#__PURE__*/React.createElement("button", {
+    className: `py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${method === 'CARD' ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'}`
+  }, "💳 ", t.methodCard || "Karta"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setMethod('DEBT'),
-    className: `py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${method === 'DEBT' ? 'bg-amber-600 border-amber-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`
-  }, "📓 ", t.methodDebt)), method === 'CASH' && /*#__PURE__*/React.createElement("div", {
+    className: `py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${method === 'DEBT' ? 'bg-amber-600 border-amber-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'}`
+  }, "📓 ", t.methodDebt || "Qarz")), method === 'CASH' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
-  }, t.cashReceivedLabel), /*#__PURE__*/React.createElement("input", {
+  }, t.cashReceivedLabel || "Qabul qilingan summa (so'm)"), /*#__PURE__*/React.createElement("input", {
     type: "number",
     value: cashReceived,
     onChange: e => setCashReceived(Number(e.target.value)),
@@ -1235,7 +2515,7 @@ function CheckoutModal({
     className: "bg-slate-100 dark:bg-slate-800/80 rounded-2xl p-3.5 flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-sm font-semibold text-slate-600 dark:text-slate-400"
-  }, t.changeLabel), /*#__PURE__*/React.createElement("span", {
+  }, t.changeLabel || "Qaytim", ":"), /*#__PURE__*/React.createElement("span", {
     className: `text-xl font-black font-mono ${cashReceived >= total ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`
   }, formatMoney(change)))), method === 'CARD' && /*#__PURE__*/React.createElement("div", {
     className: "bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center space-y-2"
@@ -1243,48 +2523,72 @@ function CheckoutModal({
     className: "text-4xl"
   }, "💳"), /*#__PURE__*/React.createElement("div", {
     className: "text-sm font-bold text-slate-800 dark:text-slate-200"
-  }, t.cardSwipePrompt), /*#__PURE__*/React.createElement("div", {
+  }, t.cardSwipePrompt || "Terminal orqali to'lang"), /*#__PURE__*/React.createElement("div", {
     className: "text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono"
   }, formatMoney(total))), method === 'DEBT' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between items-center mb-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("label", {
-    className: "text-xs font-semibold text-slate-600 dark:text-slate-400"
-  }, t.selectDebtorLabel), /*#__PURE__*/React.createElement("button", {
+    className: "text-xs font-bold text-slate-700 dark:text-slate-300"
+  }, lang === 'uz' ? "Qarzdor mijozni tanlang:" : "Выберите должника:"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreatingDebtor(!creatingDebtor),
     className: "text-xs text-amber-600 dark:text-amber-400 font-bold hover:underline"
-  }, creatingDebtor ? t.cancelBtn : t.newDebtorBtn)), !creatingDebtor ? /*#__PURE__*/React.createElement("select", {
-    value: selectedDebtor,
-    onChange: e => setSelectedDebtor(e.target.value),
-    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-500"
-  }, debtors.map(d => /*#__PURE__*/React.createElement("option", {
-    key: d.id,
-    value: d.id
-  }, d.full_name, " (", formatMoney(d.balance), " qarz) ", d.phone || ''))) : /*#__PURE__*/React.createElement("div", {
+  }, creatingDebtor ? t.cancelBtn || "Bekor qilish" : "+ Yangi mijoz qo'shish")), creatingDebtor ? /*#__PURE__*/React.createElement("div", {
     className: "p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl space-y-2"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: t.debtorNameLabel,
+    placeholder: "Mijoz to'liq ismi (masalan: Rustam aka)",
     value: newDebtorName,
     onChange: e => setNewDebtorName(e.target.value),
-    className: "w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
+    className: "w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: "+998 (90) 000-00-00",
+    placeholder: "+998 90 123-45-67",
     value: newDebtorPhone,
     onChange: e => setNewDebtorPhone(e.target.value),
-    className: "w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
+    className: "w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
   }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: handleCreateDebtor,
-    className: "w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-1.5 rounded-xl text-xs"
-  }, t.saveBtn))), /*#__PURE__*/React.createElement("div", {
-    className: "p-3 bg-slate-100 dark:bg-slate-800/80 rounded-2xl flex justify-between items-center"
+    className: "w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs shadow"
+  }, t.saveBtn || "Saqlash")) : /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "Mijozni qidirish (ism yoki telefon)...",
+    value: debtorSearch,
+    onChange: e => setDebtorSearch(e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "max-h-40 overflow-y-auto space-y-1 pr-1 border border-slate-200 dark:border-slate-800 rounded-xl p-1 bg-slate-50/50 dark:bg-slate-900/50"
+  }, filteredDebtors.map(d => {
+    const isSelected = selectedDebtor && selectedDebtor.id === d.id;
+    return /*#__PURE__*/React.createElement("div", {
+      key: d.id,
+      onClick: () => setSelectedDebtor(d),
+      className: `p-2 rounded-xl cursor-pointer transition flex items-center justify-between text-xs ${isSelected ? 'bg-amber-600 text-white font-bold shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "truncate pr-2"
+    }, /*#__PURE__*/React.createElement("div", null, d.full_name), d.phone && /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] opacity-75 font-mono"
+    }, d.phone)), /*#__PURE__*/React.createElement("div", {
+      className: "font-mono text-right font-bold whitespace-nowrap"
+    }, formatMoney(d.balance), " qarz"));
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, "📅 ", lang === 'uz' ? "Qaytarish muddati (Due date, ixtiyoriy):" : "Срок возврата долга (опционально):"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: lang === 'uz' ? "Masalan: dushanba yoki 2026-11-20" : "Например: понедельник или 2026-11-20",
+    value: dueDate,
+    onChange: e => setDueDate(e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl flex justify-between items-center border border-amber-200 dark:border-amber-800"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-slate-600 dark:text-slate-400 font-semibold"
-  }, t.debtRecorded), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-amber-800 dark:text-amber-200 font-semibold"
+  }, lang === 'uz' ? "Qarzga yoziladigan summa:" : "Сумма в долг:"), /*#__PURE__*/React.createElement("span", {
     className: "text-lg font-black text-amber-600 dark:text-amber-400 font-mono"
   }, formatMoney(total)))), /*#__PURE__*/React.createElement("div", {
     className: "mt-5 flex gap-2"
@@ -1292,15 +2596,13 @@ function CheckoutModal({
     type: "button",
     onClick: onClose,
     className: "flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-3 rounded-2xl text-xs font-semibold transition"
-  }, t.cancelBtn), /*#__PURE__*/React.createElement("button", {
+  }, t.cancelBtn || "Bekor qilish"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: loading || method === 'CASH' && cashReceived < total || method === 'DEBT' && !selectedDebtor,
     onClick: handleSubmit,
     className: "flex-2 w-2/3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white py-3 rounded-2xl text-xs sm:text-sm font-bold shadow-lg transition"
-  }, loading ? t.processing : t.confirmPayBtn))));
+  }, loading ? t.processing || "Bajarilmoqda..." : t.confirmPayBtn || "To'lovni yakunlash"))));
 }
-
-// ------------------- RECEIPT MODAL -------------------
 function ReceiptModal({
   receipt,
   onClose,
@@ -1378,6 +2680,9 @@ function DebtsScreen({
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [addDebtModalOpen, setAddDebtModalOpen] = useState(false);
   const [createDebtorModalOpen, setCreateDebtorModalOpen] = useState(false);
+  const [voiceDebtOpen, setVoiceDebtOpen] = useState(false);
+  const [ocrDebtOpen, setOcrDebtOpen] = useState(false);
+  const lang = typeof window !== "undefined" && window.pos_lang || typeof localStorage !== "undefined" && localStorage.getItem("pos_lang") || "uz";
   useEffect(() => {
     fetchDebtors();
     fetchSummary();
@@ -1436,11 +2741,21 @@ function DebtsScreen({
   }, "/ ", summary ? summary.debtors_count : 0))), /*#__PURE__*/React.createElement("span", {
     className: "text-3xl"
   }, "👥")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex items-center"
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 shadow-sm flex flex-col justify-center gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setCreateDebtorModalOpen(true),
-    className: "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl shadow transition text-xs sm:text-sm flex items-center justify-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, "➕"), /*#__PURE__*/React.createElement("span", null, t.addDebtorModalTitle)))), /*#__PURE__*/React.createElement("div", {
+    className: "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl shadow transition text-xs flex items-center justify-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", null, "➕"), /*#__PURE__*/React.createElement("span", null, t.addDebtorModalTitle || "Yangi mijoz")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setVoiceDebtOpen(true),
+    className: "bg-purple-600 hover:bg-purple-500 text-white font-bold py-1.5 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1",
+    title: "Ovozli qarz yozish"
+  }, /*#__PURE__*/React.createElement("span", null, "🎙️"), /*#__PURE__*/React.createElement("span", null, "Ovozli")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOcrDebtOpen(true),
+    className: "bg-amber-600 hover:bg-amber-500 text-white font-bold py-1.5 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1",
+    title: "Daftardan rasm olish"
+  }, /*#__PURE__*/React.createElement("span", null, "📸"), /*#__PURE__*/React.createElement("span", null, "Daftar OCR"))))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -1464,7 +2779,9 @@ function DebtsScreen({
     className: "text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5"
   }, "📞 ", debtor.phone), debtor.note && /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-slate-400 mt-1 italic"
-  }, "\"", debtor.note, "\"")), /*#__PURE__*/React.createElement("div", {
+  }, "\"", debtor.note, "\""), debtor.due_date && /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-amber-600 dark:text-amber-400 font-bold mt-1 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", null, "⏳"), /*#__PURE__*/React.createElement("span", null, t.dueDateLabel || "Muddati", ": ", debtor.due_date))), /*#__PURE__*/React.createElement("div", {
     className: "text-right"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-slate-400 block"
@@ -1904,6 +3221,22 @@ function CatalogScreen({
       notify('Sinxronlashda xatolik', 'error');
     }
   };
+  const clearCatalog = async () => {
+    if (!confirm(t.clearCatalogWarning || "Rostdan ham barcha test tovarlar va cheklarni tozalamoqchimisiz? Kechki savdo uchun toza baza tayyorlanadi.")) return;
+    try {
+      const res = await fetch(`${API_BASE}/products/clear-catalog`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      notify(data.message || "Baza tozalandi!");
+      fetchProducts();
+    } catch (e) {
+      notify('Tozalashda xatolik', 'error');
+    }
+  };
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1915,8 +3248,16 @@ function CatalogScreen({
   }, total, " SKU")), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 dark:text-slate-400"
   }, "Shtrixkodlar, tovar narxlari va qoldiq monitoringi")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 w-full md:w-auto"
-  }, /*#__PURE__*/React.createElement("input", {
+    className: "flex flex-wrap items-center gap-2 w-full md:w-auto"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: clearCatalog,
+    className: "bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1 touch-target",
+    title: "Test tovarlar va savdolarni tozalash"
+  }, /*#__PURE__*/React.createElement("span", null, "🗑️"), /*#__PURE__*/React.createElement("span", null, t.clearCatalogBtn || "Toza varaqdan boshlash")), /*#__PURE__*/React.createElement("button", {
+    onClick: reseed,
+    className: "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition border border-slate-300 dark:border-slate-700 flex items-center gap-1 touch-target",
+    title: "2000 ta demo tovarlarni qaytarish"
+  }, /*#__PURE__*/React.createElement("span", null, "🔄"), /*#__PURE__*/React.createElement("span", null, t.reseedCatalogBtn || "2000 ta tovar")), /*#__PURE__*/React.createElement("input", {
     type: "text",
     placeholder: t.searchProductPlaceholder,
     value: search,
@@ -2009,6 +3350,8 @@ function SuppliersScreen({
   const [createInvoiceModalOpen, setCreateInvoiceModalOpen] = useState(false);
   const [payInvoiceModalOpen, setPayInvoiceModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [ocrInvoiceOpen, setOcrInvoiceOpen] = useState(false);
+  const lang = typeof window !== "undefined" && window.pos_lang || typeof localStorage !== "undefined" && localStorage.getItem("pos_lang") || "uz";
   useEffect(() => {
     fetchSuppliers();
     fetchInvoices();
@@ -2067,6 +3410,9 @@ function SuppliersScreen({
     onClick: () => setCreateSupplierModalOpen(true),
     className: "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-sm"
   }, t.addSupplierBtn), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOcrInvoiceOpen(true),
+    className: "bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-md flex items-center gap-1.5 touch-target"
+  }, /*#__PURE__*/React.createElement("span", null, "📸"), /*#__PURE__*/React.createElement("span", null, t.scanInvoiceBtn || "Faktura OCR")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setCreateInvoiceModalOpen(true),
     className: "bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-md"
   }, t.addInvoiceBtn))), /*#__PURE__*/React.createElement("div", {
@@ -2841,6 +4187,89 @@ function AnalyticsScreen({
   }, item.name)), /*#__PURE__*/React.createElement("div", {
     className: "font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400"
   }, item.quantity_sold, " dona • ", formatMoney(item.revenue))))))));
+}
+
+// ------------------- PRICE TAG MODAL -------------------
+function PriceTagModal({
+  onClose,
+  t,
+  sessionLocal
+}) {
+  const [productId, setProductId] = useState(0);
+  const [price, setPrice] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [template, setTemplate] = useState('');
+  const handleGenerate = async e => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/expenses/price-tag', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          product_id: productId,
+          price,
+          quantity
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Xatolik');
+      setTemplate(data.template);
+      notify('Fiyatka generatsiyalandi!');
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleGenerate,
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl text-slate-800 dark:text-slate-100"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100 mb-3"
+  }, "🏷️ Fiyatka generatori"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, "Mahsulot ID"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: productId,
+    onChange: e => setProductId(Number(e.target.value)),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500",
+    required: true
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, "Sotish narxi (so'm)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "any",
+    value: price,
+    onChange: e => setPrice(Number(e.target.value)),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500",
+    required: true
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, "Miqdar"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "any",
+    value: quantity,
+    onChange: e => setQuantity(Number(e.target.value)),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500",
+    required: true
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, "Shblash uchun narx"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 dark:text-slate-400 mt-1"
+  }, "Barcha mahsulotlar uchun bir xil narx kiriting")), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    disabled: loading,
+    className: "w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm sm:text-base flex items-center justify-center gap-2"
+  }, loading ? 'Yuborilmoqda...' : 'Generatsiya qilish'))));
 }
 
 // ------------------- ERROR BOUNDARY -------------------

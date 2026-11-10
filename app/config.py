@@ -5,15 +5,15 @@ DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(_
 
 def resolve_database_url() -> str:
     """Resolves database URL with priority:
-    1. Explicit DATABASE_URL environment variable
+    1. Explicit DATABASE_URL environment variable (fixing postgres:// to postgresql://)
     2. HF Spaces Persistent Storage (/data) if directory exists and is writable
     3. DATA_DIR environment variable
     4. Default local repository grocery_pos.db
     """
     env_url = os.getenv("DATABASE_URL")
-    if env_url and env_url.startswith("postgres://"):
-        env_url = env_url.replace("postgres://", "postgresql://", 1)
     if env_url:
+        if env_url.startswith("postgres://"):
+            env_url = env_url.replace("postgres://", "postgresql://", 1)
         return env_url
 
     # Check Hugging Face Spaces Persistent Storage mount (/data)
@@ -36,7 +36,7 @@ class Settings(BaseModel):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
-    # Database (defaults to persistent /data if on HF Spaces, or local grocery_pos.db)
+    # Database
     DATABASE_URL: str = resolve_database_url()
     
     # Security
@@ -64,7 +64,6 @@ class Settings(BaseModel):
         raw = self.DATABASE_URL[len("sqlite:///"):]
         if raw == ":memory:":
             return None
-        # On Linux /data/grocery_pos.db -> /data/grocery_pos.db
         if raw.startswith("/"):
             return raw
         return os.path.abspath(raw)

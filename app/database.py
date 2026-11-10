@@ -13,17 +13,34 @@ if settings.sqlite_file_path:
             pass
 
 connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
+db_url = settings.DATABASE_URL
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+if db_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
 engine = create_engine(
-    settings.DATABASE_URL.replace(chr(112)+chr(111)+chr(115)+chr(116)+chr(103)+chr(114)+chr(101)+chr(115)+chr(58)+chr(47)+chr(47), chr(112)+chr(111)+chr(115)+chr(116)+chr(103)+chr(114)+chr(101)+chr(115)+chr(113)+chr(108)+chr(58)+chr(47)+chr(47)),
+    db_url,
     echo=False,
     connect_args=connect_args
 )
 
 def init_db() -> None:
     SQLModel.metadata.create_all(engine)
+    # Safe migration: ensure due_date columns exist if existing DB
+    try:
+        with engine.begin() as conn:
+            for col_stmt in [
+                "ALTER TABLE debtor ADD COLUMN due_date VARCHAR(100)",
+                "ALTER TABLE debttransaction ADD COLUMN due_date VARCHAR(100)"
+            ]:
+                try:
+                    conn.exec_driver_sql(col_stmt)
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:

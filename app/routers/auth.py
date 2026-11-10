@@ -55,3 +55,35 @@ def get_me(current_user: User = Depends(get_current_user)):
         full_name=current_user.full_name,
         role=current_user.role
     )
+
+class SwitchCashierRequest(BaseModel):
+    cashier_id: int
+
+@router.get("/cashiers", response_model=list[dict])
+def list_cashiers(session: Session = Depends(get_session)):
+    """List all cashiers for instant 1-tap shift switching."""
+    users = session.exec(select(User).where(User.is_active == True)).all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "full_name": u.full_name,
+            "role": u.role.value
+        }
+        for u in users
+    ]
+
+@router.post("/switch-cashier", response_model=TokenResponse)
+def switch_cashier(req: SwitchCashierRequest, session: Session = Depends(get_session)):
+    """Fast 1-tap cashier switch between shifts without typing credentials."""
+    user = session.get(User, req.cashier_id)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=404, detail="Kassir topilmadi / Кассир не найден")
+    
+    token = create_access_token(data={"sub": user.username, "role": user.role.value})
+    return TokenResponse(
+        access_token=token,
+        role=user.role,
+        username=user.username,
+        full_name=user.full_name
+    )

@@ -143,8 +143,7 @@ if os.path.exists(static_dir):
     async def serve_index():
         return FileResponse(os.path.join(static_dir, "index.html"))
 
-@app.get("/health", tags=["Health"])
-@app.get("/api/health", tags=["Health"])
+@app.get("/api/health")
 def health_check():
     return {
         "status": "ok",

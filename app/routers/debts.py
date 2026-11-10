@@ -14,12 +14,14 @@ class DebtorCreate(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=150)
     phone: Optional[str] = Field(default=None, max_length=50)
     note: Optional[str] = Field(default=None, max_length=500)
+    due_date: Optional[str] = Field(default=None, max_length=100)
     initial_debt: float = Field(default=0.0, ge=0.0, le=1000000000.0)
 
 class DebtorUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, min_length=1, max_length=150)
     phone: Optional[str] = Field(default=None, max_length=50)
     note: Optional[str] = Field(default=None, max_length=500)
+    due_date: Optional[str] = Field(default=None, max_length=100)
     is_active: Optional[bool] = None
 
 class DebtPaymentRequest(BaseModel):
@@ -28,6 +30,7 @@ class DebtPaymentRequest(BaseModel):
 
 class DebtIncreaseRequest(BaseModel):
     amount: float = Field(..., gt=0.0, le=1000000000.0)
+    due_date: Optional[str] = Field(default=None, max_length=100)
     note: Optional[str] = Field(default="Qarz qo'shish / Запись долга", max_length=255)
 
 class DebtorResponse(BaseModel):
@@ -35,6 +38,7 @@ class DebtorResponse(BaseModel):
     full_name: str
     phone: Optional[str]
     note: Optional[str]
+    due_date: Optional[str] = None
     balance: float
     is_active: bool
     created_at: datetime
@@ -47,6 +51,7 @@ class DebtTransactionResponse(BaseModel):
     transaction_type: DebtTransactionType
     sale_id: Optional[int]
     note: Optional[str]
+    due_date: Optional[str] = None
     created_by_name: Optional[str]
     created_at: datetime
 
@@ -108,6 +113,7 @@ def create_debtor(
         full_name=data.full_name.strip(),
         phone=data.phone.strip() if data.phone else None,
         note=data.note.strip() if data.note else None,
+        due_date=data.due_date,
         balance=round(data.initial_debt, 2),
         is_active=True,
         created_at=now_utc,
@@ -123,6 +129,7 @@ def create_debtor(
             amount=round(data.initial_debt, 2),
             transaction_type=DebtTransactionType.DEBT_INCREASE,
             note="Boshlang'ich qarz / Начальная фиксация долга при регистрации",
+            due_date=data.due_date,
             created_by_user_id=current_user.id,
             created_at=now_utc
         )
@@ -183,6 +190,8 @@ def pay_debt(
     amount = round(data.amount, 2)
     new_balance = round(debtor.balance - amount, 2)
     debtor.balance = new_balance
+    if data.due_date:
+        debtor.due_date = data.due_date
     debtor.updated_at = now_utc
     session.add(debtor)
 
@@ -191,6 +200,7 @@ def pay_debt(
         amount=amount,
         transaction_type=DebtTransactionType.DEBT_PAYMENT,
         note=data.note or "Qarz to'lovi / Внесение оплаты долга",
+        due_date=data.due_date,
         created_by_user_id=current_user.id,
         created_at=now_utc
     )
@@ -220,6 +230,8 @@ def add_debt(
     amount = round(data.amount, 2)
     new_balance = round(debtor.balance + amount, 2)
     debtor.balance = new_balance
+    if data.due_date:
+        debtor.due_date = data.due_date
     debtor.updated_at = now_utc
     session.add(debtor)
 
@@ -228,6 +240,7 @@ def add_debt(
         amount=amount,
         transaction_type=DebtTransactionType.DEBT_INCREASE,
         note=data.note or "Qo'shimcha qarz yozildi / Запись дополнительного долга",
+        due_date=data.due_date,
         created_by_user_id=current_user.id,
         created_at=now_utc
     )
@@ -268,6 +281,7 @@ def get_debtor_history(
             transaction_type=t.transaction_type,
             sale_id=t.sale_id,
             note=t.note,
+            due_date=t.due_date,
             created_by_name=creator.full_name if creator else "Tizim / Система",
             created_at=t.created_at
         ))

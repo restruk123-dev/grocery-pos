@@ -1,10 +1,10 @@
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select, func, or_
+from sqlmodel import Session, select, func, or_, delete
 
 from ..database import get_session
-from ..models import Product, Category, User, UserRole
+from ..models import Product, Category, User, UserRole, Sale, SaleItem, SupplierInvoice, SupplierInvoiceItem, SystemSetting
 from ..auth import get_current_user, require_role
 from ..seed import seed_database
 
@@ -123,6 +123,36 @@ def get_product_by_barcode(
 ):
     clean_barcode = barcode.strip()
     product = session.exec(select(Product).where(Product.barcode == clean_barcode, Product.is_active == True)).first()
+    detected_weight = None
+
+    # CIS / Uzbekistan Weighing Scales Barcode Support (EAN-13 prefixes 20..29)
+    # Structure: [2-digit prefix 20..29] + [5-digit PLU code] + [5-digit weight in grams] + [1 checksum]
+    if not product and len(clean_barcode) == 13 and clean_barcode[:2] in ("20", "21", "22", "23", "24", "28", "29"):
+        plu_raw = clean_barcode[2:7]
+        try:
+            plu_clean = str(int(plu_raw))
+        except ValueError:
+            plu_clean = plu_raw
+            
+        try:
+            weight_grams = float(clean_barcode[7:12])
+            detected_weight = round(weight_grams / 1000.0, 3) # e.g. 1.250 kg
+        except ValueError:
+            detected_weight = None
+
+        product = session.exec(
+            select(Product).where(
+                or_(
+                    Product.barcode == clean_barcode[:7],
+                    Product.barcode.startswith(clean_barcode[:7]),
+                    Product.barcode == plu_clean,
+                    Product.barcode == plu_raw,
+                    Product.barcode.like(f"%{plu_raw}%")
+                ),
+                Product.is_active == True
+            )
+        ).first()
+
     if not product:
         raise HTTPException(status_code=404, detail="Shtrixkod bo'yicha mahsulot topilmadi / Товар со штрихкодом не найден")
     
@@ -141,7 +171,8 @@ def get_product_by_barcode(
         "stock_quantity": product.stock_quantity,
         "min_stock_alert": product.min_stock_alert,
         "is_low_stock": product.stock_quantity <= product.min_stock_alert,
-        "is_active": product.is_active
+        "is_active": product.is_active,
+        "detected_weight": detected_weight
     }
 
 @router.get("/{product_id}", response_model=dict)
@@ -238,12 +269,42 @@ def delete_product(
     session.commit()
     return {"message": "Mahsulot arxivlandi / Товар архивирован"}
 
+@router.post("/clear-catalog")
+def clear_catalog(
+    current_user: User = Depends(require_role([UserRole.OWNER])),
+    session: Session = Depends(get_session)
+):
+    """Clears all test products, test sales, and invoices so the store starts clean."""
+    session.exec(delete(SaleItem))
+    session.exec(delete(Sale))
+    session.exec(delete(SupplierInvoiceItem))
+    session.exec(delete(SupplierInvoice))
+    session.exec(delete(Product))
+
+    cleared_setting = session.get(SystemSetting, "catalog_cleared")
+    if not cleared_setting:
+        cleared_setting = SystemSetting(key="catalog_cleared", value="true")
+    else:
+        cleared_setting.value = "true"
+    session.add(cleared_setting)
+    session.commit()
+
+    return {
+        "status": "ok",
+        "message": "Barcha test tovarlar va cheklar tozalandi. Do'kon toza varaqdan boshlashga tayyor! / Все тестовые товары и чеки очищены. База готова к реальной работе!"
+    }
+
 @router.post("/reseed-catalog")
 def reseed_catalog(
     target_count: int = Query(2000, ge=10, le=10000),
     current_user: User = Depends(require_role([UserRole.OWNER])),
     session: Session = Depends(get_session)
 ):
+    cleared_setting = session.get(SystemSetting, "catalog_cleared")
+    if cleared_setting:
+        cleared_setting.value = "false"
+        session.add(cleared_setting)
+        session.commit()
     stats = seed_database(session, target_sku_count=target_count)
     return {"message": f"Katalog yangilandi: {stats['products']} ta yangi SKU / Добавлено {stats['products']} SKU"}
 

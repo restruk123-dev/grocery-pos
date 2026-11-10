@@ -10,6 +10,39 @@ const TRANSLATIONS = {
   uz: {
     appName: "GroceryStore POS",
     appSubtitle: "Do'kon savdosi & Buxgalteriya",
+    switchCashierBtn: "Smena / Kassir",
+    cashierSwitchTitle: "Smenadagi kassirni tanlang (1-bosish)",
+    installAppBtn: "Ilovani o'rnatish",
+    installedMsg: "Ilova smartfoningizga o'rnatildi!",
+    cameraScannerBtn: "Kamera skaner",
+    torchOn: "Fonar (Yoqish)",
+    torchOff: "Fonar (O'chirish)",
+    barcodeScanned: "Shtrixkod o'qildi",
+    scaleWeightDetected: "Tarozidan tortilgan vazn aniqlandi",
+    voiceSearchBtn: "Ovoz",
+    voiceListening: "Eshitilmoqda... gapiring",
+    quickItemsTitle: "Tezkor tovarlar (Shtrixkodsiz)",
+    toggleAllCatalog: "Barcha tovarlar",
+    instantCashBtn: "Naqd (Aniq)",
+    instantCardBtn: "Karta (Humo/Uzcard)",
+    instantDebtBtn: "Qarzga",
+    saleSuccessToast: "Savdo muvaffaqiyatli saqlandi!",
+    printReceiptOptional: "Chekni chop etish",
+    voiceDebtBtn: "Ovozli qarz yozish",
+    voiceDebtPrompt: "Masalan: «Alisher 50 ming so'm nonga oldi, dushanba beradi»",
+    scanPaperNotebookBtn: "Qog'oz daftardan rasm olish",
+    ocrPreviewTitle: "Daftardan o'qilgan qarzlar predprosmotri",
+    importAllDebts: "Barchasini qarzlar daftariga kiritish",
+    dueDateLabel: "Qaytarish muddati",
+    scanInvoiceBtn: "Faktura / Yuk xatini skanerlash",
+    invoiceOcrTitle: "Faktura qatorlari predprosmotri",
+    importInvoiceBtn: "Omborga qabul qilish",
+    clearCatalogBtn: "Test tovarlarni tozalash / Toza varaqdan boshlash",
+    clearCatalogWarning: "Rostdan ham barcha test tovarlar va cheklarni tozalamoqchimisiz? Kechki savdo uchun toza baza tayyorlanadi.",
+    reseedCatalogBtn: "2000 ta demo tovarlarni qaytarish",
+    tabAiAssistant: "AI Yordamchi",
+    aiAssistantTitle: "Do'kon AI-yordamchisi",
+    aiPlaceholder: "Savolingizni yozing (masalan: Bugun qancha savdo bo'ldi? yoki Tamaki do'koni maslahatlari)...",
     ownerRole: "Ega (Xo'jayin)",
     cashierRole: "Kassir",
     tabPos: "📱 Kassa (POS)",
@@ -341,6 +374,31 @@ function App() {
   // Telegram modals
   const [testSendOpen, setTestSendOpen] = useState(false);
   const [zReportOpen, setZReportOpen] = useState(false);
+  const [cashierSwitchOpen, setCashierSwitchOpen] = useState(false);
+  const [storeAiOpen, setStoreAiOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    const handlePrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setCanInstall(true);
+    };
+    window.addEventListener('beforeinstallprompt', handlePrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setCanInstall(false);
+      notify(lang === 'uz' ? "Ilova smartfonga o'rnatildi!" : "Приложение успешно установлено!");
+    }
+    setDeferredPrompt(null);
+  };
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.uz;
   
@@ -449,55 +507,158 @@ function App() {
 
       {/* Telegram Modals */}
       {testSendOpen && <TestSendModal onClose={() => setTestSendOpen(false)} t={t} />}
+      {/* Cashier Shift Switcher Modal */}
+      {cashierSwitchOpen && (
+        <CashierSwitchModal
+          token={token}
+          currentUserId={user?.id || user?.username}
+          onClose={() => setCashierSwitchOpen(false)}
+          onSwitch={(newToken, newUser) => {
+            setToken(newToken);
+            setUser(newUser);
+            localStorage.setItem('pos_token', newToken);
+            localStorage.setItem('pos_user', JSON.stringify(newUser));
+          }}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
+
+      {/* Store AI Assistant Modal */}
+      {storeAiOpen && (
+        <StoreAiModal
+          token={token}
+          onClose={() => setStoreAiOpen(false)}
+          notify={notify}
+          t={t}
+          lang={lang}
+          onNavigate={(tab) => {
+            setActiveTab(tab);
+            setStoreAiOpen(false);
+          }}
+        />
+      )}
       {zReportOpen && <ZReportModal onClose={() => setZReportOpen(false)} t={t} />}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 py-2.5 shadow-sm transition-colors duration-200">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 flex-wrap">
-          {/* Logo & Shop Info */}
-          <div className="flex items-center gap-3">
-            <span className="text-2xl sm:text-3xl">🛒</span>
-            <div>
-              <div className="font-bold text-base sm:text-lg text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                <span>{t.appName}</span>
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
-                  {isOwner ? t.ownerRole : t.cashierRole}
-                </span>
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                {t.appSubtitle} • UZS (so'm)
-              </div>
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
+        {/* Top Control Bar */}
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 py-2">
+          {/* Logo & Active Cashier Switcher */}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🛒</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400">
+                {t.appName}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCashierSwitchOpen(true)}
+                className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1 hover:bg-emerald-200 transition"
+                title={lang === 'uz' ? "Smenani almashtirish (1-bosish)" : "Быстрая смена кассира"}
+              >
+                <span>👤 {user ? user.full_name.split(' ')[0] : 'Kassir'}</span>
+                <span className="text-[10px]">🔄</span>
+              </button>
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-none max-w-full">
+          {/* Quick Header Actions */}
+          <div className="flex items-center gap-1.5">
+            {/* Install PWA Button */}
+            {canInstall && (
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow flex items-center gap-1 transition animate-bounce"
+                title={lang === 'uz' ? "Ilovani smartfoningizga o'rnatish" : "Установить на рабочий стол"}
+              >
+                <span>📲</span>
+                <span className="hidden sm:inline">{lang === 'uz' ? "O'rnatish" : "Установить"}</span>
+              </button>
+            )}
+
+            {/* AI Assistant Button */}
+            <button
+              type="button"
+              onClick={() => setStoreAiOpen(true)}
+              className="px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800 transition flex items-center gap-1 shadow-sm"
+              title={lang === 'uz' ? "Do'kon AI-Yordamchisi" : "AI-Помощник"}
+            >
+              <span>🤖</span>
+              <span className="hidden md:inline">AI</span>
+            </button>
+
+            {/* Mobile QR */}
+            <button
+              type="button"
+              onClick={() => setNetworkModalOpen(true)}
+              className="p-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 transition shadow-sm"
+              title="Mobil telefon orqali ochish"
+            >
+              <span>📱</span>
+            </button>
+
+            {/* Language Switch */}
+            <button
+              type="button"
+              onClick={toggleLang}
+              className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 transition"
+            >
+              <span>{lang === 'uz' ? '🇺🇿 UZ' : '🇷🇺 RU'}</span>
+            </button>
+
+            {/* Theme Switch */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-1.5 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700"
+            >
+              <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+            </button>
+
+            {/* Logout */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-1.5 rounded-xl text-xs bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800"
+              title={t.logout}
+            >
+              <span>🚪</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Dedicated Horizontal Scrolling Tab Bar */}
+        <div className="border-t border-slate-200/80 dark:border-slate-800/80 px-2 py-1 bg-slate-50/80 dark:bg-slate-900/80">
+          <nav className="max-w-7xl mx-auto flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5">
             <button
               onClick={() => setActiveTab('pos')}
-              className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
                 activeTab === 'pos'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
               }`}
             >
               {t.tabPos}
             </button>
             <button
               onClick={() => setActiveTab('debts')}
-              className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
                 activeTab === 'debts'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
               }`}
             >
               {t.tabDebts}
             </button>
             <button
               onClick={() => setActiveTab('catalog')}
-              className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
                 activeTab === 'catalog'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
               }`}
             >
               {t.tabCatalog}
@@ -506,104 +667,43 @@ function App() {
               <>
                 <button
                   onClick={() => setActiveTab('suppliers')}
-                  className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
                     activeTab === 'suppliers'
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
                   }`}
                 >
                   {t.tabSuppliers}
                 </button>
                 <button
                   onClick={() => setActiveTab('expenses')}
-                  className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
                     activeTab === 'expenses'
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
                   }`}
                 >
                   {t.tabExpenses}
                 </button>
                 <button
                   onClick={() => setActiveTab('analytics')}
-                  className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
                     activeTab === 'analytics'
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
                   }`}
                 >
                   {t.tabAnalytics}
                 </button>
-                <button
-                  onClick={() => setActiveTab('telegram')}
-                  className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition whitespace-nowrap touch-target ${
-                    activeTab === 'telegram'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  🤖 Telegram
-                </button>
               </>
             )}
+            <button
+              onClick={() => setStoreAiOpen(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-purple-600 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/60 transition whitespace-nowrap touch-target"
+            >
+              🤖 {lang === 'uz' ? 'AI Yordamchi' : 'AI Помощник'}
+            </button>
           </nav>
-
-          {/* Controls: Theme, Language, Mobile QR, User info */}
-          <div className="flex items-center gap-2">
-            {/* Backup Button for Owner */}
-            {isOwner && (
-              <button
-                onClick={() => window.open('/api/backup?token=' + encodeURIComponent(token), '_blank')}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-950/80 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900 transition flex items-center gap-1 shadow-sm"
-                title={lang === 'uz' ? "Baza zaxira nusxasini yuklab olish" : "Скачать резервную копию базы данных"}
-              >
-                <span>💾</span>
-                <span className="hidden md:inline">{t.backupBtn}</span>
-              </button>
-            )}
-            {/* Mobile QR Button */}
-            <button
-              onClick={() => setNetworkModalOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900 transition flex items-center gap-1 shadow-sm"
-              title="Mobil telefon orqali ochish (QR kod)"
-            >
-              <span>📲</span>
-              <span className="hidden md:inline">{t.mobileQrBtn}</span>
-            </button>
-
-            {/* Language Switcher */}
-            <button
-              onClick={toggleLang}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700 transition flex items-center gap-1 shadow-sm"
-              title={lang === 'uz' ? 'Русский язык' : "O'zbek tili"}
-            >
-              <span>{lang === 'uz' ? '🇺🇿' : '🇷🇺'}</span>
-              <span>{lang === 'uz' ? "O'zbek" : 'Рус'}</span>
-            </button>
-
-            {/* Theme Switcher */}
-            <button
-              onClick={toggleTheme}
-              className="p-1.5 rounded-xl text-xs bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-amber-300 dark:border-slate-700 dark:hover:bg-slate-700 transition shadow-sm"
-              title={theme === 'dark' ? t.themeLight : t.themeDark}
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-
-            {/* User & Logout */}
-            <div className="flex items-center gap-2 pl-1 border-l border-slate-200 dark:border-slate-800">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 hidden lg:inline">
-                {user.full_name}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="px-2 py-1 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-xl transition font-medium"
-                title={t.logout}
-              >
-                🚪 <span className="hidden sm:inline">{t.logout}</span>
-              </button>
-            </div>
-          </div>
         </div>
       </header>
 
@@ -912,6 +1012,884 @@ function ZReportModal({ onClose, t }) {
   );
 }
 
+
+// ------------------- CASHIER SWITCH MODAL (3-4 CASHIERS) -------------------
+function CashierSwitchModal({ token, currentUserId, onClose, onSwitch, notify, t, lang }) {
+  const [cashiers, setCashiers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchCashiers();
+  }, []);
+
+  const fetchCashiers = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/cashiers`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setCashiers(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSelect = async (cashierId) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/switch-cashier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cashier_id: cashierId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Kassirni almashtirishda xatolik');
+      onSwitch(data.access_token, {
+        username: data.username,
+        full_name: data.full_name,
+        role: data.role
+      });
+      notify(lang === 'uz' ? `Kassir almashtirildi: ${data.full_name}` : `Смена переключена: ${data.full_name}`);
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl text-slate-800 dark:text-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">👥</span>
+            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+              {t.cashierSwitchTitle || 'Kassirni tanlang (1-bosish)'}
+            </h3>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+          {lang === 'uz' ? 'Kun davomida smenani almashtirish uchun kassir nomini bosing:' : 'Нажмите на имя кассира для мгновенного переключения смены:'}
+        </p>
+
+        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+          {cashiers.map((c) => {
+            const isCurrent = (c.id === currentUserId || c.username === currentUserId);
+            return (
+              <button
+                key={c.id}
+                onClick={() => handleSelect(c.id)}
+                disabled={loading}
+                className={`w-full p-3 rounded-2xl flex items-center justify-between transition border text-left touch-target ${
+                  isCurrent
+                    ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold shadow-sm'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-slate-800 dark:text-slate-200'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">{c.role === 'owner' ? '👑' : '👩‍💼'}</span>
+                  <div>
+                    <div className="text-xs font-bold">{c.full_name}</div>
+                    <div className="text-[10px] text-slate-400 uppercase font-mono">{c.role} • @{c.username}</div>
+                  </div>
+                </div>
+                {isCurrent && (
+                  <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                    {lang === 'uz' ? 'Hozirgi' : 'Текущий'}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- CAMERA BARCODE SCANNER MODAL (HTML5QRCODE) ------------
+function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
+  const [torchOn, setTorchOn] = useState(false);
+  const [facingMode, setFacingMode] = useState('environment');
+  const scannerRef = useRef(null);
+
+  useEffect(() => {
+    let html5QrCode = null;
+    let isStopped = false;
+
+    const startScanner = async () => {
+      try {
+        if (window.Html5Qrcode) {
+          html5QrCode = new window.Html5Qrcode('qr-reader');
+          scannerRef.current = html5QrCode;
+          const config = {
+            fps: 15,
+            qrbox: { width: 260, height: 160 },
+            aspectRatio: 1.333333
+          };
+          await html5QrCode.start(
+            { facingMode: facingMode },
+            config,
+            (decodedText) => {
+              if (decodedText && !isStopped) {
+                onScan(decodedText);
+              }
+            },
+            (err) => {}
+          );
+        }
+      } catch (err) {
+        console.error('Camera Scanner Error:', err);
+        notify(lang === 'uz' ? "Kamera ochilmadi: " + err.message : 'Ошибка камеры: ' + err.message, 'error');
+      }
+    };
+
+    startScanner();
+
+    return () => {
+      isStopped = true;
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => html5QrCode.clear()).catch(e => console.error(e));
+      }
+    };
+  }, [facingMode]);
+
+  const toggleTorch = async () => {
+    try {
+      if (scannerRef.current && scannerRef.current.applyVideoConstraints) {
+        const next = !torchOn;
+        await scannerRef.current.applyVideoConstraints({ advanced: [{ torch: next }] });
+        setTorchOn(next);
+      }
+    } catch (e) {
+      console.error('Torch error:', e);
+    }
+  };
+
+  const flipCamera = () => {
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-3 backdrop-blur-md">
+      <div className="bg-slate-900 border border-emerald-500/50 rounded-3xl w-full max-w-md p-4 text-white shadow-2xl relative overflow-hidden flex flex-col items-center">
+        <div className="w-full flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📷</span>
+            <span className="font-bold text-sm text-emerald-400">
+              {lang === 'uz' ? 'Shtrixkod skaneri' : 'Сканер штрихкодов'}
+            </span>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+
+        <div className="relative w-full rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center">
+          <div id="qr-reader" className="w-full h-full"></div>
+          {/* Target Box Reticle */}
+          <div className="absolute inset-8 border-2 border-emerald-400/80 rounded-2xl pointer-events-none flex items-center justify-center">
+            <div className="laser-line"></div>
+            <div className="text-[10px] text-emerald-300 font-mono absolute bottom-2 bg-black/60 px-2 py-0.5 rounded">
+              {lang === 'uz' ? "Shtrixkodni ramkaga to'g'rilang" : 'Наведите на штрихкод'}
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full flex items-center justify-around gap-2 mt-3 pt-2 border-t border-slate-800">
+          <button
+            type="button"
+            onClick={toggleTorch}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition ${
+              torchOn ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            <span>🔦</span>
+            <span>{torchOn ? (lang === 'uz' ? "Fonarni o'chirish" : 'Выкл фонарик') : (lang === 'uz' ? 'Fonar (Chiroq)' : 'Вкл фонарик')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={flipCamera}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+          >
+            <span>🔄</span>
+            <span>{lang === 'uz' ? "Kamera almashtirish" : 'Сменить камеру'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- VOICE DEBT RECORDING MODAL (HAQQIM.UZ) ----------------
+function VoiceDebtModal({ token, onClose, onSuccess, notify, t, lang }) {
+  const [speechText, setSpeechText] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [parsedData, setParsedData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      notify(lang === 'uz' ? "Brauzeringiz ovoz yozishni qo'llab-quvvatlamaydi" : 'Голосовой ввод не поддерживается', 'error');
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      recognition.interimResults = false;
+      setIsListening(true);
+
+      recognition.onresult = async (event) => {
+        setIsListening(false);
+        const text = event.results[0][0].transcript;
+        setSpeechText(text);
+        await parseVoice(text);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+    } catch (e) {
+      setIsListening(false);
+    }
+  };
+
+  const parseVoice = async (text) => {
+    if (!text.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/ai/parse-debt-voice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speech_text: text, language: lang })
+      });
+      const data = await res.json();
+      setParsedData(data);
+    } catch (e) {
+      notify('NLP parsing xatosi', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!parsedData || !parsedData.debtor_name || !parsedData.amount) {
+      notify('Mijoz va summa aniqlanmadi', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      let debtorId = parsedData.debtor_id;
+      if (!debtorId) {
+        const createRes = await fetch(`${API_BASE}/debts/debtors`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            full_name: parsedData.debtor_name,
+            due_date: parsedData.due_date || null,
+            note: parsedData.note || 'Ovozli yozuv',
+            initial_debt: Number(parsedData.amount)
+          })
+        });
+        const created = await createRes.json();
+        debtorId = created.id;
+      } else {
+        await fetch(`${API_BASE}/debts/debtors/${debtorId}/add-debt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            amount: Number(parsedData.amount),
+            due_date: parsedData.due_date || null,
+            note: parsedData.note || 'Ovozli yozuv'
+          })
+        });
+      }
+      notify(lang === 'uz' ? `Qarz saqlandi: ${parsedData.debtor_name} (${formatMoney(parsedData.amount)})` : `Долг сохранен: ${parsedData.debtor_name}`);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🎙️</span>
+            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+              {lang === 'uz' ? 'Ovozli qarz yozish (Haqqim.uz)' : 'Голосовая запись долга'}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        <div className="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mb-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            {lang === 'uz' ? 'Mikrofonni bosing va ayting:' : 'Нажмите на микрофон и произнесите:'}
+          </p>
+          <div className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-4 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
+            «Alisher 50 ming so'm nonga oldi, dushanba beradi»
+          </div>
+
+          <button
+            type="button"
+            onClick={startListening}
+            className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl transition mx-auto shadow-lg ${
+              isListening ? 'bg-rose-600 text-white animate-pulse shadow-rose-600/40' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+            }`}
+          >
+            <span>🎙️</span>
+          </button>
+          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 mt-2">
+            {isListening ? (lang === 'uz' ? 'Eshitilmoqda... gapiring' : 'Слушаю... говорите') : (lang === 'uz' ? 'Mikrofonni yoqish' : 'Включить микрофон')}
+          </div>
+        </div>
+
+        {speechText && (
+          <div className="mb-4">
+            <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Aytilgan matn:</label>
+            <div className="text-xs font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded-xl text-slate-800 dark:text-slate-200">
+              "{speechText}"
+            </div>
+          </div>
+        )}
+
+        {parsedData && (
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl space-y-2 mb-4">
+            <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 mb-1 flex items-center gap-1.5">
+              <span>✨</span>
+              <span>{lang === 'uz' ? "Aniqlangan ma'lumotlar:" : 'Распознанные данные:'}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Mijoz: </span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{parsedData.debtor_name}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Summa: </span>
+                <span className="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">{formatMoney(parsedData.amount)}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Muddat: </span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">{parsedData.due_date_label || parsedData.due_date || 'Belgilanmagan'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Izoh: </span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{parsedData.note || '-'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+          >
+            {t.cancelBtn}
+          </button>
+          <button
+            type="button"
+            disabled={!parsedData || loading}
+            onClick={handleConfirm}
+            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+          >
+            {loading ? t.saving : (lang === 'uz' ? 'Qarzni yozish' : 'Записать долг')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- PAPER DEBT NOTEBOOK OCR MODAL ------------------------
+function OcrDebtNotebookModal({ token, onClose, onSuccess, notify, t, lang }) {
+  const [ocrText, setOcrText] = useState('');
+  const [parsedRows, setParsedRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLoading(true);
+    try {
+      if (window.Tesseract) {
+        const worker = await window.Tesseract.createWorker(lang === 'uz' ? 'eng' : 'rus');
+        const ret = await worker.recognize(file);
+        await worker.terminate();
+        setOcrText(ret.data.text);
+        await parseText(ret.data.text);
+      } else {
+        notify('OCR kutubxonasi yuklanmoqda...', 'info');
+      }
+    } catch (err) {
+      console.error(err);
+      notify("Rasm matnini o'qishda xatolik", 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const parseText = async (text) => {
+    if (!text.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/ai/parse-debt-ocr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw_text: text })
+      });
+      const data = await res.json();
+      setParsedRows(data.items || []);
+    } catch (err) {
+      notify('Matnni tahlil qilishda xatolik', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateRow = (idx, field, val) => {
+    setParsedRows(prev => {
+      const copy = [...prev];
+      copy[idx][field] = field === 'amount' ? Number(val) : val;
+      return copy;
+    });
+  };
+
+  const removeRow = (idx) => {
+    setParsedRows(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleImportAll = async () => {
+    if (parsedRows.length === 0) return;
+    setLoading(true);
+    try {
+      for (const row of parsedRows) {
+        if (!row.debtor_name || !row.amount) continue;
+        if (row.matched_debtor_id) {
+          await fetch(`${API_BASE}/debts/debtors/${row.matched_debtor_id}/add-debt`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ amount: Number(row.amount), note: row.note || 'Daftardan kiritildi' })
+          });
+        } else {
+          await fetch(`${API_BASE}/debts/debtors`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              full_name: row.debtor_name,
+              initial_debt: Number(row.amount),
+              note: row.note || "Qog'oz daftardan"
+            })
+          });
+        }
+      }
+      notify(lang === 'uz' ? `${parsedRows.length} ta qarz bazaga kiritildi!` : `Импортировано ${parsedRows.length} долгов!`);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">📸</span>
+            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+              {lang === 'uz' ? "Qog'oz daftardan rasm olish (OCR)" : 'Фото-сканер тетради долгов'}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition"
+          >
+            <span>📷</span>
+            <span>{lang === 'uz' ? 'Kameradan rasmga olish / Yuklash' : 'Сделать фото / Загрузить'}</span>
+          </button>
+          {loading && <span className="text-xs text-emerald-600 font-semibold animate-pulse">{t.processing}</span>}
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-2 mb-3 pr-1">
+          {parsedRows.length === 0 ? (
+            <div className="text-center py-10 text-xs text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6">
+              {lang === 'uz' ? "Eski qog'oz daftaringiz sahifasini rasmga oling. Sun'iy intellekt mijozlar ismlari va qarz summalarini avtomatik jadvalga ajratadi." : 'Сфотографируйте страницу бумажной тетради долгов. ИИ автоматически выделит имена и суммы.'}
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400">
+                  <th className="py-2">Mijoz ismi</th>
+                  <th className="py-2">Summa (so'm)</th>
+                  <th className="py-2">Izoh</th>
+                  <th className="py-2 text-right">O'chirish</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {parsedRows.map((r, i) => (
+                  <tr key={i}>
+                    <td className="py-1.5 pr-2">
+                      <input
+                        type="text"
+                        value={r.debtor_name}
+                        onChange={(e) => updateRow(i, 'debtor_name', e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs"
+                      />
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <input
+                        type="number"
+                        value={r.amount}
+                        onChange={(e) => updateRow(i, 'amount', e.target.value)}
+                        className="w-28 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono font-bold text-emerald-600"
+                      />
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <input
+                        type="text"
+                        value={r.note || ''}
+                        onChange={(e) => updateRow(i, 'note', e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs"
+                      />
+                    </td>
+                    <td className="py-1.5 text-right">
+                      <button
+                        onClick={() => removeRow(i)}
+                        className="text-rose-500 hover:text-rose-700 font-bold px-2 py-1"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500">{t.cancelBtn}</button>
+          <button
+            onClick={handleImportAll}
+            disabled={parsedRows.length === 0 || loading}
+            className="px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+          >
+            {lang === 'uz' ? `Barchasini kiritish (${parsedRows.length} ta)` : `Импортировать все (${parsedRows.length})`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- INVOICE PHOTO SCANNER MODAL (KIRIM) -------------------
+function OcrInvoiceModal({ token, suppliers, onClose, onSuccess, notify, t, lang }) {
+  const [supplierId, setSupplierId] = useState(suppliers.length > 0 ? suppliers[0].id : '');
+  const [parsedItems, setParsedItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLoading(true);
+    try {
+      if (window.Tesseract) {
+        const worker = await window.Tesseract.createWorker(lang === 'uz' ? 'eng' : 'rus');
+        const ret = await worker.recognize(file);
+        await worker.terminate();
+        await parseInvoiceText(ret.data.text);
+      }
+    } catch (err) {
+      notify("Fakturani o'qishda xatolik", 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const parseInvoiceText = async (text) => {
+    try {
+      const res = await fetch(`${API_BASE}/ai/parse-invoice-ocr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw_text: text })
+      });
+      const data = await res.json();
+      setParsedItems(data.items || []);
+    } catch (err) {
+      notify("Faktura qatorlarini ajratib bo'lmadi", 'error');
+    }
+  };
+
+  const updateItem = (idx, field, val) => {
+    setParsedItems(prev => {
+      const copy = [...prev];
+      copy[idx][field] = Number(val);
+      copy[idx].total_price = Math.round(copy[idx].quantity * copy[idx].purchase_price);
+      return copy;
+    });
+  };
+
+  const handleSaveInvoice = async () => {
+    if (parsedItems.length === 0 || !supplierId) return;
+    setLoading(true);
+    try {
+      const payload = {
+        supplier_id: Number(supplierId),
+        items: parsedItems.map(it => ({
+          product_id: it.matched_product_id || 1,
+          quantity: Number(it.quantity),
+          purchase_price: Number(it.purchase_price)
+        })),
+        paid_amount: 0
+      };
+      const res = await fetch(`${API_BASE}/suppliers/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Yuk xatini saqlashda xatolik');
+      notify(lang === 'uz' ? 'Faktura omborga muvaffaqiyatli qabul qilindi!' : 'Накладная успешно принята на склад!');
+      onSuccess();
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">📑</span>
+            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+              {lang === 'uz' ? 'Faktura / Yuk xatini skanerlash' : 'Фото-сканер накладных (Kirim)'}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        <div className="flex items-center gap-3 mb-3">
+          <div className="flex-1">
+            <label className="text-[11px] font-semibold text-slate-500">Ta'minotchi:</label>
+            <select
+              value={supplierId}
+              onChange={(e) => setSupplierId(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold"
+            >
+              {suppliers.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-4 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow"
+          >
+            📷 {lang === 'uz' ? 'Rasmga olish' : 'Сделать фото'}
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-2 mb-3 pr-1">
+          {parsedItems.length === 0 ? (
+            <div className="text-center py-10 text-xs text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6">
+              {lang === 'uz' ? "Qog'oz faktura / yuk xatini rasmga oling. Tovar nomlari, soni va kirim narxlari avtomatik jadvalga olinadi." : 'Сфотографируйте бумажную накладную. Товары, количество и цены будут извлечены.'}
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400">
+                  <th className="py-2">Tovar</th>
+                  <th className="py-2">Miqdor</th>
+                  <th className="py-2">Kirim narxi</th>
+                  <th className="py-2">Jami</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {parsedItems.map((it, idx) => (
+                  <tr key={idx}>
+                    <td className="py-1.5 pr-2 font-medium">{it.product_name}</td>
+                    <td className="py-1.5 pr-2">
+                      <input
+                        type="number"
+                        value={it.quantity}
+                        onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
+                        className="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 text-xs"
+                      />
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <input
+                        type="number"
+                        value={it.purchase_price}
+                        onChange={(e) => updateItem(idx, 'purchase_price', e.target.value)}
+                        className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 text-xs font-mono"
+                      />
+                    </td>
+                    <td className="py-1.5 font-bold font-mono text-emerald-600">{formatMoney(it.total_price)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500">{t.cancelBtn}</button>
+          <button
+            onClick={handleSaveInvoice}
+            disabled={parsedItems.length === 0 || loading}
+            className="px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+          >
+            {lang === 'uz' ? 'Omborga qabul qilish' : 'Принять на склад'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- STORE AI ASSISTANT MODAL -----------------------------
+function StoreAiModal({ token, onClose, notify, t, lang, onNavigate }) {
+  const [messages, setMessages] = useState([
+    {
+      sender: 'ai',
+      text: lang === 'uz'
+        ? "Salom! Men sizning do'kon AI-yordamchingizman. Savdolar, qarzlar, ombor qoldiqlari yoki tamaki do'koniga moslashtirish bo'yicha savollaringiz bo'lsa, so'rang!"
+        : "Здравствуйте! Я ваш умный AI-помощник магазина. Отвечу на любые вопросы по выручке, долгам, остаткам или тиражированию кассы под табачный магазин."
+    }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const sendQuery = async (queryText) => {
+    const q = queryText || input;
+    if (!q.trim()) return;
+
+    setMessages(prev => [...prev, { sender: 'user', text: q }]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/ai/assistant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, language: lang })
+      });
+      const data = await res.json();
+      setMessages(prev => [
+        ...prev,
+        {
+          sender: 'ai',
+          text: data.answer,
+          suggestions: data.quick_suggestions || [],
+          actionType: data.action_type
+        }
+      ]);
+    } catch (err) {
+      setMessages(prev => [...prev, { sender: 'ai', text: 'Kechirasiz, xatolik yuz berdi.' }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 h-[600px] max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🤖</span>
+            <div>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                {lang === 'uz' ? "Do'kon AI-Yordamchisi" : 'AI-Помощник магазина'}
+              </h3>
+              <p className="text-[10px] text-emerald-600 font-bold">100% Bepul & Avtonom</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1 text-xs">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
+              <div className={`p-3 rounded-2xl max-w-[85%] whitespace-pre-wrap leading-relaxed ${
+                m.sender === 'user'
+                  ? 'bg-emerald-600 text-white rounded-br-none shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-200 dark:border-slate-700/60'
+              }`}>
+                {m.text}
+              </div>
+
+              {m.suggestions && m.suggestions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {m.suggestions.map((sug, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => sendQuery(sug)}
+                      className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold hover:bg-emerald-100 transition"
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          {loading && <div className="text-xs text-slate-400 animate-pulse">AI javob yozmoqda...</div>}
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); sendQuery(); }} className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={lang === 'uz' ? 'Savolingizni yozing...' : 'Напишите ваш вопрос...'}
+            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow disabled:opacity-40"
+          >
+            Yuborish
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ------------------- POS TERMINAL SCREEN -------------------
 function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSetLang, toggleLang: propToggleLang }) {
   const lang = propLang || (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
@@ -923,7 +1901,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       window.location.reload();
     } catch (e) {}
   });
-  const toggleLang = propToggleLang || (() => setLang(prev => prev === 'uz' ? 'ru' : 'uz'));
+
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [products, setProducts] = useState([]);
@@ -931,11 +1909,28 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const [barcodeQuery, setBarcodeQuery] = useState('');
   const [cart, setCart] = useState([]);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutInitialMethod, setCheckoutInitialMethod] = useState('CASH');
   const [lastReceipt, setLastReceipt] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [holdingCart, setHoldingCart] = useState(false);
+  const [successToast, setSuccessToast] = useState(null);
+  const [directLoading, setDirectLoading] = useState(false);
+  const [scannerActive, setScannerActive] = useState(false);
+  const [showAllCatalog, setShowAllCatalog] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
 
   const barcodeInputRef = useRef(null);
+
+  const QUICK_ITEMS = [
+    { id: 'q_tandir', name: "Tandir non", price: 4000, icon: '🫓', barcode: 'NON_TANDIR' },
+    { id: 'q_buxanka', name: "Buxanka non", price: 3000, icon: '🍞', barcode: 'NON_BUXANKA' },
+    { id: 'q_paket_katta', name: "Paket (katta)", price: 1000, icon: '🛍️', barcode: 'PAKET_KAT' },
+    { id: 'q_paket_kichik', name: "Paket (kichik)", price: 500, icon: '🛍️', barcode: 'PAKET_KICH' },
+    { id: 'q_tuxum', name: "Tuxum (1 dona)", price: 2000, icon: '🥚', barcode: 'TUXUM_1' },
+    { id: 'q_lavash', name: "Lavash xamiri", price: 5000, icon: '🌯', barcode: 'LAVASH' },
+    { id: 'q_suv', name: "Gazsiz suv 0.5L", price: 3000, icon: '💧', barcode: 'SUV_05' },
+    { id: 'q_shakar', name: "Shakar (1 kg)", price: 9000, icon: '🍚', barcode: 'SHAKAR_1' },
+    { id: 'q_sigaret', name: "Sigaret (Winston)", price: 22000, icon: '🚬', barcode: 'SIG_WINSTON' },
+    { id: 'q_zajigalka', name: "Zajigalka (Chaqmoq)", price: 3000, icon: '🔥', barcode: 'ZAJIGALKA' }
+  ];
 
   useEffect(() => {
     fetchCategories();
@@ -954,7 +1949,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
   const fetchProducts = async () => {
     try {
-      const params = new URLSearchParams({ limit: '30' });
+      const params = new URLSearchParams({ limit: '24' });
       if (search) params.append('search', search);
       if (selectedCategory) params.append('category_id', selectedCategory.toString());
 
@@ -968,140 +1963,113 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     }
   };
 
-  // Web Audio API beep function
   const playBeep = () => {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    oscillator.frequency.value = 800;
-    gainNode.gain.value = 0.3;
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.1);
-  };
-
-  // Barcode Scanner via camera / BarcodeDetector API
-  const [scannerActive, setScannerActive] = useState(false);
-  const [scannerError, setScannerError] = useState('');
-
-  const startScanner = async () => {
-    setScannerError('');
     try {
-      // Use BarcodeDetector API if available
-      if ('BarcodeDetector' in window) {
-        const detector = new BarcodeDetector({ formats: ['ean_13', 'upc_e', 'code_128'] });
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facing: 'environment', facingMode: { exact: 'environment' } }
-        });
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.plays = true;
-        video.style.display = 'none';
-        document.body.appendChild(video);
-
-        const canvas = document.createElement('canvas');
-        canvas.style.display = 'none';
-        document.body.appendChild(canvas);
-
-        const ctx = canvas.getContext('2d');
-        const config = { color: 'rgb(0, 0, 0)', width: 640, height: 480 };
-        const tick = () => {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const result = detector.detect(canvas);
-          result.forEach((barcode) => {
-            const code = barcode.raw_value;
-            if (code) {
-              const prodRes = await fetch(`${API_BASE}/products/barcode/${code}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              if (prodRes.ok) {
-                const prod = await prodRes.json();
-                addToCart(prod);
-                playBeep();
-                // Stop stream and cleanup
-                stream.getTracks().forEach(t => t.stop());
-                document.body.removeChild(video);
-                document.body.removeChild(canvas);
-                setScannerActive(false);
-                notify(`Shtrixkod qabul qilindi: ${code} / Штрихкод распознан: ${code}`);
-              }
-            }
-          });
-          requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      } else {
-        // Fallback: prompt manual entry since no BarcodeDetector support
-        notify('Sizning brauzeringiz BarcodeDetector API yordamida kamera skanerini qo\'llab-quvvatlaymiga emas / Ваш браузер не поддерживает BarcodeDetector API для камерного сканирования', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      setScannerError(err.message);
-      notify('Skanerda xatolik yuz berdi / Произошла ошибка в сканере', 'error');
-    }
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.frequency.value = 880;
+      gainNode.gain.value = 0.25;
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.12);
+    } catch (e) {}
   };
 
   const handleBarcodeSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const code = barcodeQuery.trim();
     if (!code) return;
+    await processBarcode(code);
+  };
 
+  const processBarcode = async (code) => {
     try {
-      const res = await fetch(`${API_BASE}/products/barcode/${code}`, {
+      const res = await fetch(`${API_BASE}/products/barcode/${encodeURIComponent(code)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) {
-        notify(`Shtrixkod topilmadi: ${code} / Штрихкод не найден`, 'error');
+        notify((lang === 'uz' ? "Shtrixkod topilmadi: " : "Штрихкод не найден: ") + code, 'error');
         setBarcodeQuery('');
         return;
       }
       const prod = await res.json();
-      addToCart(prod);
       playBeep();
+      const qty = prod.detected_weight ? Number(prod.detected_weight) : 1.0;
+      addToCart(prod, qty);
+      if (prod.detected_weight) {
+        notify((lang === 'uz' ? "Tarozidan tortilgan vazn aniqlandi: " : "Вес с весов: ") + qty + " kg");
+      } else {
+        notify(prod.name);
+      }
       setBarcodeQuery('');
+      if (barcodeInputRef.current) barcodeInputRef.current.focus();
     } catch (err) {
       notify(err.message, 'error');
     }
   };
 
-  const holdCurrentCart = async () => {
-    setHoldingCart(true);
+  const startVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      notify(lang === 'uz' ? "Brauzeringiz ovozli qidiruvni qo'llab-quvvatlamaydi" : "Голосовой ввод не поддерживается браузером", 'error');
+      return;
+    }
     try {
-      const res = await fetch(`${API_BASE}/pos/hold`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ cart_items: cart.map((item) => ({
-          product_id: item.product.id,
-          quantity: item.quantity
-        })) })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Hold xatolik');
-      notify(data.message || 'Chek saqlandi');
-      setCart([]);
-      setHoldingCart(false);
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      setVoiceListening(true);
+      notify(lang === 'uz' ? "Eshitilmoqda... tovar nomini ayting" : "Слушаю... назовите товар", 'info');
+
+      recognition.onresult = (e) => {
+        setVoiceListening(false);
+        const text = e.results[0][0].transcript;
+        setSearch(text);
+        notify((lang === 'uz' ? "Qidirilmoqda: " : "Поиск: ") + text);
+      };
+      recognition.onerror = () => {
+        setVoiceListening(false);
+      };
+      recognition.onend = () => {
+        setVoiceListening(false);
+      };
+      recognition.start();
     } catch (err) {
+      setVoiceListening(false);
       notify(err.message, 'error');
-      setHoldingCart(false);
     }
   };
 
-  const addToCart = (product) => {
+  const addToCart = (product, quantity = 1.0) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
         return prev.map((item) =>
           item.product.id === product.id
-            ? { ...item, quantity: Math.round((item.quantity + 1) * 100) / 100 }
+            ? { ...item, quantity: Math.round((item.quantity + quantity) * 100) / 100 }
             : item
         );
       }
-      return [...prev, { product, quantity: 1.0 }];
+      return [...prev, { product, quantity: Math.round(quantity * 100) / 100 }];
     });
+  };
+
+  const addQuickItem = (item) => {
+    playBeep();
+    const virtualProduct = {
+      id: item.barcode,
+      name: item.name,
+      barcode: item.barcode,
+      sale_price: item.price,
+      purchase_price: Math.round(item.price * 0.8),
+      unit: 'dona',
+      stock_quantity: 999
+    };
+    addToCart(virtualProduct, 1.0);
+    notify(item.name + " (+1)");
   };
 
   const updateQuantity = (productId, delta) => {
@@ -1128,365 +2096,450 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     return cart.reduce((sum, item) => sum + item.product.sale_price * item.quantity, 0);
   }, [cart]);
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
-      {/* Products & Fast Selection (8 cols) */}
-      <div className="lg:col-span-7 xl:col-span-8 space-y-3">
-        {/* Search & Barcode Bar */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row gap-2 transition-colors duration-200">
-          <form onSubmit={handleBarcodeSubmit} className="flex-1 flex gap-2">
-            <input
-              ref={barcodeInputRef}
-              type="text"
-              placeholder={t.barcodeScanPlaceholder}
-              value={barcodeQuery}
-              onChange={(e) => setBarcodeQuery(e.target.value)}
-              className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-            <button
-              type="submit"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition"
-            >
-              ↵
-            </button>
-          </form>
+  // Fast 1-Click Checkout Handler
+  const handleDirectCheckout = async (paymentMethod) => {
+    if (cart.length === 0) return;
+    if (paymentMethod === 'DEBT') {
+      setCheckoutInitialMethod('DEBT');
+      setCheckoutModalOpen(true);
+      return;
+    }
 
-          {/* Scanner Button */}
-          {isOwner ? (
-            <>
+    setDirectLoading(true);
+    try {
+      const payload = {
+        items: cart.map((i) => ({
+          product_id: typeof i.product.id === 'number' ? i.product.id : null,
+          barcode: i.product.barcode,
+          name: i.product.name,
+          price: i.product.sale_price,
+          quantity: i.quantity
+        })),
+        payment_method: paymentMethod,
+        cash_received: paymentMethod === 'CASH' ? cartTotal : 0,
+        card_amount: paymentMethod === 'CARD' ? cartTotal : 0,
+        debt_amount: 0,
+        debtor_id: null
+      };
+
+      const res = await fetch(`${API_BASE}/pos/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "To'lovda xatolik yuz berdi");
+
+      playBeep();
+      setCart([]);
+      setSuccessToast({
+        receiptNumber: data.receipt_number,
+        total: cartTotal,
+        method: paymentMethod,
+        data: data
+      });
+      setTimeout(() => setSuccessToast(null), 6000);
+      if (barcodeInputRef.current) barcodeInputRef.current.focus();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setDirectLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Non-blocking Checkout Success Toast Banner */}
+      {successToast && (
+        <div className="bg-emerald-600 text-white p-3 sm:p-4 rounded-2xl shadow-xl flex items-center justify-between gap-3 animate-fade-in transition">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">✅</span>
+            <div>
+              <div className="font-extrabold text-sm sm:text-base">
+                {lang === 'uz' ? "Savdo saqlandi: " : "Продажа сохранена: "}
+                {formatMoney(successToast.total)} ({successToast.method})
+              </div>
+              <div className="text-xs text-emerald-100 font-mono">
+                Chek #{successToast.receiptNumber}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setLastReceipt(successToast.data);
+              setSuccessToast(null);
+            }}
+            className="bg-white text-emerald-800 hover:bg-emerald-50 px-3 py-1.5 rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5"
+          >
+            <span>🖨️</span>
+            <span>{t.printReceiptOptional || "Chekni chop etish"}</span>
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
+        {/* Products & Fast Selection (8 cols) */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-3">
+          {/* Search, Barcode & Action Tools */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-sm flex flex-col sm:flex-row gap-2 transition-colors duration-200">
+            {/* Barcode input & Submit */}
+            <form onSubmit={handleBarcodeSubmit} className="flex-1 flex gap-1.5">
+              <input
+                ref={barcodeInputRef}
+                type="text"
+                placeholder={t.barcodeScanPlaceholder || "Shtrixkodni kiriting yoki skanerlang..."}
+                value={barcodeQuery}
+                onChange={(e) => setBarcodeQuery(e.target.value)}
+                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
               <button
-                onClick={startScanner}
-                className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition"
-                disabled={scannerActive}
-                title={lang === 'uz' ? 'Kameradan shtrixkod skanerish' : 'Сканер через камеру'}
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition"
               >
-                <span>{scannerActive ? '⏺️' : '📷'}</span>
-                <span className="hidden md:inline">{scannerActive ? ' Skaner yo\'q' : 'Skaner'}</span>
+                ↵
               </button>
-            </>
-          ) : (
+            </form>
+
+            {/* Camera Scanner Button (works for both Cashiers and Owner!) */}
             <button
-              onClick={() => notify('Kassada skaner avtomatik emas / В кассе нет автоматического сканера', 'info')}
-              className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition"
-              title="Cashier mode: manual barcode entry only"
+              type="button"
+              onClick={() => setScannerActive(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target"
+              title={lang === 'uz' ? "Kamera orqali shtrixkod skaneri" : "Сканер через камеру"}
             >
               <span>📷</span>
-              <span className="hidden md:inline">Manuel</span>
+              <span className="hidden sm:inline">{lang === 'uz' ? "Skaner" : "Сканер"}</span>
             </button>
-          )}
 
-          <input
-            type="text"
-            placeholder={t.searchProductPlaceholder}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-
-        {/* Categories Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
-              selectedCategory === null
-                ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-          >
-            {t.allCategories}
-          </button>
-          {categories.map((c) => (
+            {/* Voice Search Button */}
             <button
-              key={c.id}
-              onClick={() => setSelectedCategory(c.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
-                selectedCategory === c.id
-                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+              type="button"
+              onClick={startVoiceSearch}
+              className={`font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target ${
+                voiceListening
+                  ? 'bg-rose-600 text-white animate-pulse'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white'
               }`}
+              title={lang === 'uz' ? "Ovozli qidiruv (O'zbekcha / Ruscha)" : "Голосовой поиск"}
             >
-              {c.name.split('/')[0].trim()}
+              <span>🎙️</span>
+              <span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
             </button>
-          ))}
-        </div>
 
-        {/* Quick Items Grid - Popular & Weight Items */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pb-2">
-          {/* Weight items (no barcode needed) - Uz locale */}
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={() => lookupAndAddQuickItem('uz', 'bread')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Bread / Хлеб"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🍞</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('uz', 'tandyr_lepeshka')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Tandyr Lepeshka / Тандыр лепешка"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🫓</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('uz', 'sugar')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Sugar / Сахар"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🍚</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('uz', 'potatoes')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Potatoes / Картофель"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🥔</span>
-            </button>
+            {/* Text Search Input */}
+            <input
+              type="text"
+              placeholder={t.searchProductPlaceholder || "Tovar nomi bo'yicha qidirish..."}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full sm:w-44 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+            />
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={() => lookupAndAddQuickItem('uz', 'onions')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Onions / Лук"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🧅</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('uz', 'eggs')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Eggs / Яйца"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🥚</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('oz', 'bread')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Bread / Хлеб"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🍞</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('oz', 'tandyr_lepeshka')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Tandyr Lepeshka / Тандыр лепешка"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🫓</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('oz', 'sugar')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Sugar / Сахар"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🍚</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('oz', 'potatoes')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Potatoes / Картофель"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🥔</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('oz', 'onions')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Onions / Лук"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🧅</span>
-            </button>
-            <button
-              onClick={() => lookupAndAddQuickItem('oz', 'eggs')}
-              className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition text-center touch-target"
-              title="Eggs / Яйца"
-            >
-              {t.quickDemo}{' '}
-              <span className="text-[10px]">🥚</span>
-            </button>
-          </div>
-        </div>
 
-        {/* Product Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
-          {products.map((p) => {
-            const low = p.stock_quantity <= p.min_stock_alert;
-            return (
-              <div
-                key={p.id}
-                onClick={() => addToCart(p)}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition shadow-sm active:scale-95 touch-target select-none"
+          {/* Quick Non-Barcode Items (Essential for real grocery + tobacco speed) */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <span>⚡</span>
+                <span>{lang === 'uz' ? "Tezkor tovarlar (Shtrixkodsiz 1-bosish):" : "Быстрые товары (без штрихкода):"}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAllCatalog(!showAllCatalog)}
+                className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
               >
-                <div>
-                  <div className="text-[10px] text-slate-400 font-mono flex items-center justify-between">
-                    <span>{p.barcode}</span>
-                    {low && <span className="text-amber-500 font-bold">⚠️</span>}
-                  </div>
-                  <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 line-clamp-2 mt-1">
-                    {p.name}
-                  </h4>
-                </div>
-
-                <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {p.stock_quantity} {p.unit}
-                  </span>
-                  <span className="font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 font-mono">
-                    {formatMoney(p.sale_price)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Cart & Checkout Panel (4-5 cols) */}
-      <div className="lg:col-span-5 xl:col-span-4 flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm h-full max-h-[calc(100vh-140px)] sticky top-20 transition-colors duration-200">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-2">
-          <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <span>🛒</span>
-            <span>{t.cartTitle}</span>
-            <span className="text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
-              {cart.length}
-            </span>
-          </h3>
-          {cart.length > 0 && (
-            <button
-              onClick={clearCart}
-              className="text-xs text-rose-500 hover:text-rose-600 font-semibold"
-            >
-              {t.clearCart}
-            </button>
-          )}
-        </div>
-
-        {/* Cart Items List */}
-        <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1">
-          {cart.length === 0 ? (
-            <div className="h-48 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs">
-              <span className="text-3xl mb-2">🧺</span>
-              <p>{t.cartEmpty}</p>
+                {showAllCatalog
+                  ? (lang === 'uz' ? "Yashirish" : "Скрыть каталог")
+                  : (lang === 'uz' ? "Barcha tovarlar (2000+)" : "Показать все товары")}
+              </button>
             </div>
-          ) : (
-            cart.map((item) => (
-              <div
-                key={item.product.id}
-                className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-2.5 flex items-center justify-between gap-2"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                    {item.product.name}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                    {formatMoney(item.product.sale_price)} × {item.quantity} ={' '}
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      {formatMoney(item.product.sale_price * item.quantity)}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => updateQuantity(item.product.id, -1)}
-                    className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-600 text-sm"
-                  >
-                    -
-                  </button>
-                  <span className="font-bold text-xs w-6 text-center text-slate-900 dark:text-slate-100">
-                    {item.quantity}
-                  </span>
-                  <button
-                    onClick={() => updateQuantity(item.product.id, 1)}
-                    className="w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center hover:bg-emerald-500 text-sm"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => removeFromCart(item.product.id)}
-                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-500 text-xs flex items-center justify-center ml-1"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Cart Bottom Summary */}
-        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t.totalToPay}</span>
-            <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-              {formatMoney(cartTotal)}
-            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+              {QUICK_ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => addQuickItem(item)}
+                  className="bg-emerald-50/80 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-emerald-200 dark:border-slate-700 rounded-xl p-2 text-left transition flex items-center gap-2 touch-target shadow-sm"
+                >
+                  <span className="text-xl">{item.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate">
+                      {item.name}
+                    </div>
+                    <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                      {formatMoney(item.price)}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Hold Cart Button */}
-          {cart.length > 0 && !holdingCart && (
-            <button
-              onClick={() => holdCurrentCart()}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm sm:text-base flex items-center justify-center gap-2"
-              title={lang === 'uz' ? "Hozirgi chekni saqlash va Keyingi mijozga o'tish / Сохранить текущий чек и перевести следующего клиента" : 'Сохранить текущий чек и перевести следующего клиента'}
-            >
-              <span>📌</span>
-              <span>Hold ({formatMoney(cartTotal)})</span>
-            </button>
+          {/* Categories Pills (Visible when catalog expanded or search active) */}
+          {(showAllCatalog || search) && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
+                  selectedCategory === null
+                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                {t.allCategories}
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCategory(c.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
+                    selectedCategory === c.id
+                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {c.name.split('/')[0].trim()}
+                </button>
+              ))}
+            </div>
           )}
 
-          <button
-            onClick={() => setCheckoutModalOpen(true)}
-            disabled={cart.length === 0}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm sm:text-base flex items-center justify-center gap-2"
-          >
-            <span>💳</span>
-            <span>{t.checkoutBtn} ({formatMoney(cartTotal)})</span>
-          </button>
+          {/* Products Grid (Shown when search active or expanded) */}
+          {(showAllCatalog || search) && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
+              {products.map((p) => {
+                const low = p.stock_quantity <= 5;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      playBeep();
+                      addToCart(p);
+                    }}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm hover:shadow-md hover:border-emerald-500 cursor-pointer transition flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="text-[10px] text-slate-400 font-mono flex items-center justify-between">
+                        <span>{p.barcode}</span>
+                        {low && <span className="text-amber-500 font-bold">⚠️</span>}
+                      </div>
+                      <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-2 mt-1">
+                        {p.name}
+                      </h4>
+                    </div>
+
+                    <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {p.stock_quantity} {p.unit}
+                      </span>
+                      <span className="font-extrabold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-mono">
+                        {formatMoney(p.sale_price)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Checkout Payment Modal */}
-        {checkoutModalOpen && (
-          <CheckoutModal
-            token={token}
-            total={cartTotal}
-            cart={cart}
-            onClose={() => setCheckoutModalOpen(false)}
-            onSuccess={(receipt) => {
-              setCheckoutModalOpen(false);
-              setCart([]);
-              setLastReceipt(receipt);
-              notify(`Chek muvaffaqiyatli saqlandi / Чек успешно сохранен: ${receipt.receipt_number}`);
-            }}
-            notify={notify}
-            t={t}
-          />
-        )}
+        {/* Cart & Checkout Panel (4-5 cols) */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm h-full max-h-[calc(100vh-140px)] sticky top-20 transition-colors duration-200">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-2">
+            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>🛒</span>
+              <span>{t.cartTitle || "Savat"}</span>
+              <span className="text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                {cart.length}
+              </span>
+            </h3>
+            {cart.length > 0 && (
+              <button
+                onClick={clearCart}
+                className="text-xs text-rose-500 hover:text-rose-600 font-semibold"
+              >
+                {t.clearCart || "Tozalash"}
+              </button>
+            )}
+          </div>
 
-        {/* Receipt Modal */}
-        {lastReceipt && (
-          <ReceiptModal receipt={lastReceipt} onClose={() => setLastReceipt(null)} t={t} />
-        )}
+          {/* Cart Items List */}
+          <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1 max-h-64 sm:max-h-80">
+            {cart.length === 0 ? (
+              <div className="h-40 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs">
+                <span className="text-3xl mb-2">🧺</span>
+                <p>{t.cartEmpty || "Savat bo'sh. Tovar skanerlang yoki tezkor tugmalardan tanlang."}</p>
+              </div>
+            ) : (
+              cart.map((item) => (
+                <div
+                  key={item.product.id}
+                  className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-2.5 flex items-center justify-between gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                      {item.product.name}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      {formatMoney(item.product.sale_price)} × {item.quantity} ={' '}
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatMoney(item.product.sale_price * item.quantity)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => updateQuantity(item.product.id, -1)}
+                      className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-600 text-sm"
+                    >
+                      -
+                    </button>
+                    <span className="font-bold text-xs w-6 text-center text-slate-900 dark:text-slate-100">
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(item.product.id, 1)}
+                      className="w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center hover:bg-emerald-500 text-sm"
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => removeFromCart(item.product.id)}
+                      className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-500 text-xs flex items-center justify-center ml-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Cart Bottom Summary & 1-Click Checkout Buttons */}
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {t.totalToPay || "Jami to'lov"}:
+              </span>
+              <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                {formatMoney(cartTotal)}
+              </span>
+            </div>
+
+            {/* Fast 1-Click Checkout Actions */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={cart.length === 0 || directLoading}
+                onClick={() => handleDirectCheckout('CASH')}
+                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 touch-target text-xs sm:text-sm"
+                title="1 bosishda naqd pul bilan yopish"
+              >
+                <span>💵</span>
+                <span>{lang === 'uz' ? "Naqd (Aniq)" : "Наличные (Ровно)"}</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={cart.length === 0 || directLoading}
+                onClick={() => handleDirectCheckout('CARD')}
+                className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 touch-target text-xs sm:text-sm"
+                title="1 bosishda karta bilan yopish"
+              >
+                <span>💳</span>
+                <span>{lang === 'uz' ? "Karta (Humo/Uz)" : "Карта"}</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={cart.length === 0 || directLoading}
+                onClick={() => handleDirectCheckout('DEBT')}
+                className="bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-bold py-2.5 rounded-2xl shadow-sm transition flex items-center justify-center gap-1.5 touch-target text-xs"
+              >
+                <span>📓</span>
+                <span>{lang === 'uz' ? "Qarzga yozish" : "В долг"}</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={cart.length === 0 || directLoading}
+                onClick={() => {
+                  setCheckoutInitialMethod('CASH');
+                  setCheckoutModalOpen(true);
+                }}
+                className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-2.5 rounded-2xl border border-slate-300 dark:border-slate-700 transition flex items-center justify-center gap-1 touch-target text-xs"
+              >
+                <span>⚙️</span>
+                <span>{lang === 'uz' ? "Boshqa to'lov..." : "Сдача / Сплит"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Camera Scanner Modal */}
+          {scannerActive && (
+            <CameraScannerModal
+              onScan={(code) => {
+                setScannerActive(false);
+                processBarcode(code);
+              }}
+              onClose={() => setScannerActive(false)}
+              notify={notify}
+              t={t}
+              lang={lang}
+            />
+          )}
+
+          {/* Checkout Payment Modal */}
+          {checkoutModalOpen && (
+            <CheckoutModal
+              token={token}
+              total={cartTotal}
+              cart={cart}
+              initialMethod={checkoutInitialMethod}
+              onClose={() => setCheckoutModalOpen(false)}
+              onSuccess={(receipt) => {
+                setCheckoutModalOpen(false);
+                playBeep();
+                setCart([]);
+                setSuccessToast({
+                  receiptNumber: receipt.receipt_number,
+                  total: cartTotal,
+                  method: receipt.payment_method,
+                  data: receipt
+                });
+                setTimeout(() => setSuccessToast(null), 6000);
+              }}
+              notify={notify}
+              t={t}
+              lang={lang}
+            />
+          )}
+
+          {/* Receipt Modal (opened only when user taps print) */}
+          {lastReceipt && (
+            <ReceiptModal receipt={lastReceipt} onClose={() => setLastReceipt(null)} t={t} />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ------------------- CHECKOUT MODAL (UZS DENOMINATIONS) -------------------
-function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
-  const [method, setMethod] = useState('CASH'); // CASH, CARD, DEBT
+
+function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, onSuccess, notify, t, lang = 'uz' }) {
+  const [method, setMethod] = useState(initialMethod); // CASH, CARD, DEBT
   const [cashReceived, setCashReceived] = useState(total);
   const [debtors, setDebtors] = useState([]);
-  const [selectedDebtor, setSelectedDebtor] = useState('');
+  const [debtorSearch, setDebtorSearch] = useState('');
+  const [selectedDebtor, setSelectedDebtor] = useState(null);
+  const [dueDate, setDueDate] = useState('');
   const [newDebtorName, setNewDebtorName] = useState('');
   const [newDebtorPhone, setNewDebtorPhone] = useState('');
   const [creatingDebtor, setCreatingDebtor] = useState(false);
@@ -1503,8 +2556,8 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
       });
       const data = await res.json();
       setDebtors(data.items || []);
-      if (data.items && data.items.length > 0) {
-        setSelectedDebtor(data.items[0].id);
+      if (data.items && data.items.length > 0 && !selectedDebtor) {
+        setSelectedDebtor(data.items[0]);
       }
     } catch (e) {
       console.error(e);
@@ -1513,7 +2566,7 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
 
   const handleCreateDebtor = async () => {
     if (!newDebtorName.trim()) {
-      notify('Mijoz ismini kiriting / Введите имя клиента', 'error');
+      notify(lang === 'uz' ? "Mijoz ismini kiriting" : "Введите имя клиента", 'error');
       return;
     }
     try {
@@ -1530,10 +2583,10 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Mijoz yaratishda xatolik');
+      if (!res.ok) throw new Error(data.detail || "Mijoz yaratishda xatolik");
       notify(`Mijoz ${data.full_name} ro'yxatdan o'tdi`);
       await fetchDebtors();
-      setSelectedDebtor(data.id);
+      setSelectedDebtor(data);
       setCreatingDebtor(false);
       setNewDebtorName('');
       setNewDebtorPhone('');
@@ -1542,11 +2595,16 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
     }
   };
 
+  const filteredDebtors = debtors.filter((d) => {
+    if (!debtorSearch) return true;
+    const q = debtorSearch.toLowerCase();
+    return d.full_name.toLowerCase().includes(q) || (d.phone && d.phone.includes(q));
+  });
+
   const change = Math.max(0, Math.round(Number(cashReceived) - total));
 
-  // Quick bills for Uzbek so'm (UZS): 10 000, 20 000, 50 000, 100 000, 200 000, plus exact total
   const UZS_QUICK_BILLS = [
-    { label: t.exactAmount, value: total },
+    { label: t.exactAmount || "Aniq", value: total },
     { label: '10 000', value: 10000 },
     { label: '20 000', value: 20000 },
     { label: '50 000', value: 50000 },
@@ -1558,12 +2616,19 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
     setLoading(true);
     try {
       const payload = {
-        items: cart.map((i) => ({ product_id: i.product.id, quantity: i.quantity })),
+        items: cart.map((i) => ({
+          product_id: typeof i.product.id === 'number' ? i.product.id : null,
+          barcode: i.product.barcode,
+          name: i.product.name,
+          price: i.product.sale_price,
+          quantity: i.quantity
+        })),
         payment_method: method,
         cash_received: method === 'CASH' ? Number(cashReceived) : 0,
         card_amount: method === 'CARD' ? total : 0,
         debt_amount: method === 'DEBT' ? total : 0,
-        debtor_id: method === 'DEBT' ? Number(selectedDebtor) : null
+        debtor_id: method === 'DEBT' ? (selectedDebtor ? selectedDebtor.id : null) : null,
+        due_date: method === 'DEBT' ? (dueDate || null) : null
       };
 
       const res = await fetch(`${API_BASE}/pos/checkout`, {
@@ -1575,7 +2640,7 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'To\'lovda xatolik yuz berdi');
+      if (!res.ok) throw new Error(data.detail || "To'lovda xatolik yuz berdi");
       onSuccess(data);
     } catch (err) {
       notify(err.message, 'error');
@@ -1585,11 +2650,11 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl text-slate-800 dark:text-slate-100 transition-colors duration-200">
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl text-slate-800 dark:text-slate-100 transition-colors duration-200 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
           <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
-            <span>💳 {t.checkoutTitle}</span>
+            <span>💳 {t.checkoutTitle || "To'lov"}</span>
             <span className="text-emerald-600 dark:text-emerald-400 font-extrabold font-mono">
               {formatMoney(total)}
             </span>
@@ -1599,7 +2664,7 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
           </button>
         </div>
 
-        {/* Method Selection Tabs */}
+        {/* Method Switcher Tabs */}
         <div className="grid grid-cols-3 gap-2 mb-4">
           <button
             type="button"
@@ -1607,10 +2672,10 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
             className={`py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${
               method === 'CASH'
                 ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
             }`}
           >
-            💵 {t.methodCash}
+            💵 {t.methodCash || "Naqd"}
           </button>
           <button
             type="button"
@@ -1618,10 +2683,10 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
             className={`py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${
               method === 'CARD'
                 ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
             }`}
           >
-            💳 {t.methodCard}
+            💳 {t.methodCard || "Karta"}
           </button>
           <button
             type="button"
@@ -1629,10 +2694,10 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
             className={`py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${
               method === 'DEBT'
                 ? 'bg-amber-600 border-amber-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
             }`}
           >
-            📓 {t.methodDebt}
+            📓 {t.methodDebt || "Qarz"}
           </button>
         </div>
 
@@ -1641,7 +2706,7 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {t.cashReceivedLabel}
+                {t.cashReceivedLabel || "Qabul qilingan summa (so'm)"}
               </label>
               <input
                 type="number"
@@ -1666,7 +2731,7 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
             </div>
 
             <div className="bg-slate-100 dark:bg-slate-800/80 rounded-2xl p-3.5 flex justify-between items-center">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">{t.changeLabel}</span>
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">{t.changeLabel || "Qaytim"}:</span>
               <span
                 className={`text-xl font-black font-mono ${
                   cashReceived >= total ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
@@ -1682,71 +2747,108 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
         {method === 'CARD' && (
           <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center space-y-2">
             <div className="text-4xl">💳</div>
-            <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.cardSwipePrompt}</div>
+            <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.cardSwipePrompt || "Terminal orqali to'lang"}</div>
             <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
               {formatMoney(total)}
             </div>
           </div>
         )}
 
-        {/* DEBT FORM */}
+        {/* DEBT FORM WITH SEARCHABLE LIST & DUE DATE */}
         {method === 'DEBT' && (
           <div className="space-y-3">
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                  {t.selectDebtorLabel}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setCreatingDebtor(!creatingDebtor)}
-                  className="text-xs text-amber-600 dark:text-amber-400 font-bold hover:underline"
-                >
-                  {creatingDebtor ? t.cancelBtn : t.newDebtorBtn}
-                </button>
-              </div>
-
-              {!creatingDebtor ? (
-                <select
-                  value={selectedDebtor}
-                  onChange={(e) => setSelectedDebtor(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-500"
-                >
-                  {debtors.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.full_name} ({formatMoney(d.balance)} qarz) {d.phone || ''}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl space-y-2">
-                  <input
-                    type="text"
-                    placeholder={t.debtorNameLabel}
-                    value={newDebtorName}
-                    onChange={(e) => setNewDebtorName(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="+998 (90) 000-00-00"
-                    value={newDebtorPhone}
-                    onChange={(e) => setNewDebtorPhone(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCreateDebtor}
-                    className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-1.5 rounded-xl text-xs"
-                  >
-                    {t.saveBtn}
-                  </button>
-                </div>
-              )}
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {lang === 'uz' ? "Qarzdor mijozni tanlang:" : "Выберите должника:"}
+              </label>
+              <button
+                type="button"
+                onClick={() => setCreatingDebtor(!creatingDebtor)}
+                className="text-xs text-amber-600 dark:text-amber-400 font-bold hover:underline"
+              >
+                {creatingDebtor ? (t.cancelBtn || "Bekor qilish") : "+ Yangi mijoz qo'shish"}
+              </button>
             </div>
 
-            <div className="p-3 bg-slate-100 dark:bg-slate-800/80 rounded-2xl flex justify-between items-center">
-              <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">{t.debtRecorded}</span>
+            {creatingDebtor ? (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl space-y-2">
+                <input
+                  type="text"
+                  placeholder="Mijoz to'liq ismi (masalan: Rustam aka)"
+                  value={newDebtorName}
+                  onChange={(e) => setNewDebtorName(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
+                />
+                <input
+                  type="text"
+                  placeholder="+998 90 123-45-67"
+                  value={newDebtorPhone}
+                  onChange={(e) => setNewDebtorPhone(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateDebtor}
+                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs shadow"
+                >
+                  {t.saveBtn || "Saqlash"}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Mijozni qidirish (ism yoki telefon)..."
+                  value={debtorSearch}
+                  onChange={(e) => setDebtorSearch(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
+                />
+
+                <div className="max-h-40 overflow-y-auto space-y-1 pr-1 border border-slate-200 dark:border-slate-800 rounded-xl p-1 bg-slate-50/50 dark:bg-slate-900/50">
+                  {filteredDebtors.map((d) => {
+                    const isSelected = selectedDebtor && selectedDebtor.id === d.id;
+                    return (
+                      <div
+                        key={d.id}
+                        onClick={() => setSelectedDebtor(d)}
+                        className={`p-2 rounded-xl cursor-pointer transition flex items-center justify-between text-xs ${
+                          isSelected
+                            ? 'bg-amber-600 text-white font-bold shadow-sm'
+                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                        }`}
+                      >
+                        <div className="truncate pr-2">
+                          <div>{d.full_name}</div>
+                          {d.phone && <div className="text-[10px] opacity-75 font-mono">{d.phone}</div>}
+                        </div>
+                        <div className="font-mono text-right font-bold whitespace-nowrap">
+                          {formatMoney(d.balance)} qarz
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Return Due Date */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                📅 {lang === 'uz' ? "Qaytarish muddati (Due date, ixtiyoriy):" : "Срок возврата долга (опционально):"}
+              </label>
+              <input
+                type="text"
+                placeholder={lang === 'uz' ? "Masalan: dushanba yoki 2026-11-20" : "Например: понедельник или 2026-11-20"}
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
+              />
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl flex justify-between items-center border border-amber-200 dark:border-amber-800">
+              <span className="text-xs text-amber-800 dark:text-amber-200 font-semibold">
+                {lang === 'uz' ? "Qarzga yoziladigan summa:" : "Сумма в долг:"}
+              </span>
               <span className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono">
                 {formatMoney(total)}
               </span>
@@ -1761,7 +2863,7 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
             onClick={onClose}
             className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-3 rounded-2xl text-xs font-semibold transition"
           >
-            {t.cancelBtn}
+            {t.cancelBtn || "Bekor qilish"}
           </button>
           <button
             type="button"
@@ -1769,7 +2871,7 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
             onClick={handleSubmit}
             className="flex-2 w-2/3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white py-3 rounded-2xl text-xs sm:text-sm font-bold shadow-lg transition"
           >
-            {loading ? t.processing : t.confirmPayBtn}
+            {loading ? (t.processing || "Bajarilmoqda...") : (t.confirmPayBtn || "To'lovni yakunlash")}
           </button>
         </div>
       </div>
@@ -1777,7 +2879,7 @@ function CheckoutModal({ token, total, cart, onClose, onSuccess, notify, t }) {
   );
 }
 
-// ------------------- RECEIPT MODAL -------------------
+
 function ReceiptModal({ receipt, onClose, t }) {
   const print = () => window.print();
 
@@ -1878,6 +2980,9 @@ function DebtsScreen({ token, notify, t }) {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [addDebtModalOpen, setAddDebtModalOpen] = useState(false);
   const [createDebtorModalOpen, setCreateDebtorModalOpen] = useState(false);
+  const [voiceDebtOpen, setVoiceDebtOpen] = useState(false);
+  const [ocrDebtOpen, setOcrDebtOpen] = useState(false);
+  const lang = (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
 
   useEffect(() => {
     fetchDebtors();
@@ -1937,14 +3042,32 @@ function DebtsScreen({ token, notify, t }) {
           <span className="text-3xl">👥</span>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex items-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 shadow-sm flex flex-col justify-center gap-1.5">
           <button
             onClick={() => setCreateDebtorModalOpen(true)}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl shadow transition text-xs sm:text-sm flex items-center justify-center gap-2"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl shadow transition text-xs flex items-center justify-center gap-1.5"
           >
             <span>➕</span>
-            <span>{t.addDebtorModalTitle}</span>
+            <span>{t.addDebtorModalTitle || "Yangi mijoz"}</span>
           </button>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => setVoiceDebtOpen(true)}
+              className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-1.5 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1"
+              title="Ovozli qarz yozish"
+            >
+              <span>🎙️</span>
+              <span>Ovozli</span>
+            </button>
+            <button
+              onClick={() => setOcrDebtOpen(true)}
+              className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-1.5 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1"
+              title="Daftardan rasm olish"
+            >
+              <span>📸</span>
+              <span>Daftar OCR</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1987,6 +3110,12 @@ function DebtsScreen({ token, notify, t }) {
                 )}
                 {debtor.note && (
                   <div className="text-[11px] text-slate-400 mt-1 italic">"{debtor.note}"</div>
+                )}
+                {debtor.due_date && (
+                  <div className="text-[11px] text-amber-600 dark:text-amber-400 font-bold mt-1 flex items-center gap-1">
+                    <span>⏳</span>
+                    <span>{t.dueDateLabel || "Muddati"}: {debtor.due_date}</span>
+                  </div>
                 )}
               </div>
               <div className="text-right">
@@ -2477,6 +3606,21 @@ function CatalogScreen({ token, notify, isOwner, t }) {
     }
   };
 
+  const clearCatalog = async () => {
+    if (!confirm(t.clearCatalogWarning || "Rostdan ham barcha test tovarlar va cheklarni tozalamoqchimisiz? Kechki savdo uchun toza baza tayyorlanadi.")) return;
+    try {
+      const res = await fetch(`${API_BASE}/products/clear-catalog`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      notify(data.message || "Baza tozalandi!");
+      fetchProducts();
+    } catch (e) {
+      notify('Tozalashda xatolik', 'error');
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Top Bar */}
@@ -2494,7 +3638,23 @@ function CatalogScreen({ token, notify, isOwner, t }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={clearCatalog}
+            className="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1 touch-target"
+            title="Test tovarlar va savdolarni tozalash"
+          >
+            <span>🗑️</span>
+            <span>{t.clearCatalogBtn || "Toza varaqdan boshlash"}</span>
+          </button>
+          <button
+            onClick={reseed}
+            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition border border-slate-300 dark:border-slate-700 flex items-center gap-1 touch-target"
+            title="2000 ta demo tovarlarni qaytarish"
+          >
+            <span>🔄</span>
+            <span>{t.reseedCatalogBtn || "2000 ta tovar"}</span>
+          </button>
           <input
             type="text"
             placeholder={t.searchProductPlaceholder}
@@ -2610,6 +3770,8 @@ function SuppliersScreen({ token, notify, t }) {
   const [createInvoiceModalOpen, setCreateInvoiceModalOpen] = useState(false);
   const [payInvoiceModalOpen, setPayInvoiceModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [ocrInvoiceOpen, setOcrInvoiceOpen] = useState(false);
+  const lang = (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
 
   useEffect(() => {
     fetchSuppliers();
@@ -2673,6 +3835,13 @@ function SuppliersScreen({ token, notify, t }) {
             className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-sm"
           >
             {t.addSupplierBtn}
+          </button>
+          <button
+            onClick={() => setOcrInvoiceOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-md flex items-center gap-1.5 touch-target"
+          >
+            <span>📸</span>
+            <span>{t.scanInvoiceBtn || "Faktura OCR"}</span>
           </button>
           <button
             onClick={() => setCreateInvoiceModalOpen(true)}
@@ -3436,31 +4605,6 @@ function AnalyticsScreen({ token, notify, t }) {
         <>
           {/* Main Financial KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-
-          {/* Telegram Panel */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm mt-3">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">🤖 Telegram</h3>
-            <div className="space-y-3">
-              <button
-                onClick={() => setTestSendOpen(true)}
-                className="w-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2.5 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition"
-              >
-                📤 Test xabir yuborish / Отправить тестовое сообщение
-              </button>
-              <button
-                onClick={() => setZReportOpen(true)}
-                className="w-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 py-2.5 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-300 transition"
-              >
-                📊 Z-gesini yuborish / Отправить Z-отчет
-              </button>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Bot Token va Owner Chat ID avtomatik .env faylidan oqiladi.
-              </p>
-            </div>
-          </div>
-
-        </>
-      )}
             {/* Revenue */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
               <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.kpiRevenue}</div>

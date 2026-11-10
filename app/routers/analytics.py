@@ -2,7 +2,7 @@ from datetime import datetime, timezone, timedelta, time
 from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, or_
 
 from ..database import get_session
 from ..models import (
@@ -11,7 +11,10 @@ from ..models import (
 )
 from ..auth import require_role
 
-router = APIRouter(prefix="/analytics", tags=["Accounting & Analytics (Бухгалтерия)"])
+router = APIRouter(prefix="/analytics", tags=["Accounting & Analytics (Buxgalteriya)"])
+
+# Uzbekistan Tashkent timezone: UTC+5
+TZ_TASHKENT = timezone(timedelta(hours=5))
 
 class TopProductMetric(BaseModel):
     product_id: int
@@ -53,18 +56,22 @@ class AnalyticsDashboardResponse(BaseModel):
     top_selling_products: List[TopProductMetric]
 
 def get_period_dates(period: str):
-    now = datetime.now(timezone.utc)
+    now_tashkent = datetime.now(TZ_TASHKENT)
     if period == "today":
-        start_date = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
+        start_tashkent = datetime.combine(now_tashkent.date(), time.min, tzinfo=TZ_TASHKENT)
+        start_date = start_tashkent.astimezone(timezone.utc)
     elif period == "week":
-        start_date = now - timedelta(days=7)
+        start_date = (now_tashkent - timedelta(days=7)).astimezone(timezone.utc)
     elif period == "month":
-        start_date = now - timedelta(days=30)
+        start_date = (now_tashkent - timedelta(days=30)).astimezone(timezone.utc)
     elif period == "all":
         start_date = datetime(2020, 1, 1, tzinfo=timezone.utc)
     else:
-        start_date = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
-    return start_date, now
+        start_tashkent = datetime.combine(now_tashkent.date(), time.min, tzinfo=TZ_TASHKENT)
+        start_date = start_tashkent.astimezone(timezone.utc)
+    
+    end_date = datetime.now(timezone.utc)
+    return start_date, end_date
 
 @router.get("/dashboard", response_model=AnalyticsDashboardResponse)
 def get_analytics_dashboard(
@@ -73,21 +80,45 @@ def get_analytics_dashboard(
     session: Session = Depends(get_session)
 ):
     start_date, end_date = get_period_dates(period)
+    start_date_naive = start_date.replace(tzinfo=None)
+    end_date_naive = end_date.replace(tzinfo=None)
 
-    # 1. Sales & Revenue
+    # 1. Fetch Sales in period (handling both tz-aware and naive timestamps in DB)
     sales = session.exec(
-        select(Sale).where(Sale.created_at >= start_date, Sale.created_at <= end_date)
+        select(Sale).where(
+            Sale.created_at >= start_date,
+            Sale.created_at <= end_date
+        )
     ).all()
 
     sales_count = len(sales)
     revenue = round(sum(s.total_amount for s in sales), 2)
-    cash_total = round(sum(s.cash_received - s.change_given for s in sales if s.payment_method in (PaymentMethod.CASH, PaymentMethod.MIXED)), 2)
-    card_total = round(sum(s.card_amount for s in sales), 2)
-    debt_total = round(sum(s.debt_amount for s in sales), 2)
+
+    # 100% exact payments breakdown down to 1 so'm
+    cash_total = 0.0
+    card_total = 0.0
+    debt_total = 0.0
+
+    for s in sales:
+        if s.payment_method == PaymentMethod.CASH:
+            cash_total += s.total_amount
+        elif s.payment_method == PaymentMethod.CARD:
+            card_total += s.total_amount
+        elif s.payment_method == PaymentMethod.DEBT:
+            debt_total += s.total_amount
+        elif s.payment_method == PaymentMethod.MIXED:
+            cash_portion = max(0.0, s.cash_received - s.change_given)
+            cash_total += min(cash_portion, s.total_amount)
+            card_total += s.card_amount
+            debt_total += s.debt_amount
+
+    cash_total = round(cash_total, 2)
+    card_total = round(card_total, 2)
+    debt_total = round(debt_total, 2)
     average_receipt = round(revenue / sales_count, 2) if sales_count > 0 else 0.0
 
     # 2. COGS & Top Selling Products
-    sale_ids = [s.id for s in sales]
+    sale_ids = [s.id for s in sales if s.id is not None]
     cogs = 0.0
     product_stats: Dict[int, Dict] = {}
 
@@ -117,7 +148,10 @@ def get_analytics_dashboard(
 
     # 3. Expenses
     expenses = session.exec(
-        select(Expense).where(Expense.expense_date >= start_date, Expense.expense_date <= end_date)
+        select(Expense).where(
+            Expense.expense_date >= start_date,
+            Expense.expense_date <= end_date
+        )
     ).all()
     total_expenses = round(sum(e.amount for e in expenses), 2)
 
