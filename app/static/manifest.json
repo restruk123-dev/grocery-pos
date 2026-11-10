@@ -2,11 +2,13 @@
   "name": "GroceryStore POS & Accounting (UZS)",
   "short_name": "GroceryPOS",
   "description": "Oziq-ovqat do'koni avtomatizatsiyasi: POS-terminal, Qarzlar daftari, shtrixkod skaneri va buxgalteriya tahlili",
-  "start_url": "/",
+  "start_url": "/?mode=standalone",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#10b981",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/static/icons/icon-192.png",

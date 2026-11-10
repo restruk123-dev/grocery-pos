@@ -12,6 +12,7 @@ from ..models import (
 from ..auth import require_role
 
 import re as re_module
+from ..services.translit import get_search_variants
 
 router = APIRouter(prefix="/ai", tags=["AI Assistant"])
 
@@ -828,7 +829,7 @@ def parse_invoice_ocr(request: InvoiceOcrParseRequest, session: Session = Depend
         total_rows=len(items)
     )
 
-# ---------- Store AI Assistant (Free Local Engine) ----------
+# ---------- Store AI Assistant (Context-Aware Store Intelligence) ----------
 
 class StoreAiQueryRequest(BaseModel):
     query: str
@@ -841,80 +842,263 @@ class StoreAiQueryResponse(BaseModel):
 
 @router.post("/assistant", response_model=StoreAiQueryResponse)
 def store_ai_assistant(req: StoreAiQueryRequest, session: Session = Depends(get_session)):
-    """Zero-cost smart AI assistant for cashiers and store owners."""
-    q = req.query.strip().lower()
+    """Intelligent context-aware AI assistant for grocery and convenience store management."""
+    raw_q = req.query.strip()
+    q = raw_q.lower()
     lang = req.language
     
-    # 1. Sales / Revenue question
-    if any(k in q for k in ["savdo", "tushum", "kassa", "daromad", "выручк", "продаж", "сколько заработали"]):
-        tz_uz = timezone(timedelta(hours=5))
-        now_uz = datetime.now(tz_uz)
-        start_utc = datetime.combine(now_uz.date(), time.min, tzinfo=tz_uz).astimezone(timezone.utc)
-        start_naive = start_utc.replace(tzinfo=None)
-        
-        sales = session.exec(select(Sale).where(Sale.created_at >= start_utc)).all()
-        rev = sum(s.total_amount for s in sales)
-        count = len(sales)
-        
+    # Live store metrics
+    tz_uz = timezone(timedelta(hours=5))
+    now_uz = datetime.now(tz_uz)
+    start_utc = datetime.combine(now_uz.date(), time.min, tzinfo=tz_uz).astimezone(timezone.utc)
+    
+    sales_today = session.exec(select(Sale).where(Sale.created_at >= start_utc)).all()
+    today_revenue = sum(s.total_amount for s in sales_today)
+    today_count = len(sales_today)
+    cash_amount = sum(s.cash_received - s.change_given for s in sales_today if s.cash_received > 0)
+    card_amount = sum(s.card_amount for s in sales_today)
+    debt_amount = sum(s.debt_amount for s in sales_today)
+    
+    debtors = session.exec(select(Debtor).where(Debtor.is_active == True, Debtor.balance > 0)).all()
+    total_debt = sum(d.balance for d in debtors)
+    top_debtors = sorted(debtors, key=lambda x: x.balance, reverse=True)[:5]
+    
+    products = session.exec(select(Product).where(Product.is_active == True)).all()
+    total_products = len(products)
+    low_stock = [p for p in products if p.stock_quantity <= p.min_stock_alert]
+    
+    start_month = datetime(now_uz.year, now_uz.month, 1, tzinfo=tz_uz).astimezone(timezone.utc)
+    expenses_month = session.exec(select(Expense).where(Expense.expense_date >= start_month)).all()
+    total_expenses = sum(e.amount for e in expenses_month)
+
+    # 1. Option 1 or Revenue / Sales
+    if q in ["1", "1.", "1)"] or any(k in q for k in ["savdo", "tushum", "kassa", "daromad", "выручк", "продаж", "сколько заработали", "чек", "выручка"]):
         if lang == "uz":
-            ans = f"Bugungi savdo hisoboti:\n- Jami tushum: {rev:,.0f} so'm\n- Urilgan cheklar soni: {count} ta\n- O'rtacha chek: {(rev/count if count else 0):,.0f} so'm\n\nBuxgalteriya 100% aniq ishlamoqda."
+            ans = "\n".join([
+                f"📊 Bugungi savdo tahlili ({now_uz.strftime('%d.%m.%Y')} holatiga):",
+                f"• Jami tushum: {today_revenue:,.0f} so'm",
+                f"• Urilgan cheklar: {today_count} ta",
+                f"• O'rtacha chek: {(today_revenue/today_count if today_count else 0):,.0f} so'm",
+                f"• Naqd: {max(0, cash_amount):,.0f} so'm | Karta: {card_amount:,.0f} so'm | Nasiya: {debt_amount:,.0f} so'm",
+                "",
+                "💡 Maslahat: Har bir xaridorga kassa oldidagi tezkor tovarlarni (saqich, shokolad, salfetka) taklif qilish orqali o'rtacha chekni 15-20% oshirishingiz mumkin."
+            ])
         else:
-            ans = f"Показатели продаж за сегодня:\n- Общая выручка: {rev:,.0f} сум\n- Пробито чеков: {count} шт\n- Средний чек: {(rev/count if count else 0):,.0f} сум\n\nБухгалтерия сходится до 1 сума."
+            ans = "\n".join([
+                f"📊 Показатели продаж за сегодня ({now_uz.strftime('%d.%m.%Y')}):",
+                f"• Общая выручка: {today_revenue:,.0f} сум",
+                f"• Пробито чеков: {today_count} шт",
+                f"• Средний чек: {(today_revenue/today_count if today_count else 0):,.0f} сум",
+                f"• Наличные: {max(0, cash_amount):,.0f} сум | Картой: {card_amount:,.0f} сум | В долг: {debt_amount:,.0f} сум",
+                "",
+                "💡 Совет: Предлагайте покупателям прикассовые импульсные товары (жвачки, шоколадки, влажные салфетки) — это увеличит средний чек на 15–20%."
+            ])
         return StoreAiQueryResponse(
             answer=ans,
-            quick_suggestions=["Qarzdorlar holati", "Kam qolgan tovarlar", "Tamaki do'koni maslahatlari"] if lang == "uz" else ["Состояние долгов", "Заканчивающиеся товары", "Советы для табачки"],
+            quick_suggestions=["2. Qarzlar holati", "3. Kam qolgan tovarlar", "4. Xarajatlar va foyda"] if lang == "uz" else ["2. Долги и должники", "3. Заканчивающиеся товары", "4. Расходы и прибыль"],
             action_type="navigate_analytics"
         )
-    
-    # 2. Debts / Qarzdorlar question
-    if any(k in q for k in ["qarz", "debt", "haqqim", "долг", "кто должен", "qaytar"]):
-        debtors = session.exec(select(Debtor).where(Debtor.is_active == True, Debtor.balance > 0)).all()
-        total_d = sum(d.balance for d in debtors)
-        top_d = sorted(debtors, key=lambda x: x.balance, reverse=True)[:3]
-        top_str = "\n".join([f"- {d.full_name}: {d.balance:,.0f} so'm" + (f" (Muddati: {d.due_date})" if d.due_date else "") for d in top_d])
-        
+
+    # 2. Option 2 or Debt book
+    if q in ["2", "2.", "2)"] or any(k in q for k in ["qarz", "debt", "haqqim", "долг", "кто должен", "qaytar", "nasiya", "тетрадь"]):
+        top_str = "\n".join([f"  • {d.full_name}: {d.balance:,.0f} so'm" + (f" (Qaytarish muddati: {d.due_date})" if d.due_date else "") for d in top_debtors])
         if lang == "uz":
-            ans = f"Qarzlar daftari hisoboti:\n- Jami qarzdorlik: {total_d:,.0f} so'm\n- Qarzdorlar: {len(debtors)} nafar\n\nEng katta qarzlar:\n{top_str or 'Hozircha faol qarzlar yo`q.'}"
+            ans = "\n".join([
+                "📒 Qarzlar daftari (Haqqim.uz holati):",
+                f"• Jami berilgan nasiya qarz: {total_debt:,.0f} so'm",
+                f"• Qarzdorlar soni: {len(debtors)} nafar",
+                "",
+                "Eng yirik qarzdorlar:",
+                top_str if top_str else "  Hozircha faol qarzlar yo'q. Do'kon toza!",
+                "",
+                "📌 Qarzni qaytarish eslatmasi: Muddati kelgan mijozlarga SMS yoki Telegram orqali xushmuomala eslatma yuborish tavsiya etiladi."
+            ])
         else:
-            ans = f"Тетрадь долгов (Qarz daftari):\n- Общий долг: {total_d:,.0f} сум\n- Должников: {len(debtors)} чел\n\nКрупнейшие долги:\n{top_str or 'Активных долгов нет.'}"
+            ans = "\n".join([
+                "📒 Тетрадь долгов (Qarz daftari):",
+                f"• Общая задолженность перед магазином: {total_debt:,.0f} сум",
+                f"• Количество должников: {len(debtors)} чел",
+                "",
+                "Крупнейшие долги:",
+                top_str if top_str else "  Активных долгов нет. База чистая!",
+                "",
+                "📌 Совет: Регулярно фиксируйте срок возврата (due_date) и напоминайте должникам за 1 день до срока."
+            ])
         return StoreAiQueryResponse(
             answer=ans,
-            quick_suggestions=["Bugungi savdo", "Ovozli qarz yozish", "Qog'oz daftarni skanerlash"] if lang == "uz" else ["Продажи сегодня", "Голосовая запись долга", "Скан тетради"],
+            quick_suggestions=["Ovozli qarz yozish", "1. Bugungi savdo", "3. Kam qolgan tovarlar"] if lang == "uz" else ["Голосовая запись долга", "1. Выручка сегодня", "3. Остатки на складе"],
             action_type="navigate_debts"
         )
 
-    # 3. Low stock / Mahsulotlar qoldig'i
-    if any(k in q for k in ["kam qolgan", "qoldiq", "ombor", "tugayapti", "остатк", "заканчивается", "заказ"]):
-        low = session.exec(select(Product).where(Product.is_active == True, Product.stock_quantity <= Product.min_stock_alert)).all()
-        low_items = [f"- {p.name}: {p.stock_quantity} {p.unit}" for p in low[:5]]
-        
+    # 3. Option 3 or Low stock / Warehouse
+    if q in ["3", "3.", "3)"] or any(k in q for k in ["kam qolgan", "qoldiq", "ombor", "tugayapti", "остатк", "заканчивается", "заказ", "склад"]):
+        low_items = [f"  • {p.name}: qoldiq {p.stock_quantity:g} {p.unit} (min: {p.min_stock_alert:g})" for p in low_stock[:6]]
         if lang == "uz":
-            ans = f"Omborda oz qolgan mahsulotlar ({len(low)} ta):\n" + ("\n".join(low_items) if low_items else "Barcha tovarlar yetarli miqdorda!")
+            ans = "\n".join([
+                "📦 Ombordagi tovarlar holati:",
+                f"• Bazadagi jami mahsulotlar: {total_products} SKU",
+                f"• Tugab borayotgan tovarlar: {len(low_stock)} ta",
+                "",
+                "Shoshilinch buyurtma qilish kerak bo'lganlar:",
+                "\n".join(low_items) if low_items else "  Barcha tovarlar yetarli zaxirada!",
+                "",
+                "🚚 Tavsiya: Faktura OCR tugmasi orqali yangi kelgan yuk xatini skanerlab, qoldiqlarni bir zumda to'ldiring."
+            ])
         else:
-            ans = f"Товары с низким остатком ({len(low)} шт):\n" + ("\n".join(low_items) if low_items else "Все товары в достаточном остатке!")
+            ans = "\n".join([
+                "📦 Состояние склада и остатков:",
+                f"• Всего товаров в базе: {total_products} SKU",
+                f"• Товаров с критическим остатком: {len(low_stock)} шт",
+                "",
+                "Срочно заказать у поставщиков:",
+                "\n".join(low_items) if low_items else "  Все товары в достаточном запасе!",
+                "",
+                "🚚 Рекомендация: Используйте кнопку «Faktura OCR» для оприходования накладных с камеры за пару секунд."
+            ])
         return StoreAiQueryResponse(
             answer=ans,
-            quick_suggestions=["Yuk xatini skanerlash", "Bugungi savdo", "Tezkor tovarlar"] if lang == "uz" else ["Скан накладной", "Выручка за день", "Быстрые товары"],
+            quick_suggestions=["Faktura OCR skaner", "1. Bugungi tushum", "2. Qarzlar holati"] if lang == "uz" else ["Скан накладной OCR", "1. Выручка сегодня", "2. Долги"],
             action_type="navigate_catalog"
         )
 
-    # 4. Tobacco shop readiness
-    if any(k in q for k in ["tamaki", "tobacco", "sigaret", "сигарет", "табач", "совет", "maslahat"]):
+    # 4. Option 4 or Expenses / Profit
+    if q in ["4", "4.", "4)"] or any(k in q for k in ["xarajat", "rasxod", "foyda", "прибыль", "расход", "чистая прибыль", "аренда"]):
+        est_gross_profit = today_revenue * 0.22
         if lang == "uz":
-            ans = "Tamaki do'koni uchun imkoniyatlar:\n1. Blokli va pachkali sotuvni to'liq qo'llab-quvvatlaydi.\n2. Telefonda kamera orqali, noutbukda USB-skaner orqali DataMatrix va shtrixkodlarni o'qiydi.\n3. Nasiya qarz daftari 100% aniq yuritiladi.\n4. Bir kunda 3-4 sotuvchi smenasini 1 tugma bilan almashtirish mumkin.\n\nTizim tamaki do'konlariga sotishga to'liq tayyor!"
+            ans = "\n".join([
+                "💸 Xarajatlar va foyda hisoboti:",
+                f"• Shu oygi jami xarajatlar: {total_expenses:,.0f} so'm",
+                f"• Bugungi taxminiy yalpi foyda (~22% marja): {est_gross_profit:,.0f} so'm",
+                "",
+                "💡 Moliyaviy maslahat: Oziq-ovqat do'konlarida barqaror sof foyda 15-25% oralig'ida bo'ladi. Xarajatlarni nazorat qilib, muddati o'tadigan mahsulotlar hisobdan chiqarilishini kamaytiring."
+            ])
         else:
-            ans = "Готовность для табачного магазина:\n1. Продажа блоками и пачками.\n2. Мгновенное сканирование с камеры телефона или USB-сканера ноутбука.\n3. Электронная тетрадь долгов Haqqim.uz формата.\n4. Быстрая смена 3-4 кассиров в день в 1 клик.\n\nСистема полностью готова к тиражированию в табачные магазины!"
+            ans = "\n".join([
+                "💸 Расходы и прибыльность магазина:",
+                f"• Всего расходов в этом месяце: {total_expenses:,.0f} сум",
+                f"• Оценочная валовая прибыль за сегодня (~22% маржа): {est_gross_profit:,.0f} сум",
+                "",
+                "💡 Финансовый совет: Здоровая чистая маржа продуктового магазина составляет 15–22%. Держите под контролем списания (порчу) скоропортящихся товаров."
+            ])
         return StoreAiQueryResponse(
             answer=ans,
-            quick_suggestions=["Kassirni almashtirish", "Tezkor tovarlar", "Buxgalteriya"] if lang == "uz" else ["Сменить кассира", "Быстрые товары", "Бухгалтерия"]
+            quick_suggestions=["1. Bugungi savdo", "2. Qarzlar daftari", "5. Maslahatlar"] if lang == "uz" else ["1. Выручка сегодня", "2. Долги", "5. Советы"],
+            action_type="navigate_expenses"
         )
 
-    # Default fallback
+    # 5. Option 5 or Retail / Tobacco advice
+    if q in ["5", "5.", "5)"] or any(k in q for k in ["tamaki", "tobacco", "sigaret", "сигарет", "табач", "совет", "maslahat", "marja", "ustama", "наценка"]):
+        if lang == "uz":
+            ans = "\n".join([
+                "🏪 Do'konni boshqarish bo'yicha ekspert maslahatlari:",
+                "1. **Narx belgilash**: Oziq-ovqatda ijtimoiy tovarlar (non, un, shakar) marjasi 5-10%, donador mahsulotlar 15-20%, shirinlik va ichimliklar 25-35%, maishiy kimyo 30-40% bo'lishi maqbul.",
+                "2. **Tamaki do'koni**: Sigaretlar aylanmasi yuqori, marjasi 8-12%. Tizimimiz blokli/pachkali sotishni va DataMatrix kodlarini to'liq qo'llab-quvvatlaydi.",
+                "3. **Kassirlar smenasi**: Smena almashganda Z-hisobot oling va naqd pulni qabul qiling.",
+                "4. **Yo'qotishlar oldini olish**: Har oyda bir marta tovarlar inventarizatsiyasini o'tkazing."
+            ])
+        else:
+            ans = "\n".join([
+                "🏪 Экспертные советы по управлению торговлей:",
+                "1. **Ценообразование**: Социальные товары (хлеб, сахар, мука) наценка 5–10%, бакалея 15–20%, напитки и кондитерка 25–35%, бытовая химия 30–45%.",
+                "2. **Табачный магазин**: Сигареты дают высокий поток, но маржа 7–12%. Продавайте блоки и пачки, сканируйте DataMatrix.",
+                "3. **Смены кассиров**: Быстрая сдача смены через кнопку в шапке с печатью Z-отчета исключает недостачи.",
+                "4. **Контроль остатков**: Настройте порог min_stock, чтобы поставщики привозили товар вовремя."
+            ])
+        return StoreAiQueryResponse(
+            answer=ans,
+            quick_suggestions=["1. Bugungi tushum", "2. Qarzlar holati", "3. Ombor qoldiqlari"] if lang == "uz" else ["1. Выручка сегодня", "2. Долги", "3. Остатки на складе"]
+        )
+
+    # 6. Specific product stock query
+    variants = get_search_variants(q)
+    matched_product = None
+    for p in products:
+        p_name_low = p.name.lower()
+        if any(v in p_name_low for v in variants if len(v) >= 3):
+            matched_product = p
+            break
+            
+    if matched_product:
+        if lang == "uz":
+            ans = "\n".join([
+                "🔍 Mahsulot ma'lumoti topildi:",
+                f"• Nomi: **{matched_product.name}**",
+                f"• Shtrixkod: `{matched_product.barcode}`",
+                f"• Ombordagi qoldiq: **{matched_product.stock_quantity:g} {matched_product.unit}**",
+                f"• Sotish narxi: **{matched_product.sale_price:,.0f} so'm**",
+                f"• Holat: {'⚠️ Oz qolgan (Buyurtma bering)' if matched_product.stock_quantity <= matched_product.min_stock_alert else '✅ Yetarli'}"
+            ])
+        else:
+            ans = "\n".join([
+                "🔍 Информация о товаре:",
+                f"• Наименование: **{matched_product.name}**",
+                f"• Штрихкод: `{matched_product.barcode}`",
+                f"• Остаток на складе: **{matched_product.stock_quantity:g} {matched_product.unit}**",
+                f"• Цена продажи: **{matched_product.sale_price:,.0f} сум**",
+                f"• Статус: {'⚠️ Мало на складе (Срочно заказать)' if matched_product.stock_quantity <= matched_product.min_stock_alert else '✅ В наличии'}"
+            ])
+        return StoreAiQueryResponse(
+            answer=ans,
+            quick_suggestions=["1. Bugungi tushum", "3. Barcha kam qolganlar", "Kassaga o'tish"] if lang == "uz" else ["1. Выручка сегодня", "3. Все с низким остатком", "Перейти в кассу"]
+        )
+
+    # 7. Greetings and conversational welcome
+    if any(k in q for k in ["salom", "assalom", "privet", "здравствуйте", "привет", "хай", "hello", "qalaysiz", "ishlar", "raxmat", "rahmat", "спасибо"]):
+        if lang == "uz":
+            ans = "\n".join([
+                "Assalomu alaykum! Do'koningiz AI-Maslahatchisiman.",
+                "",
+                "⚡ Hozirgi do'kon tezkor holati:",
+                f"• Bugun savdo: **{today_revenue:,.0f} so'm** ({today_count} ta chek)",
+                f"• Faol qarzlar: **{total_debt:,.0f} so'm** ({len(debtors)} nafar mijoz)",
+                f"• Omborda: **{total_products}** xil mahsulot ({len(low_stock)} tasi kam qolgan)",
+                "",
+                "Quyidagi raqamlardan birini tanlang yoki savolingizni yozing:",
+                "**1** - Bugungi savdo va tushum",
+                "**2** - Qarzlar daftari va qarzdorlar",
+                "**3** - Kam qolgan tovarlar ro'yxati",
+                "**4** - Xarajatlar va sof foyda",
+                "**5** - Do'kon va tamaki savdosi maslahatlari"
+            ])
+        else:
+            ans = "\n".join([
+                "Здравствуйте! Я ваш умный AI-консультант магазина.",
+                "",
+                "⚡ Сводка магазина на данный момент:",
+                f"• Выручка за сегодня: **{today_revenue:,.0f} сум** ({today_count} чеков)",
+                f"• Долги клиентов: **{total_debt:,.0f} сум** ({len(debtors)} чел)",
+                f"• На складе: **{total_products}** SKU ({len(low_stock)} заканчиваются)",
+                "",
+                "Отправьте цифру или напишите любой вопрос:",
+                "**1** - Продажи и выручка за сегодня",
+                "**2** - Тетрадь долгов и крупнейшие должники",
+                "**3** - Заканчивающиеся товары на складе",
+                "**4** - Расходы и чистая прибыль",
+                "**5** - Советы по розничной и табачной торговле"
+            ])
+        return StoreAiQueryResponse(
+            answer=ans,
+            quick_suggestions=["1. Savdo tushumi", "2. Qarzlar", "3. Kam qolgan tovarlar"] if lang == "uz" else ["1. Выручка сегодня", "2. Долги", "3. Заканчивающиеся товары"]
+        )
+
+    # 8. Natural conversational fallback with live store context
     if lang == "uz":
-        ans = "Salom! Men sizning do'kon AI-yordamchingizman. Savdolar, qarzlar, ombor qoldiqlari, smenalar yoki tamaki do'koni bo'yicha savollaringizga yordam beraman."
+        ans = "\n".join([
+            f"Tushundim: «{raw_q}». Do'koningiz ma'lumotlar bazasi bilan tahlil qildim.",
+            "",
+            f"Hozirda do'konda {total_products} ta SKU tovar, bugungi savdo {today_revenue:,.0f} so'm, qarzdorlik esa {total_debt:,.0f} so'm.",
+            "Aniqroq ma'lumot olish uchun biror tovar nomini yozing (masalan: «shakar qancha qolgan?») yoki quyidagi menyu punktlaridan foydalaning:",
+            "**1** - Savdo hisoboti | **2** - Qarzlar | **3** - Ombor | **4** - Foyda"
+        ])
     else:
-        ans = "Здравствуйте! Я ваш AI-помощник магазина. Отвечу на любые вопросы по выручке, долгам, остаткам или настройке под табачные магазины."
+        ans = "\n".join([
+            f"Понял ваш запрос: «{raw_q}». Проанализировал базу данных магазина.",
+            "",
+            f"Сейчас в магазине {total_products} SKU товаров, продажи за день: {today_revenue:,.0f} сум, долги: {total_debt:,.0f} сум.",
+            "Чтобы узнать точную информацию, напишите название товара (например: «сколько осталось сахара?») или отправьте цифру:",
+            "**1** - Продажи | **2** - Долги | **3** - Остатки | **4** - Прибыль"
+        ])
     return StoreAiQueryResponse(
         answer=ans,
-        quick_suggestions=["Bugungi savdo", "Qarzdorlar holati", "Kam qolgan tovarlar"] if lang == "uz" else ["Выручка сегодня", "Тетрадь долгов", "Заканчивающиеся товары"]
+        quick_suggestions=["1. Savdo hisoboti", "2. Qarzlar daftari", "3. Kam qolgan tovarlar"] if lang == "uz" else ["1. Выручка за день", "2. Тетрадь долгов", "3. Остатки товаров"]
     )

@@ -7,6 +7,7 @@ from sqlmodel import Session, select, func, or_
 from ..database import get_session
 from ..models import Debtor, DebtTransaction, DebtTransactionType, User
 from ..auth import get_current_user
+from ..services.translit import get_search_variants
 
 router = APIRouter(prefix="/debts", tags=["Debts Notebook (Qarzlar daftari / Тетрадь долгов)"])
 
@@ -26,6 +27,7 @@ class DebtorUpdate(BaseModel):
 
 class DebtPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0.0, le=1000000000.0)
+    due_date: Optional[str] = Field(default=None, max_length=100)
     note: Optional[str] = Field(default="Qarz to'lovi / Погашение долга", max_length=255)
 
 class DebtIncreaseRequest(BaseModel):
@@ -68,13 +70,13 @@ def list_debtors(
 
     if search:
         safe_search = search.strip().replace("%", "\\%").replace("_", "\\_")
-        search_term = f"%{safe_search}%"
-        query = query.where(
-            or_(
-                Debtor.full_name.ilike(search_term),
-                Debtor.phone.ilike(search_term)
-            )
-        )
+        variants = get_search_variants(safe_search)
+        conds = []
+        for v in variants:
+            st = f"%{v}%"
+            conds.append(Debtor.full_name.ilike(st))
+            conds.append(Debtor.phone.ilike(st))
+        query = query.where(or_(*conds))
 
     if only_with_debt:
         query = query.where(Debtor.balance > 0)

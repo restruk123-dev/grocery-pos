@@ -123,6 +123,20 @@ def create_expense(
         created_by_name=current_user.full_name
     )
 
+
+@router.delete("/{expense_id}")
+def delete_expense(
+    expense_id: int,
+    current_user: User = Depends(require_role([UserRole.OWNER])),
+    session: Session = Depends(get_session)
+):
+    exp = session.get(Expense, expense_id)
+    if not exp:
+        raise HTTPException(status_code=404, detail="Xarajat topilmadi / Расход не найден")
+    session.delete(exp)
+    session.commit()
+    return {"status": "ok", "message": "Xarajat o'chirildi / Расход удален"}
+
 @router.get("/categories", response_model=List[str])
 def get_expense_categories():
     return [c.value for c in ExpenseCategory]

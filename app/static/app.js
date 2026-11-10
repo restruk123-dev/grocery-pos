@@ -41,6 +41,20 @@ const TRANSLATIONS = {
     scanInvoiceBtn: "Faktura / Yuk xatini skanerlash",
     invoiceOcrTitle: "Faktura qatorlari predprosmotri",
     importInvoiceBtn: "Omborga qabul qilish",
+    addProductBtn: "+ Tovar qo'shish",
+    addProductTitle: "Yangi tovar qo'shish (Katalog / POS)",
+    productNameLabel: "Mahsulot nomi *",
+    barcodeLabel: "Shtrixkod *",
+    scanBarcodeBtn: "Kamera skaner",
+    categoryLabel: "Kategoriya",
+    unitLabel: "O'lchov birligi",
+    purchasePriceLabel: "Tannarxi / Kirim narxi (so'm)",
+    salePriceLabel: "Sotish narxi (so'm) *",
+    stockQtyLabel: "Ombordagi qoldiq soni",
+    isQuickLabel: "Tezkor tovar (Kassada 1-bosish bilan sotish uchun)",
+    pwaBannerTitle: "Ilovani to'liq ekranga o'rnatish (Brauzersiz ochish)",
+    pwaBannerDesc: "Brauzer manzil qatorisiz, qulay ilova ko'rinishida ochish uchun: brauzer menyusida (3 nuqta) «Bosh ekranga qo'shish» (Добавить на главный экран) tugmasini bosing.",
+    pwaBannerClose: "Tushunarli",
     clearCatalogBtn: "Test tovarlarni tozalash / Toza varaqdan boshlash",
     clearCatalogWarning: "Rostdan ham barcha test tovarlar va cheklarni tozalamoqchimisiz? Kechki savdo uchun toza baza tayyorlanadi.",
     reseedCatalogBtn: "2000 ta demo tovarlarni qaytarish",
@@ -272,6 +286,20 @@ const TRANSLATIONS = {
     addDebtModalTitle: "Запись дополнительного долга",
     debtAmountLabel: "Сумма долга (сум) *",
     historyModalTitle: "История операций по долгу",
+    addProductBtn: "+ Добавить товар",
+    addProductTitle: "Добавление нового товара в базу",
+    productNameLabel: "Наименование товара *",
+    barcodeLabel: "Штрихкод *",
+    scanBarcodeBtn: "Камера сканер",
+    categoryLabel: "Категория",
+    unitLabel: "Единица измерения",
+    purchasePriceLabel: "Цена закупки / Себестоимость (сум)",
+    salePriceLabel: "Цена продажи (сум) *",
+    stockQtyLabel: "Остаток на складе (кол-во)",
+    isQuickLabel: "Быстрый товар на кассе (без штрихкода)",
+    pwaBannerTitle: "Установить на домашний экран (Открыть без браузера)",
+    pwaBannerDesc: "Чтобы приложение открывалось в отдельном изолированном окне без адресной строки: нажмите Меню браузера (3 точки) ➔ «Добавить на главный экран» (или «Установить приложение»).",
+    pwaBannerClose: "Понятно",
     catalogTitle: "Каталог товаров",
     lowStockFilter: "⚠️ Мало на складе",
     syncCatalogBtn: "🔄 Синхр. 2000 SKU",
@@ -345,6 +373,51 @@ const TRANSLATIONS = {
 };
 
 // Formats number to Uzbek sum with space separators: e.g. "12 500 so'm"
+
+// ------------------- TRANSLITERATION CLIENT HELPERS -------------------
+const CYR_TO_LAT_MAP = {
+  'ш': 'sh',
+  'ч': 'ch',
+  'ё': 'yo',
+  'ю': 'yu',
+  'я': 'ya',
+  'ц': 'ts',
+  'ў': "o'",
+  'ғ': "g'",
+  'қ': 'q',
+  'ҳ': 'h',
+  'х': 'x',
+  'ж': 'j',
+  'а': 'a',
+  'б': 'b',
+  'в': 'v',
+  'г': 'g',
+  'д': 'd',
+  'е': 'e',
+  'э': 'e',
+  'з': 'z',
+  'и': 'i',
+  'й': 'y',
+  'к': 'k',
+  'л': 'l',
+  'м': 'm',
+  'н': 'n',
+  'о': 'o',
+  'п': 'p',
+  'р': 'r',
+  'с': 's',
+  'т': 't',
+  'у': 'u',
+  'ф': 'f',
+  'ъ': "'",
+  'ь': '',
+  'ы': 'i',
+  'щ': 'sh'
+};
+function cyrToLat(text) {
+  if (!text) return '';
+  return text.toLowerCase().split('').map(c => CYR_TO_LAT_MAP[c] || c).join('');
+}
 function formatMoney(amount, currency = "so'm") {
   if (amount === undefined || amount === null || isNaN(amount)) return `0 ${currency}`;
   const parts = Math.round(Number(amount)).toString().split(".");
@@ -381,6 +454,13 @@ function App() {
   const [storeAiOpen, setStoreAiOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
+  const [pwaBannerDismissed, setPwaBannerDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('pwa_banner_dismissed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   useEffect(() => {
     const handlePrompt = e => {
       e.preventDefault();
@@ -653,7 +733,26 @@ function App() {
   }, t.tabAnalytics)), /*#__PURE__*/React.createElement("button", {
     onClick: () => setStoreAiOpen(true),
     className: "px-3 py-1.5 rounded-xl text-xs font-bold text-purple-600 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/60 transition whitespace-nowrap touch-target"
-  }, "🤖 ", lang === 'uz' ? 'AI Yordamchi' : 'AI Помощник')))), /*#__PURE__*/React.createElement("main", {
+  }, "🤖 ", lang === 'uz' ? 'AI Yordamchi' : 'AI Помощник')))), !pwaBannerDismissed && /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-emerald-700 to-teal-800 text-white px-3 py-2 text-xs flex items-center justify-between shadow-md"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 max-w-4xl"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-base"
+  }, "📲"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold mr-1"
+  }, t.pwaBannerTitle || "Ilovani to'liq ekranga o'rnatish:"), /*#__PURE__*/React.createElement("span", {
+    className: "opacity-95"
+  }, t.pwaBannerDesc || "Brauzer manzil qatorisiz ishlash uchun brauzer menyusida (3 nuqta) «Bosh ekranga qo'shish» tugmasini bosing."))), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setPwaBannerDismissed(true);
+      try {
+        localStorage.setItem('pwa_banner_dismissed', 'true');
+      } catch (e) {}
+    },
+    className: "ml-2 bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-lg text-[11px] whitespace-nowrap transition"
+  }, "✕ ", t.pwaBannerClose || "Tushunarli")), /*#__PURE__*/React.createElement("main", {
     className: "flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4"
   }, activeTab === 'pos' && /*#__PURE__*/React.createElement(PosScreen, {
     token: token,
@@ -666,16 +765,19 @@ function App() {
   }), activeTab === 'debts' && /*#__PURE__*/React.createElement(DebtsScreen, {
     token: token,
     notify: notify,
-    t: t
+    t: t,
+    lang: lang
   }), activeTab === 'catalog' && /*#__PURE__*/React.createElement(CatalogScreen, {
     token: token,
     notify: notify,
     isOwner: isOwner,
-    t: t
+    t: t,
+    lang: lang
   }), activeTab === 'suppliers' && isOwner && /*#__PURE__*/React.createElement(SuppliersScreen, {
     token: token,
     notify: notify,
-    t: t
+    t: t,
+    lang: lang
   }), activeTab === 'expenses' && isOwner && /*#__PURE__*/React.createElement(ExpensesScreen, {
     token: token,
     notify: notify,
@@ -1070,13 +1172,17 @@ function CameraScannerModal({
     const startScanner = async () => {
       try {
         if (window.Html5Qrcode) {
-          html5QrCode = new window.Html5Qrcode('qr-reader');
+          const formats = window.Html5QrcodeSupportedFormats ? [window.Html5QrcodeSupportedFormats.EAN_13, window.Html5QrcodeSupportedFormats.EAN_8, window.Html5QrcodeSupportedFormats.CODE_128, window.Html5QrcodeSupportedFormats.CODE_39, window.Html5QrcodeSupportedFormats.QR_CODE, window.Html5QrcodeSupportedFormats.UPC_A, window.Html5QrcodeSupportedFormats.UPC_E, window.Html5QrcodeSupportedFormats.DATA_MATRIX] : undefined;
+          html5QrCode = new window.Html5Qrcode('qr-reader', {
+            formatsToSupport: formats,
+            verbose: false
+          });
           scannerRef.current = html5QrCode;
           const config = {
-            fps: 15,
+            fps: 20,
             qrbox: {
-              width: 260,
-              height: 160
+              width: 280,
+              height: 180
             },
             aspectRatio: 1.333333
           };
@@ -1084,9 +1190,10 @@ function CameraScannerModal({
             facingMode: facingMode
           }, config, decodedText => {
             if (decodedText && !isStopped) {
+              isStopped = true;
               onScan(decodedText);
             }
-          }, err => {});
+          }, () => {});
         }
       } catch (err) {
         console.error('Camera Scanner Error:', err);
@@ -1131,7 +1238,7 @@ function CameraScannerModal({
     className: "text-xl"
   }, "📷"), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-sm text-emerald-400"
-  }, lang === 'uz' ? 'Shtrixkod skaneri' : 'Сканер штрихкодов')), /*#__PURE__*/React.createElement("button", {
+  }, lang === 'uz' ? 'Shtrixkod skaneri (EAN-13 / QR / 1D)' : 'Сканер штрихкодов (EAN-13 / QR)')), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "p-1 rounded-full text-slate-400 hover:text-white text-lg"
   }, "✕")), /*#__PURE__*/React.createElement("div", {
@@ -1156,6 +1263,239 @@ function CameraScannerModal({
     onClick: flipCamera,
     className: "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
   }, /*#__PURE__*/React.createElement("span", null, "🔄"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Kamera almashtirish" : 'Сменить камеру')))));
+}
+
+// ------------------- CREATE / EDIT PRODUCT MODAL -------------------
+function CreateProductModal({
+  token,
+  initialBarcode = '',
+  onClose,
+  onSuccess,
+  notify,
+  t,
+  lang
+}) {
+  const [barcode, setBarcode] = useState(initialBarcode);
+  const [name, setName] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [unit, setUnit] = useState('dona');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [salePrice, setSalePrice] = useState('');
+  const [stockQuantity, setStockQuantity] = useState('10');
+  const [isQuick, setIsQuick] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/products/categories/all`);
+      const data = await res.json();
+      setCategories(data || []);
+      if (data && data.length > 0 && !categoryId) {
+        setCategoryId(data[0].id.toString());
+      }
+    } catch (e) {}
+  };
+  const startVoiceName = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      notify(lang === 'uz' ? "Ovozli kiritish qo'llab-quvvatlanmaydi" : "Голосовой ввод не поддерживается", 'error');
+      return;
+    }
+    try {
+      const rec = new SpeechRecognition();
+      rec.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      setVoiceActive(true);
+      notify(lang === 'uz' ? "Eshitilmoqda... tovar nomini ayting" : "Слушаю... назовите товар", 'info');
+      rec.onresult = e => {
+        setVoiceActive(false);
+        const spoken = e.results[0][0].transcript;
+        setName(spoken);
+      };
+      rec.onerror = () => setVoiceActive(false);
+      rec.onend = () => setVoiceActive(false);
+      rec.start();
+    } catch (e) {
+      setVoiceActive(false);
+    }
+  };
+  const submit = async e => {
+    e.preventDefault();
+    if (!barcode.trim() || !name.trim() || !salePrice) {
+      notify(lang === 'uz' ? "Shtrixkod, nom va sotish narxini to'ldiring" : "Заполните штрихкод, название и цену", 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const pPrice = Number(purchasePrice) || Math.round(Number(salePrice) * 0.75);
+      const res = await fetch(`${API_BASE}/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          barcode: barcode.trim(),
+          name: name.trim(),
+          category_id: categoryId ? Number(categoryId) : null,
+          unit: unit || 'dona',
+          purchase_price: pPrice,
+          sale_price: Number(salePrice),
+          stock_quantity: Number(stockQuantity) || 0,
+          is_quick: Boolean(isQuick)
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Mahsulot yaratishda xatolik');
+      notify(lang === 'uz' ? `Tovar qo'shildi: ${name}` : `Товар добавлен: ${name}`);
+      onSuccess(data);
+      onClose();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, "➕"), /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100"
+  }, t.addProductTitle || "Yangi tovar qo'shish")), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg"
+  }, "✕")), /*#__PURE__*/React.createElement("form", {
+    onSubmit: submit,
+    className: "flex-1 overflow-y-auto space-y-3 pr-1"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, t.barcodeLabel || "Shtrixkod *"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "4607000000001",
+    value: barcode,
+    onChange: e => setBarcode(e.target.value),
+    className: "flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500",
+    required: true
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setCameraActive(true),
+    className: "bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm"
+  }, /*#__PURE__*/React.createElement("span", null, "📷"), /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline"
+  }, lang === 'uz' ? "Kamera" : "Скан")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, t.productNameLabel || "Mahsulot nomi *"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "Buxanka non oq / Coca-Cola 1.5L",
+    value: name,
+    onChange: e => setName(e.target.value),
+    className: "flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500",
+    required: true
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: startVoiceName,
+    className: `px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 ${voiceActive ? 'bg-rose-600 text-white animate-pulse' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm'}`,
+    title: "Ovoz bilan aytish"
+  }, /*#__PURE__*/React.createElement("span", null, "🎙️")))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, t.categoryLabel || "Kategoriya"), /*#__PURE__*/React.createElement("select", {
+    value: categoryId,
+    onChange: e => setCategoryId(e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium"
+  }, categories.map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.name.split('/')[0].trim())))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, t.unitLabel || "Birlik"), /*#__PURE__*/React.createElement("select", {
+    value: unit,
+    onChange: e => setUnit(e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "dona"
+  }, "dona (шт)"), /*#__PURE__*/React.createElement("option", {
+    value: "kg"
+  }, "kg (кг)"), /*#__PURE__*/React.createElement("option", {
+    value: "l"
+  }, "l (литр)"), /*#__PURE__*/React.createElement("option", {
+    value: "quti"
+  }, "quti (пачка/коробка)"), /*#__PURE__*/React.createElement("option", {
+    value: "metr"
+  }, "metr (метр)")))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, t.purchasePriceLabel || "Kirim narxi (so'm)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    placeholder: "4000",
+    value: purchasePrice,
+    onChange: e => setPurchasePrice(e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, t.salePriceLabel || "Sotish narxi (so'm) *"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    placeholder: "5500",
+    value: salePrice,
+    onChange: e => setSalePrice(e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-emerald-400 dark:border-emerald-600 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400",
+    required: true
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 items-center"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
+  }, t.stockQtyLabel || "Boshlang'ich qoldiq"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: stockQuantity,
+    onChange: e => setStockQuantity(e.target.value),
+    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "pt-4"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: isQuick,
+    onChange: e => setIsQuick(e.target.checked),
+    className: "w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+  }), /*#__PURE__*/React.createElement("span", null, "⚡ Tezkor tovar (Kassa)")))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    className: "flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+  }, t.cancelBtn), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    disabled: loading,
+    className: "flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+  }, loading ? t.saving : t.saveBtn)))), cameraActive && /*#__PURE__*/React.createElement(CameraScannerModal, {
+    onScan: scanned => {
+      setBarcode(scanned);
+      setCameraActive(false);
+      notify((lang === 'uz' ? "Shtrixkod o'qildi: " : "Штрихкод считан: ") + scanned);
+    },
+    onClose: () => setCameraActive(false),
+    notify: notify,
+    t: t,
+    lang: lang
+  }));
 }
 
 // ------------------- VOICE DEBT RECORDING MODAL (HAQQIM.UZ) ----------------
@@ -1840,6 +2180,9 @@ function PosScreen({
   const [scannerActive, setScannerActive] = useState(false);
   const [showAllCatalog, setShowAllCatalog] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
+  const [quickProducts, setQuickProducts] = useState([]);
+  const [notFoundBarcode, setNotFoundBarcode] = useState(null);
+  const [createProductOpen, setCreateProductOpen] = useState(false);
   const barcodeInputRef = useRef(null);
   const QUICK_ITEMS = [{
     id: 'q_tandir',
@@ -2178,7 +2521,7 @@ function PosScreen({
     className: "text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
   }, showAllCatalog ? lang === 'uz' ? "Yashirish" : "Скрыть каталог" : lang === 'uz' ? "Barcha tovarlar (2000+)" : "Показать все товары")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 sm:grid-cols-5 gap-1.5"
-  }, QUICK_ITEMS.map(item => /*#__PURE__*/React.createElement("button", {
+  }, (quickProducts.length > 0 ? quickProducts : QUICK_ITEMS).map(item => /*#__PURE__*/React.createElement("button", {
     key: item.id,
     type: "button",
     onClick: () => addQuickItem(item),
@@ -2302,7 +2645,48 @@ function PosScreen({
       setCheckoutModalOpen(true);
     },
     className: "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-2.5 rounded-2xl border border-slate-300 dark:border-slate-700 transition flex items-center justify-center gap-1 touch-target text-xs"
-  }, /*#__PURE__*/React.createElement("span", null, "⚙️"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Boshqa to'lov..." : "Сдача / Сплит")))), scannerActive && /*#__PURE__*/React.createElement(CameraScannerModal, {
+  }, /*#__PURE__*/React.createElement("span", null, "⚙️"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Boshqa to'lov..." : "Сдача / Сплит")))), notFoundBarcode && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-4xl mb-2 inline-block"
+  }, "🔍"), /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base text-slate-900 dark:text-slate-100 mb-1"
+  }, lang === 'uz' ? "Mahsulot topilmadi" : "Товар не найден"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500 dark:text-slate-400 font-mono mb-3 bg-slate-100 dark:bg-slate-800 py-1.5 px-2 rounded-lg font-bold"
+  }, notFoundBarcode), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-600 dark:text-slate-300 mb-4"
+  }, lang === 'uz' ? "Ushbu shtrixkod bazada yo'q. Uni hoziroq bazaga qo'shasizmi?" : "Этого штрихкода нет в базе. Добавить его прямо сейчас?"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setNotFoundBarcode(null),
+    className: "flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 transition"
+  }, t.cancelBtn || "Bekor qilish"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      const b = notFoundBarcode;
+      setNotFoundBarcode(null);
+      setCreateProductOpen(b);
+    },
+    className: "flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition"
+  }, "➕ ", lang === 'uz' ? "Qo'shish" : "Добавить")))), createProductOpen && /*#__PURE__*/React.createElement(CreateProductModal, {
+    token: token,
+    initialBarcode: typeof createProductOpen === 'string' ? createProductOpen : '',
+    onClose: () => setCreateProductOpen(false),
+    onSuccess: newProd => {
+      setCreateProductOpen(false);
+      if (newProd && newProd.name) {
+        addToCart(newProd, 1.0);
+      }
+      fetchProducts();
+      fetchQuickProducts();
+    },
+    notify: notify,
+    t: t,
+    lang: lang
+  }), scannerActive && /*#__PURE__*/React.createElement(CameraScannerModal, {
     onScan: code => {
       setScannerActive(false);
       processBarcode(code);
@@ -2836,6 +3220,30 @@ function DebtsScreen({
     debtor: selectedDebtor,
     onClose: () => setHistoryModalOpen(false),
     t: t
+  }), voiceDebtOpen && /*#__PURE__*/React.createElement(VoiceDebtModal, {
+    token: token,
+    onClose: () => setVoiceDebtOpen(false),
+    onSuccess: () => {
+      setVoiceDebtOpen(false);
+      fetchDebtors();
+      fetchSummary();
+      notify(lang === 'uz' ? "Ovozli qarz muvaffaqiyatli saqlandi!" : "Голосовой долг сохранен!");
+    },
+    notify: notify,
+    t: t,
+    lang: lang
+  }), ocrDebtOpen && /*#__PURE__*/React.createElement(OcrDebtNotebookModal, {
+    token: token,
+    onClose: () => setOcrDebtOpen(false),
+    onSuccess: () => {
+      setOcrDebtOpen(false);
+      fetchDebtors();
+      fetchSummary();
+      notify(lang === 'uz' ? "Daftar yozuvlari kiritildi!" : "Записи из тетради распознаны и внесены!");
+    },
+    notify: notify,
+    t: t,
+    lang: lang
   }), createDebtorModalOpen && /*#__PURE__*/React.createElement(CreateDebtorModal, {
     token: token,
     onClose: () => setCreateDebtorModalOpen(false),
@@ -3175,8 +3583,11 @@ function CatalogScreen({
   token,
   notify,
   isOwner,
-  t
+  t,
+  lang: propLang
 }) {
+  const lang = propLang || typeof window !== "undefined" && window.pos_lang || typeof localStorage !== "undefined" && localStorage.getItem("pos_lang") || "uz";
+  const [createProductOpen, setCreateProductOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');

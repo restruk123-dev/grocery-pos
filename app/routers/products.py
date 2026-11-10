@@ -4,9 +4,14 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select, func, or_, delete
 
 from ..database import get_session
-from ..models import Product, Category, User, UserRole, Sale, SaleItem, SupplierInvoice, SupplierInvoiceItem, SystemSetting
+from ..models import (
+    Product, Category, User, UserRole, Sale, SaleItem, 
+    SupplierInvoice, SupplierInvoiceItem, SystemSetting,
+    Expense, Debtor, DebtTransaction, Supplier
+)
 from ..auth import get_current_user, require_role
 from ..seed import seed_database
+from ..services.translit import get_search_variants
 
 router = APIRouter(prefix="/products", tags=["Products & Catalog"])
 
@@ -19,6 +24,7 @@ class ProductCreate(BaseModel):
     sale_price: float = Field(..., ge=0.0, le=1000000000.0)
     stock_quantity: float = Field(default=0.0, ge=0.0, le=1000000.0)
     min_stock_alert: float = Field(default=5.0, ge=0.0, le=100000.0)
+    is_quick: bool = Field(default=False)
 
 class ProductUpdate(BaseModel):
     barcode: Optional[str] = Field(default=None, min_length=1, max_length=64)
@@ -29,6 +35,7 @@ class ProductUpdate(BaseModel):
     sale_price: Optional[float] = Field(default=None, ge=0.0, le=1000000000.0)
     stock_quantity: Optional[float] = Field(default=None, ge=0.0, le=1000000.0)
     min_stock_alert: Optional[float] = Field(default=None, ge=0.0, le=100000.0)
+    is_quick: Optional[bool] = None
     is_active: Optional[bool] = None
 
 class CategoryCreate(BaseModel):
@@ -47,6 +54,7 @@ class ProductResponse(BaseModel):
     sale_price: float
     stock_quantity: float
     min_stock_alert: float
+    is_quick: bool = False
     is_low_stock: bool
     is_active: bool
 
@@ -63,15 +71,14 @@ def list_products(
     query = select(Product).where(Product.is_active == True)
 
     if search:
-        # Sanitize wildcard characters for LIKE query safety
         safe_search = search.strip().replace("%", "\\%").replace("_", "\\_")
-        search_term = f"%{safe_search}%"
-        query = query.where(
-            or_(
-                Product.name.ilike(search_term),
-                Product.barcode.ilike(search_term)
-            )
-        )
+        variants = get_search_variants(safe_search)
+        conds = []
+        for v in variants:
+            st = f"%{v}%"
+            conds.append(Product.name.ilike(st))
+            conds.append(Product.barcode.ilike(st))
+        query = query.where(or_(*conds))
 
     if category_id:
         query = query.where(Product.category_id == category_id)
@@ -104,6 +111,7 @@ def list_products(
             "sale_price": p.sale_price,
             "stock_quantity": p.stock_quantity,
             "min_stock_alert": p.min_stock_alert,
+            "is_quick": bool(getattr(p, "is_quick", False)),
             "is_low_stock": p.stock_quantity <= p.min_stock_alert,
             "is_active": p.is_active
         })
@@ -114,6 +122,34 @@ def list_products(
         "limit": limit,
         "items": result_items
     }
+
+@router.get("/quick", response_model=List[dict])
+def get_quick_products(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Returns quick products for POS screen directly from database."""
+    items = session.exec(
+        select(Product).where(Product.is_active == True, Product.is_quick == True).order_by(Product.name)
+    ).all()
+    
+    # If no products explicitly marked as quick, fallback to first 8 active products
+    if not items:
+        items = session.exec(
+            select(Product).where(Product.is_active == True).order_by(Product.name).limit(8)
+        ).all()
+
+    is_owner = (current_user.role == UserRole.OWNER)
+    return [{
+        "id": p.id,
+        "barcode": p.barcode,
+        "name": p.name,
+        "unit": p.unit,
+        "sale_price": p.sale_price,
+        "purchase_price": p.purchase_price if is_owner else None,
+        "stock_quantity": p.stock_quantity,
+        "is_quick": bool(getattr(p, "is_quick", False))
+    } for p in items]
 
 @router.get("/barcode/{barcode}", response_model=dict)
 def get_product_by_barcode(
@@ -170,6 +206,7 @@ def get_product_by_barcode(
         "sale_price": product.sale_price,
         "stock_quantity": product.stock_quantity,
         "min_stock_alert": product.min_stock_alert,
+        "is_quick": bool(getattr(product, "is_quick", False)),
         "is_low_stock": product.stock_quantity <= product.min_stock_alert,
         "is_active": product.is_active,
         "detected_weight": detected_weight
@@ -199,6 +236,7 @@ def get_product(
         "sale_price": product.sale_price,
         "stock_quantity": product.stock_quantity,
         "min_stock_alert": product.min_stock_alert,
+        "is_quick": bool(getattr(product, "is_quick", False)),
         "is_low_stock": product.stock_quantity <= product.min_stock_alert,
         "is_active": product.is_active
     }
@@ -206,12 +244,27 @@ def get_product(
 @router.post("", response_model=dict)
 def create_product(
     data: ProductCreate,
-    current_user: User = Depends(require_role([UserRole.OWNER])),
+    current_user: User = Depends(require_role([UserRole.OWNER, UserRole.CASHIER])),
     session: Session = Depends(get_session)
 ):
     clean_barcode = data.barcode.strip()
     existing = session.exec(select(Product).where(Product.barcode == clean_barcode)).first()
     if existing:
+        if not existing.is_active:
+            # Reactivate previously archived product
+            existing.is_active = True
+            existing.name = data.name.strip()
+            existing.category_id = data.category_id
+            existing.unit = data.unit
+            existing.purchase_price = data.purchase_price
+            existing.sale_price = data.sale_price
+            existing.stock_quantity = data.stock_quantity
+            existing.min_stock_alert = data.min_stock_alert
+            existing.is_quick = data.is_quick
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            return {"message": "Mahsulot qayta faollashtirildi", "id": existing.id, "barcode": existing.barcode}
         raise HTTPException(status_code=400, detail="Bunday shtrixkodli mahsulot allaqachon mavjud / Товар с таким штрихкодом уже существует")
     
     product_data = data.model_dump()
@@ -228,7 +281,7 @@ def create_product(
 def update_product(
     product_id: int,
     data: ProductUpdate,
-    current_user: User = Depends(require_role([UserRole.OWNER])),
+    current_user: User = Depends(require_role([UserRole.OWNER, UserRole.CASHIER])),
     session: Session = Depends(get_session)
 ):
     product = session.get(Product, product_id)
@@ -240,7 +293,7 @@ def update_product(
         clean_barcode = update_data["barcode"].strip()
         if clean_barcode != product.barcode:
             existing = session.exec(select(Product).where(Product.barcode == clean_barcode)).first()
-            if existing:
+            if existing and existing.id != product.id:
                 raise HTTPException(status_code=400, detail="Bunday shtrixkodli mahsulot allaqachon mavjud / Товар с таким штрихкодом уже существует")
         update_data["barcode"] = clean_barcode
 
@@ -270,15 +323,21 @@ def delete_product(
     return {"message": "Mahsulot arxivlandi / Товар архивирован"}
 
 @router.post("/clear-catalog")
+@router.post("/clear-all")
+@router.post("/reset-demo-data")
 def clear_catalog(
     current_user: User = Depends(require_role([UserRole.OWNER])),
     session: Session = Depends(get_session)
 ):
-    """Clears all test products, test sales, and invoices so the store starts clean."""
-    session.exec(delete(SaleItem))
-    session.exec(delete(Sale))
+    """Clears all test products, sales, debts, suppliers, and expenses for a 100% clean store start."""
+    session.exec(delete(Expense))
+    session.exec(delete(DebtTransaction))
+    session.exec(delete(Debtor))
     session.exec(delete(SupplierInvoiceItem))
     session.exec(delete(SupplierInvoice))
+    session.exec(delete(Supplier))
+    session.exec(delete(SaleItem))
+    session.exec(delete(Sale))
     session.exec(delete(Product))
 
     cleared_setting = session.get(SystemSetting, "catalog_cleared")
@@ -291,7 +350,7 @@ def clear_catalog(
 
     return {
         "status": "ok",
-        "message": "Barcha test tovarlar va cheklar tozalandi. Do'kon toza varaqdan boshlashga tayyor! / Все тестовые товары и чеки очищены. База готова к реальной работе!"
+        "message": "Barcha test tovarlar, qarzlar, xarajatlar va cheklar tozalandi. Do'kon toza varaqdan boshlashga 100% tayyor! / Все тестовые товары, долги, расходы и чеки очищены. База готова к реальной торговле!"
     }
 
 @router.post("/reseed-catalog")
@@ -316,13 +375,13 @@ def get_categories(session: Session = Depends(get_session)):
 @router.post("/categories", response_model=Category)
 def create_category(
     data: CategoryCreate,
-    current_user: User = Depends(require_role([UserRole.OWNER])),
+    current_user: User = Depends(require_role([UserRole.OWNER, UserRole.CASHIER])),
     session: Session = Depends(get_session)
 ):
     clean_name = data.name.strip()
     existing = session.exec(select(Category).where(Category.name == clean_name)).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Bunday nomli kategoriya allaqachon mavjud / Категория с таким именем уже существует")
+        return existing
     cat = Category(name=clean_name, description=data.description, icon=data.icon)
     session.add(cat)
     session.commit()

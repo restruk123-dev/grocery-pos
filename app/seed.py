@@ -155,12 +155,17 @@ VARIATIONS = [
     "Original", "Oltin", "Sevimli", "Bayramona", "Yangi"
 ]
 
+QUICK_STAPLE_NAMES = [
+    "Buxanka non", "Tandir non", "Shakar qadoqlangan", "Kartoshka yangi",
+    "Piyoz oq", "Sut tabiiy", "Bug'doy uni", "Pista yog'i", "Tuxum"
+]
+
 def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
-    """Populates the database with initial users, suppliers, debtors, categories, and 2000 SKU products in UZS (so'm)."""
+    """Populates database with initial users. Demo data is skipped if catalog_cleared == true."""
     stats = {"users": 0, "categories": 0, "products": 0, "debtors": 0, "suppliers": 0}
     now_utc = datetime.now(timezone.utc)
 
-    # 1. Seed Users (Owner & Cashier)
+    # 1. Seed Users (Owner & Cashier) - ALWAYS REQUIRED FOR LOGIN
     owner = session.exec(select(User).where(User.username == settings.DEFAULT_OWNER_USERNAME)).first()
     if not owner:
         owner = User(
@@ -195,7 +200,7 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
 
     session.commit()
 
-    # 2. Seed Categories
+    # 2. Always ensure default Categories exist
     category_map = {}
     for cat_data in CATEGORIES_DATA:
         cat = session.exec(select(Category).where(Category.name == cat_data["name"])).first()
@@ -206,6 +211,11 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
             session.refresh(cat)
             stats["categories"] += 1
         category_map[cat.name] = cat.id
+
+    # If owner cleared catalog for clean store start, DO NOT seed fake suppliers, debts, products or expenses!
+    cleared_setting = session.get(SystemSetting, 'catalog_cleared')
+    if cleared_setting and cleared_setting.value == 'true':
+        return stats
 
     # 3. Seed Suppliers
     suppliers_data = [
@@ -223,11 +233,11 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
 
     # 4. Seed Debtors (Qarzlar daftari / Тетрадь долгов)
     debtors_data = [
-        {"full_name": "Alisher Rahimov", "phone": "+998 (90) 123-45-67", "note": "44-xonadon qo'shni, haftalik hisob", "initial_debt": 150000.0},
-        {"full_name": "Mariya Ivanovna (muallima)", "phone": "+998 (91) 234-56-78", "note": "Non va sut mahsulotlari oladi, maoshda to'laydi", "initial_debt": 75000.0},
-        {"full_name": "Damir usta (avtoservis)", "phone": "+998 (93) 345-67-89", "note": "Do'kon ro'parasidagi 12-ustaxona", "initial_debt": 280000.0},
-        {"full_name": "Nargiza opa", "phone": "+998 (94) 456-78-90", "note": "Pensiyada har oyning 15-sanasida yopadi", "initial_debt": 90000.0},
-        {"full_name": "Sergey quruvchi", "phone": "+998 (97) 567-89-01", "note": "Ta'mirlash brigadasi boshlig'i", "initial_debt": 0.0},
+        {"full_name": "Alisher Rahimov", "phone": "+998 (90) 123-45-67", "note": "44-xonadon qo'shni, haftalik hisob", "due_date": "Dushanba", "initial_debt": 150000.0},
+        {"full_name": "Mariya Ivanovna (muallima)", "phone": "+998 (91) 234-56-78", "note": "Non va sut mahsulotlari oladi, maoshda to'laydi", "due_date": "Oy oxirida", "initial_debt": 75000.0},
+        {"full_name": "Damir usta (avtoservis)", "phone": "+998 (93) 345-67-89", "note": "Do'kon ro'parasidagi 12-ustaxona", "due_date": "Juma", "initial_debt": 280000.0},
+        {"full_name": "Nargiza opa", "phone": "+998 (94) 456-78-90", "note": "Pensiyada har oyning 15-sanasida yopadi", "due_date": "15-sana", "initial_debt": 90000.0},
+        {"full_name": "Sergey quruvchi", "phone": "+998 (97) 567-89-01", "note": "Ta'mirlash brigadasi boshlig'i", "due_date": "1 hafta", "initial_debt": 0.0},
     ]
     for d_data in debtors_data:
         debtor = session.exec(select(Debtor).where(Debtor.full_name == d_data["full_name"])).first()
@@ -244,16 +254,13 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
                     amount=init_debt,
                     transaction_type=DebtTransactionType.DEBT_INCREASE,
                     note="Boshlang'ich qarz qoldig'i (so'm)",
+                    due_date=d_data.get("due_date"),
                     created_at=now_utc - timedelta(days=3)
                 )
                 session.add(tx)
                 session.commit()
 
-    # 5. Seed 2000 SKU Products (Skip if owner cleared test catalog)
-    cleared_setting = session.get(SystemSetting, 'catalog_cleared')
-    if cleared_setting and cleared_setting.value == 'true':
-        return stats
-
+    # 5. Seed 2000 SKU Products
     existing_count = session.exec(select(Product)).all()
     current_count = len(existing_count)
     if current_count < target_sku_count:
@@ -261,7 +268,6 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
         categories_list = list(PRODUCT_TEMPLATES.keys())
         products_to_add = []
         
-        # Consistent barcode sequence starting from 4607000000001
         base_barcode = 4607000000000
         start_idx = current_count + 1
 
@@ -280,23 +286,22 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
             full_name = f"{base_name} '{brand}' ({variation}) {weight_suffix}"
             barcode = f"{base_barcode + idx}"
 
-            # Add slight realistic price spread (+/- 15%)
             price_factor = 1.0 + ((i % 11) - 5) * 0.03
-            # Round prices to nearest 500 so'm for clean retail pricing
             purchase_price = round(round((base_pur * price_factor) / 500.0) * 500.0, 2)
             sale_price = round(round((base_sale * price_factor) / 500.0) * 500.0, 2)
             
-            # Ensure sale_price > purchase_price
             if sale_price <= purchase_price:
                 sale_price = purchase_price + 2000.0
             
-            # Realistic stock distribution
             if i % 25 == 0:
-                stock_qty = float(random.randint(1, 4)) # below min_stock
+                stock_qty = float(random.randint(1, 4))
             else:
                 stock_qty = float(random.randint(10, 150))
             
             min_stock = 5.0 if unit != "kg" else 15.0
+
+            # Mark staple products as is_quick
+            is_quick = any(base_name.startswith(q) for q in QUICK_STAPLE_NAMES) and (i < 15)
 
             p = Product(
                 barcode=barcode,
@@ -307,13 +312,13 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
                 sale_price=sale_price,
                 stock_quantity=stock_qty,
                 min_stock_alert=min_stock,
+                is_quick=is_quick,
                 is_active=True,
                 created_at=now_utc,
                 updated_at=now_utc
             )
             products_to_add.append(p)
             
-            # Batch add in chunks of 500 for high speed
             if len(products_to_add) >= 500:
                 session.add_all(products_to_add)
                 session.commit()
@@ -325,7 +330,7 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
             session.commit()
             stats["products"] += len(products_to_add)
 
-    # 6. Seed a sample expense if none exist
+    # 6. Seed a sample expense ONLY if not cleared
     exp = session.exec(select(Expense)).first()
     if not exp:
         session.add(Expense(

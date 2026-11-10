@@ -9,7 +9,7 @@ os.environ["AUTO_SEED"] = "false"
 
 from app.main import app
 from app.database import get_session
-from app.models import User, UserRole, Product, Debtor
+from app.models import User, UserRole, Product, Debtor, Expense, ExpenseCategory
 from app.auth import hash_password, create_access_token
 
 client = TestClient(app)
@@ -46,7 +46,8 @@ def session_fixture():
             sale_price=4000.0,
             purchase_price=3000.0,
             stock_quantity=50.0,
-            unit="dona"
+            unit="dona",
+            is_quick=True
         )
         scale_product = Product(
             name="Olma Qizil (Tarozi)",
@@ -195,7 +196,7 @@ def test_ai_store_assistant(session):
     assert v_data["amount"] == 50000.0
     assert "dushanba" in (v_data.get("due_date_label") or "").lower() or v_data.get("due_date") is not None
 
-    # Smart store assistant
+    # Smart store assistant natural query
     ai_res = client.post(
         "/api/v1/ai/assistant",
         json={"query": "Bugun qancha savdo bo'ldi?"},
@@ -203,3 +204,62 @@ def test_ai_store_assistant(session):
     )
     assert ai_res.status_code == 200
     assert "savdo" in ai_res.json()["answer"].lower() or "tushum" in ai_res.json()["answer"].lower()
+
+    # Smart store assistant numbered menu "1"
+    ai_num1 = client.post(
+        "/api/v1/ai/assistant",
+        json={"query": "1"},
+        headers=headers
+    )
+    assert ai_num1.status_code == 200
+    assert "kunlik savdo" in ai_num1.json()["answer"].lower() or "tushum" in ai_num1.json()["answer"].lower()
+
+
+def test_transliteration_and_quick_products(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Search Latin "Test Non" with Cyrillic "тест" or "нон"
+    res_cyr = client.get("/api/v1/products?search=нон", headers=headers)
+    assert res_cyr.status_code == 200
+    items = res_cyr.json()["items"]
+    assert len(items) >= 1
+    assert any("non" in it["name"].lower() for it in items)
+
+    # Search with "буханка" (synonym maps to non/buxanka)
+    res_syn = client.get("/api/v1/products?search=буханка", headers=headers)
+    assert res_syn.status_code == 200
+
+    # Quick products endpoint
+    quick_res = client.get("/api/v1/products/quick", headers=headers)
+    assert quick_res.status_code == 200
+    quick_items = quick_res.json()
+    assert len(quick_items) >= 1
+    assert quick_items[0]["is_quick"] is True
+
+
+def test_expense_delete(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create expense
+    exp_res = client.post(
+        "/api/v1/expenses",
+        json={
+            "category": "UTILITIES",
+            "amount": 25000.0,
+            "description": "Elektr energiyasi to'lovi"
+        },
+        headers=headers
+    )
+    assert exp_res.status_code == 200
+    exp_id = exp_res.json()["id"]
+
+    # Delete expense
+    del_res = client.delete(f"/api/v1/expenses/{exp_id}", headers=headers)
+    assert del_res.status_code == 200
+    assert del_res.json()["status"] == "ok"
+
+    # Verify not found
+    del_again = client.delete(f"/api/v1/expenses/{exp_id}", headers=headers)
+    assert del_again.status_code == 404
