@@ -263,3 +263,49 @@ def test_expense_delete(session):
     # Verify not found
     del_again = client.delete(f"/api/v1/expenses/{exp_id}", headers=headers)
     assert del_again.status_code == 404
+
+
+def test_voice_command_actions(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Open scanner
+    res_sc = client.post(
+        "/api/v1/ai/voice-command",
+        json={"speech_text": "Skanerni och", "language": "uz"},
+        headers=headers
+    )
+    assert res_sc.status_code == 200
+    assert res_sc.json()["action"] == "open_scanner"
+    assert "ochildi" in res_sc.json()["voice_text"].lower()
+
+    # 2. Add to cart
+    res_cart = client.post(
+        "/api/v1/ai/voice-command",
+        json={"speech_text": "Savatga 2 ta non qo'sh", "language": "uz"},
+        headers=headers
+    )
+    assert res_cart.status_code == 200
+    assert res_cart.json()["action"] == "add_to_cart"
+    assert res_cart.json()["data"]["quantity"] == 2.0
+    assert "non" in res_cart.json()["data"]["product"]["name"].lower()
+
+    # 3. Calculate finances / profit
+    res_fin = client.post(
+        "/api/v1/ai/voice-command",
+        json={"speech_text": "Bugungi foyda va marja qancha?", "language": "uz"},
+        headers=headers
+    )
+    assert res_fin.status_code == 200
+    assert res_fin.json()["action"] == "calculate_finances"
+    assert "profit" in res_fin.json()["data"]
+
+    # 4. Debt voice command
+    res_debt = client.post(
+        "/api/v1/ai/voice-command",
+        json={"speech_text": "Bobur Mirzoga 30 ming qarz yoz", "language": "uz"},
+        headers=headers
+    )
+    assert res_debt.status_code == 200
+    assert res_debt.json()["action"] == "open_debt"
+    assert res_debt.json()["data"]["amount"] == 30000.0

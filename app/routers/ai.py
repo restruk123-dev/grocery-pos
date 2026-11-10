@@ -835,6 +835,19 @@ class StoreAiQueryRequest(BaseModel):
     query: str
     language: str = "uz"
 
+
+class VoiceCommandRequest(BaseModel):
+    speech_text: str
+    language: str = "uz"  # "uz" or "ru"
+    context: Optional[str] = "pos"  # "pos", "debts", "catalog", "expenses"
+
+
+class VoiceCommandResponse(BaseModel):
+    action: str  # "open_scanner", "add_to_cart", "open_debt", "calculate_finances", "clear_cart", "checkout", "speak_only", "product_not_found"
+    answer: str
+    voice_text: str
+    data: Optional[Dict[str, Any]] = None
+
 class StoreAiQueryResponse(BaseModel):
     answer: str
     quick_suggestions: List[str]
@@ -1101,4 +1114,191 @@ def store_ai_assistant(req: StoreAiQueryRequest, session: Session = Depends(get_
     return StoreAiQueryResponse(
         answer=ans,
         quick_suggestions=["1. Savdo hisoboti", "2. Qarzlar daftari", "3. Kam qolgan tovarlar"] if lang == "uz" else ["1. Выручка за день", "2. Тетрадь долгов", "3. Остатки товаров"]
+    )
+
+
+
+# ---------- Voice Command Router (Actions & Speech Response) ----------
+
+@router.post("/voice-command", response_model=VoiceCommandResponse)
+def voice_command(req: VoiceCommandRequest, session: Session = Depends(get_session)):
+    """Executes high-accuracy voice commands (open scanner, add to cart, debt record, financial breakdown)
+    and returns both the action payload and clean natural speech for browser SpeechSynthesis.
+    100% free, reliable, zero external API cost or latency."""
+    raw_text = req.speech_text.strip()
+    q = raw_text.lower()
+    lang = req.language
+    
+    # 1. Open Camera Barcode Scanner
+    if any(w in q for w in ["skaner", "сканер", "kamera", "камера", "shtrixkod skaner", "сканировать", "открой сканер", "skanerni och"]):
+        ans = "📸 **Shtrixkod skaneri ochildi**" if lang == "uz" else "📸 **Сканер штрихкодов открыт**"
+        voice = "Shtrixkod skaneri ochildi" if lang == "uz" else "Сканер штрихкодов открыт"
+        return VoiceCommandResponse(
+            action="open_scanner",
+            answer=ans,
+            voice_text=voice
+        )
+        
+    # 2. Clear Cart
+    if any(w in q for w in ["savatni tozal", "savatni bo'shat", "очисти корзину", "сбрось корзину", "tozala savat", "очистить чек"]):
+        ans = "🗑️ **Savat tozalandi**" if lang == "uz" else "🗑️ **Корзина очищена**"
+        voice = "Savat tozalandi" if lang == "uz" else "Корзина очищена"
+        return VoiceCommandResponse(
+            action="clear_cart",
+            answer=ans,
+            voice_text=voice
+        )
+        
+    # 3. Checkout / Finish Sale
+    if any(w in q for w in ["to'lov", "to'lov qil", "chekni ur", "пробей чек", "оплати", "закрыть чек", "chek urish", "заверши чек"]):
+        ans = "💳 **To'lov oynasi ochildi**" if lang == "uz" else "💳 **Окно оплаты открыто**"
+        voice = "To'lov oynasi ochildi" if lang == "uz" else "Окно оплаты открыто"
+        return VoiceCommandResponse(
+            action="checkout",
+            answer=ans,
+            voice_text=voice
+        )
+        
+    # 4. Debt Record (Qarz yozish / Записать долг)
+    if any(w in q for w in ["qarz", "долг", "nasiya", "haqqim", "запиши долг", "qarz yoz"]):
+        try:
+            parsed_debt = parse_debt_voice(DebtVoiceParseRequest(speech_text=raw_text, language=lang), session=session)
+            if parsed_debt and parsed_debt.amount > 0:
+                d_name = parsed_debt.debtor_name or ("Noma'lum" if lang == "uz" else "Клиент")
+                ans = f"📓 **Qarz daftari:** {d_name}ga {parsed_debt.amount:,.0f} so'm qarz yozildi" if lang == "uz" else f"📓 **Тетрадь долгов:** долг {d_name} на сумму {parsed_debt.amount:,.0f} сум"
+                voice = f"{d_name}ga {parsed_debt.amount:,.0f} so'm qarz yozish tayyorlandi" if lang == "uz" else f"Запись долга клиенту {d_name} на {parsed_debt.amount:,.0f} сум подготовлена"
+                return VoiceCommandResponse(
+                    action="open_debt",
+                    answer=ans,
+                    voice_text=voice,
+                    data={
+                        "debtor_name": parsed_debt.debtor_name,
+                        "amount": parsed_debt.amount,
+                        "due_date": parsed_debt.due_date,
+                        "due_date_label": parsed_debt.due_date_label,
+                        "note": parsed_debt.note or "Ovozli qarz yozuvi"
+                    }
+                )
+        except Exception:
+            pass
+            
+    # 5. Financial Calculation (Foyda / Marja / Xarajatlar)
+    if any(w in q for w in ["foyda", "marja", "xarajat", "rasxod", "маржа", "прибыль", "расход", "посчитай", "daromad", "tushum"]):
+        tz_uz = timezone(timedelta(hours=5))
+        now_uz = datetime.now(tz_uz)
+        start_utc = datetime.combine(now_uz.date(), time.min, tzinfo=tz_uz).astimezone(timezone.utc)
+        sales_today = session.exec(select(Sale).where(Sale.created_at >= start_utc)).all()
+        today_revenue = sum(s.total_amount for s in sales_today)
+        est_profit = round(today_revenue * 0.22, 2)
+        
+        start_month = datetime(now_uz.year, now_uz.month, 1, tzinfo=tz_uz).astimezone(timezone.utc)
+        expenses_month = session.exec(select(Expense).where(Expense.expense_date >= start_month)).all()
+        total_expenses = sum(e.amount for e in expenses_month)
+        
+        if lang == "uz":
+            ans = f"📊 **Bugungi savdo:** {today_revenue:,.0f} so'm | **Yalpi foyda (~22%):** {est_profit:,.0f} so'm | **Oylik xarajat:** {total_expenses:,.0f} so'm"
+            voice = f"Bugungi savdo {today_revenue:,.0f} so'm, taxminiy yalpi foyda {est_profit:,.0f} so'm. Oylik xarajatlar {total_expenses:,.0f} so'm."
+        else:
+            ans = f"📊 **Выручка за сегодня:** {today_revenue:,.0f} сум | **Прибыль (~22%):** {est_profit:,.0f} сум | **Расходы за месяц:** {total_expenses:,.0f} сум"
+            voice = f"Сегодня выручка {today_revenue:,.0f} сум, примерная прибыль {est_profit:,.0f} сум. Расходы за месяц {total_expenses:,.0f} сум."
+            
+        return VoiceCommandResponse(
+            action="calculate_finances",
+            answer=ans,
+            voice_text=voice,
+            data={
+                "revenue": today_revenue,
+                "profit": est_profit,
+                "expenses": total_expenses,
+                "margin_percent": 22.0
+            }
+        )
+
+    # 6. Add to Cart (Savatga qo'shish / Добавить в корзину)
+    # Detect trigger words or implicit adding
+    is_add = any(w in q for w in ["savatga", "qo'sh", "qosh", "добавь", "в корзину", "пробей", "кирит", "ol", "в чек"])
+    
+    # Extract quantity
+    qty = 1.0
+    qty_match = re_module.search(r'(\d+(?:[.,]\d+)?)\s*(?:ta|dona|kg|litr|l|pachka|quti|шт|кг)?', q)
+    if qty_match:
+        try:
+            qty = float(qty_match.group(1).replace(',', '.'))
+        except ValueError:
+            qty = 1.0
+    else:
+        # Word numbers
+        word_nums = {
+            "bitta": 1.0, "bir": 1.0, "ikki": 2.0, "uch": 3.0, "to'rt": 4.0, "besh": 5.0,
+            "один": 1.0, "одна": 1.0, "два": 2.0, "две": 2.0, "три": 3.0, "четыре": 4.0, "пять": 5.0
+        }
+        for wn, wv in word_nums.items():
+            if wn in q:
+                qty = wv
+                break
+
+    # Clean product query text
+    clean_q = q
+    for stop_word in [
+        "savatga", "qo'sh", "qosh", "добавь", "в корзину", "пробей", "кирит", "iltimos", "пожалуйста",
+        "bitta", "bir", "ikki", "uch", "to'rt", "besh", "один", "одна", "два", "две", "три", "четыре", "пять",
+        "ta", "dona", "kg", "litr", "pachka", "quti", "шт", "кг", "пачка", "коробка", "в чек"
+    ]:
+        clean_q = re_module.sub(rf'\b{re_module.escape(stop_word)}\b', ' ', clean_q)
+    clean_q = re_module.sub(r'\d+(?:[.,]\d+)?', ' ', clean_q).strip()
+
+    if (is_add or req.context == "pos") and len(clean_q) >= 2:
+        variants = get_search_variants(clean_q)
+        products = session.exec(select(Product).where(Product.is_active == True)).all()
+        matched = None
+        for p in products:
+            p_name_low = p.name.lower()
+            if any(v in p_name_low for v in variants if len(v) >= 3):
+                matched = p
+                break
+                
+        if matched:
+            ans = f"✅ **{matched.name}** ({qty:g} {matched.unit}) savatga qo'shildi. Narxi: {matched.sale_price:,.0f} so'm" if lang == "uz" else f"✅ **{matched.name}** ({qty:g} {matched.unit}) добавлен в чек. Цена: {matched.sale_price:,.0f} сум"
+            voice = f"{matched.name} savatga qo'shildi. Narxi {matched.sale_price:,.0f} so'm" if lang == "uz" else f"Товар {matched.name} добавлен в чек. Цена {matched.sale_price:,.0f} сум"
+            return VoiceCommandResponse(
+                action="add_to_cart",
+                answer=ans,
+                voice_text=voice,
+                data={
+                    "product": {
+                        "id": matched.id,
+                        "name": matched.name,
+                        "sale_price": matched.sale_price,
+                        "purchase_price": matched.purchase_price,
+                        "barcode": matched.barcode,
+                        "unit": matched.unit,
+                        "stock_quantity": matched.stock_quantity
+                    },
+                    "quantity": qty
+                }
+            )
+        elif is_add:
+            ans = f"🔍 **«{clean_q}»** nomli tovar bazada topilmadi. Uni yangi tovar sifatida qo'shasizmi?" if lang == "uz" else f"🔍 Товар **«{clean_q}»** не найден в базе. Добавить его?"
+            voice = f"{clean_q} nomli tovar topilmadi. Yangi tovar qo'shilsinmi?" if lang == "uz" else f"Товар {clean_q} не найден в базе. Добавить его?"
+            return VoiceCommandResponse(
+                action="product_not_found",
+                answer=ans,
+                voice_text=voice,
+                data={"query": clean_q}
+            )
+
+    # 7. General AI Assistant Query Fallback
+    assistant_resp = store_ai_assistant(StoreAiQueryRequest(query=raw_text, language=lang), session=session)
+    # Extract first 2 sentences for natural voice speech
+    first_lines = [line.strip() for line in assistant_resp.answer.split('\n') if line.strip() and not line.strip().startswith('**') and not line.strip().startswith('•')]
+    voice_summary = ". ".join(first_lines[:2])
+    voice_summary = re_module.sub(r'[*_#`]', '', voice_summary).strip()
+    if not voice_summary:
+        voice_summary = "Ma'lumotlar tayyorlandi" if lang == "uz" else "Данные подготовлены"
+
+    return VoiceCommandResponse(
+        action="speak_only",
+        answer=assistant_resp.answer,
+        voice_text=voice_summary,
+        data={"suggestions": assistant_resp.quick_suggestions}
     )

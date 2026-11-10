@@ -384,6 +384,76 @@ function cyrToLat(text) {
   return text.toLowerCase().split('').map(c => CYR_TO_LAT_MAP[c] || c).join('');
 }
 
+
+// ------------------- SPEECH SYNTHESIS & VOICE HELPERS -------------------
+function speakAloud(text, lang = 'uz') {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*_#`•\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleanText) return;
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (lang === 'ru') {
+      const ruVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ru'));
+      if (ruVoice) utterance.voice = ruVoice;
+      utterance.lang = 'ru-RU';
+    } else {
+      const uzVoice = voices.find(v => v.lang && (v.lang.toLowerCase().startsWith('uz') || v.lang.toLowerCase().startsWith('tr')));
+      if (uzVoice) utterance.voice = uzVoice;
+      utterance.lang = uzVoice ? uzVoice.lang : 'ru-RU';
+    }
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.error('Speech synthesis error:', e);
+  }
+}
+
+function VoiceInputBtn({ onResult, lang = 'uz', title = 'Ovozli kiritish', className = '' }) {
+  const [listening, setListening] = useState(false);
+  const start = (e) => {
+    if (e) e.preventDefault();
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      alert(lang === 'uz' ? "Brauzeringizda ovozli kiritish qo'llab-quvvatlanmaydi" : "Голосовой ввод не поддерживается браузером");
+      return;
+    }
+    try {
+      const rec = new SpeechRec();
+      rec.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      rec.continuous = false;
+      rec.interimResults = false;
+      setListening(true);
+      rec.onresult = (ev) => {
+        setListening(false);
+        const txt = ev.results[0][0].transcript;
+        if (txt && onResult) onResult(txt);
+      };
+      rec.onerror = () => setListening(false);
+      rec.onend = () => setListening(false);
+      rec.start();
+    } catch (err) {
+      setListening(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={start}
+      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center ${
+        listening
+          ? 'bg-rose-600 text-white animate-pulse shadow-md shadow-rose-600/30'
+          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
+      } ${className}`}
+      title={title}
+    >
+      <span>🎙️</span>
+    </button>
+  );
+}
+
 function formatMoney(amount, currency = "so'm") {
   if (amount === undefined || amount === null || isNaN(amount)) return `0 ${currency}`;
   const parts = Math.round(Number(amount)).toString().split(".");
@@ -1423,7 +1493,7 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
               {t.barcodeLabel || "Shtrixkod *"}
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <input
                 type="text"
                 placeholder="4607000000001"
@@ -1432,6 +1502,7 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
                 className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
                 required
               />
+              <VoiceInputBtn onResult={(txt) => setBarcode(txt.replace(/\D/g, ''))} lang={lang} title="Shtrixkodni ovoz bilan aytish" />
               <button
                 type="button"
                 onClick={() => setCameraActive(true)}
@@ -2292,6 +2363,23 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const [notFoundBarcode, setNotFoundBarcode] = useState(null);
   const [createProductOpen, setCreateProductOpen] = useState(false);
 
+  // Parked / Held Carts (MoySklad Queue)
+  const [parkedCarts, setParkedCarts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('pos_parked_carts') || '[]');
+    } catch (e) {
+      return [];
+    }
+  });
+  const [parkedModalOpen, setParkedModalOpen] = useState(false);
+
+  // Quick Banknotes & Change Calculation (1C / MoySklad style)
+  const [selectedCashReceived, setSelectedCashReceived] = useState(null);
+
+  // Master Voice AI Assistant state
+  const [voiceAiActive, setVoiceAiActive] = useState(false);
+  const [voiceAiSpeaking, setVoiceAiSpeaking] = useState(false);
+
   const barcodeInputRef = useRef(null);
 
   const QUICK_ITEMS = [
@@ -2310,6 +2398,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   useEffect(() => {
     fetchCategories();
     fetchProducts();
+    fetchQuickProducts();
   }, [selectedCategory, search]);
 
   const fetchCategories = async () => {
@@ -2338,6 +2427,20 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     }
   };
 
+  const fetchQuickProducts = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/products/quick`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) setQuickProducts(data);
+      }
+    } catch (e) {
+      console.error('Quick products fetch error:', e);
+    }
+  };
+
   const playBeep = () => {
     try {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2350,6 +2453,170 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.12);
     } catch (e) {}
+  };
+
+  const cartTotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.product.sale_price * item.quantity, 0);
+  }, [cart]);
+
+  // When total changes, sync quick cash banknote if exact was selected
+  const cashGiven = selectedCashReceived !== null ? selectedCashReceived : cartTotal;
+  const cashChange = Math.max(0, cashGiven - cartTotal);
+
+  // ------------------- HOTKEYS LISTENER (1C:Retail Style) -------------------
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't intercept function keys if a modal is open
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (barcodeInputRef.current) barcodeInputRef.current.focus();
+      } else if (e.key === 'F5') {
+        e.preventDefault();
+        if (cart.length > 0) handleDirectCheckout('CASH');
+      } else if (e.key === 'F6') {
+        e.preventDefault();
+        if (cart.length > 0) handleDirectCheckout('CARD');
+      } else if (e.key === 'F7') {
+        e.preventDefault();
+        if (cart.length > 0) handleDirectCheckout('DEBT');
+      } else if (e.key === 'F12') {
+        e.preventDefault();
+        if (cart.length > 0) setCheckoutModalOpen(true);
+      } else if (e.key === 'Escape') {
+        if (checkoutModalOpen) setCheckoutModalOpen(false);
+        else if (scannerActive) setScannerActive(false);
+        else if (parkedModalOpen) setParkedModalOpen(false);
+        else if (cart.length > 0) parkCurrentCart();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cart, cartTotal, checkoutModalOpen, scannerActive, parkedModalOpen, parkedCarts]);
+
+  // ------------------- PARK / HOLD CART QUEUE -------------------
+  const parkCurrentCart = () => {
+    if (cart.length === 0) {
+      notify(lang === 'uz' ? "Savat bo'sh, saqlashga tovar yo'q" : "Корзина пуста", 'warn');
+      return;
+    }
+    const newHold = {
+      id: Date.now().toString().slice(-5),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      items: cart,
+      total: cartTotal,
+      itemCount: cart.reduce((sum, it) => sum + it.quantity, 0)
+    };
+    const updated = [newHold, ...parkedCarts].slice(0, 10);
+    setParkedCarts(updated);
+    try { localStorage.setItem('pos_parked_carts', JSON.stringify(updated)); } catch (e) {}
+    setCart([]);
+    setSelectedCashReceived(null);
+    notify(lang === 'uz' ? `Chek #${newHold.id} saqlandi` : `Чек #${newHold.id} отложен`, 'info');
+    speakAloud(lang === 'uz' ? "Chek saqlandi" : "Чек отложен", lang);
+  };
+
+  const resumeParkedCart = (heldId) => {
+    const found = parkedCarts.find(h => h.id === heldId);
+    if (!found) return;
+    if (cart.length > 0) {
+      const autoPark = {
+        id: Date.now().toString().slice(-5),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        items: cart,
+        total: cartTotal,
+        itemCount: cart.reduce((sum, it) => sum + it.quantity, 0)
+      };
+      const updated = [autoPark, ...parkedCarts.filter(h => h.id !== heldId)];
+      setParkedCarts(updated);
+      try { localStorage.setItem('pos_parked_carts', JSON.stringify(updated)); } catch (e) {}
+    } else {
+      const updated = parkedCarts.filter(h => h.id !== heldId);
+      setParkedCarts(updated);
+      try { localStorage.setItem('pos_parked_carts', JSON.stringify(updated)); } catch (e) {}
+    }
+    setCart(found.items);
+    setSelectedCashReceived(null);
+    setParkedModalOpen(false);
+    notify(lang === 'uz' ? `Chek #${heldId} tiklandi` : `Чек #${heldId} восстановлен`, 'success');
+    speakAloud(lang === 'uz' ? "Chek tiklandi" : "Чек восстановлен", lang);
+  };
+
+  const removeParkedCart = (heldId) => {
+    const updated = parkedCarts.filter(h => h.id !== heldId);
+    setParkedCarts(updated);
+    try { localStorage.setItem('pos_parked_carts', JSON.stringify(updated)); } catch (e) {}
+  };
+
+  // ------------------- MASTER VOICE AI ASSISTANT & COMMAND ROUTER -------------------
+  const startMasterVoiceAI = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      notify(lang === 'uz' ? "Brauzeringiz ovozli boshqaruvni qo'llab-quvvatlamaydi" : "Голосовой ввод не поддерживается", 'error');
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      setVoiceAiActive(true);
+      notify(lang === 'uz' ? "🎙️ Eshitilmoqda... Buyruqni ayting (skaner, tovar qo'shish, qarz, foyda)" : "🎙️ Слушаю команду (сканер, добавить товар, долг, прибыль)...", 'info');
+
+      recognition.onresult = async (e) => {
+        setVoiceAiActive(false);
+        const spoken = e.results[0][0].transcript;
+        if (!spoken) return;
+        await handleVoiceCommand(spoken);
+      };
+      recognition.onerror = () => setVoiceAiActive(false);
+      recognition.onend = () => setVoiceAiActive(false);
+      recognition.start();
+    } catch (err) {
+      setVoiceAiActive(false);
+      notify(err.message, 'error');
+    }
+  };
+
+  const handleVoiceCommand = async (speechText) => {
+    try {
+      notify((lang === 'uz' ? "Bajarilmoqda: " : "Обработка: ") + speechText, 'info');
+      const res = await fetch(`${API_BASE}/ai/voice-command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          speech_text: speechText,
+          language: lang,
+          context: 'pos'
+        })
+      });
+      const data = await res.json();
+
+      if (data.voice_text) {
+        speakAloud(data.voice_text, lang);
+      }
+
+      if (data.action === 'open_scanner') {
+        setScannerActive(true);
+      } else if (data.action === 'add_to_cart' && data.data && data.data.product) {
+        addToCart(data.data.product, data.data.quantity || 1.0);
+        playBeep();
+        notify(data.answer, 'success');
+      } else if (data.action === 'clear_cart') {
+        setCart([]);
+        notify(lang === 'uz' ? "Savat tozalandi" : "Корзина очищена");
+      } else if (data.action === 'checkout') {
+        if (cart.length > 0) setCheckoutModalOpen(true);
+      } else if (data.action === 'product_not_found') {
+        setNotFoundBarcode(data.data ? data.data.query : speechText);
+      } else {
+        notify(data.answer, 'info');
+      }
+    } catch (err) {
+      notify(err.message, 'error');
+    }
   };
 
   const handleBarcodeSubmit = async (e) => {
@@ -2365,7 +2632,8 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) {
-        notify((lang === 'uz' ? "Shtrixkod topilmadi: " : "Штрихкод не найден: ") + code, 'error');
+        playBeep();
+        setNotFoundBarcode(code);
         setBarcodeQuery('');
         return;
       }
@@ -2374,46 +2642,13 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       const qty = prod.detected_weight ? Number(prod.detected_weight) : 1.0;
       addToCart(prod, qty);
       if (prod.detected_weight) {
-        notify((lang === 'uz' ? "Tarozidan tortilgan vazn aniqlandi: " : "Вес с весов: ") + qty + " kg");
+        notify((lang === 'uz' ? "Vazn aniqlandi: " : "Вес с весов: ") + qty + " kg");
       } else {
         notify(prod.name);
       }
       setBarcodeQuery('');
       if (barcodeInputRef.current) barcodeInputRef.current.focus();
     } catch (err) {
-      notify(err.message, 'error');
-    }
-  };
-
-  const startVoiceSearch = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      notify(lang === 'uz' ? "Brauzeringiz ovozli qidiruvni qo'llab-quvvatlamaydi" : "Голосовой ввод не поддерживается браузером", 'error');
-      return;
-    }
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      setVoiceListening(true);
-      notify(lang === 'uz' ? "Eshitilmoqda... tovar nomini ayting" : "Слушаю... назовите товар", 'info');
-
-      recognition.onresult = (e) => {
-        setVoiceListening(false);
-        const text = e.results[0][0].transcript;
-        setSearch(text);
-        notify((lang === 'uz' ? "Qidirilmoqda: " : "Поиск: ") + text);
-      };
-      recognition.onerror = () => {
-        setVoiceListening(false);
-      };
-      recognition.onend = () => {
-        setVoiceListening(false);
-      };
-      recognition.start();
-    } catch (err) {
-      setVoiceListening(false);
       notify(err.message, 'error');
     }
   };
@@ -2434,16 +2669,16 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
   const addQuickItem = (item) => {
     playBeep();
-    const virtualProduct = {
-      id: item.barcode,
+    const prod = {
+      id: item.id || item.barcode,
       name: item.name,
       barcode: item.barcode,
-      sale_price: item.price,
-      purchase_price: Math.round(item.price * 0.8),
-      unit: 'dona',
-      stock_quantity: 999
+      sale_price: item.sale_price !== undefined ? item.sale_price : item.price,
+      purchase_price: item.purchase_price !== undefined ? item.purchase_price : Math.round((item.sale_price || item.price) * 0.75),
+      unit: item.unit || 'dona',
+      stock_quantity: item.stock_quantity !== undefined ? item.stock_quantity : 999
     };
-    addToCart(virtualProduct, 1.0);
+    addToCart(prod, 1.0);
     notify(item.name + " (+1)");
   };
 
@@ -2461,17 +2696,26 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     );
   };
 
+  const setItemExactQty = (productId, newQty) => {
+    const parsed = parseFloat(newQty);
+    if (isNaN(parsed) || parsed <= 0) return;
+    setCart((prev) =>
+      prev.map((item) =>
+        item.product.id === productId ? { ...item, quantity: parsed } : item
+      )
+    );
+  };
+
   const removeFromCart = (productId) => {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    setSelectedCashReceived(null);
+  };
 
-  const cartTotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.product.sale_price * item.quantity, 0);
-  }, [cart]);
-
-  // Fast 1-Click Checkout Handler
+  // Direct 1-Click Checkout Handler
   const handleDirectCheckout = async (paymentMethod) => {
     if (cart.length === 0) return;
     if (paymentMethod === 'DEBT') {
@@ -2479,9 +2723,9 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       setCheckoutModalOpen(true);
       return;
     }
-
     setDirectLoading(true);
     try {
+      const cashVal = paymentMethod === 'CASH' ? cashGiven : 0;
       const payload = {
         items: cart.map((i) => ({
           product_id: typeof i.product.id === 'number' ? i.product.id : null,
@@ -2491,10 +2735,9 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
           quantity: i.quantity
         })),
         payment_method: paymentMethod,
-        cash_received: paymentMethod === 'CASH' ? cartTotal : 0,
+        cash_received: cashVal,
         card_amount: paymentMethod === 'CARD' ? cartTotal : 0,
-        debt_amount: 0,
-        debtor_id: null
+        debt_amount: 0
       };
 
       const res = await fetch(`${API_BASE}/pos/checkout`, {
@@ -2506,18 +2749,24 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "To'lovda xatolik yuz berdi");
+      if (!res.ok) throw new Error(data.detail || "To'lovda xatolik");
 
       playBeep();
       setCart([]);
+      setSelectedCashReceived(null);
       setSuccessToast({
         receiptNumber: data.receipt_number,
         total: cartTotal,
-        method: paymentMethod,
+        change: data.change_given,
+        method: data.payment_method,
         data: data
       });
       setTimeout(() => setSuccessToast(null), 6000);
-      if (barcodeInputRef.current) barcodeInputRef.current.focus();
+      
+      const spkMsg = paymentMethod === 'CASH'
+        ? (lang === 'uz' ? `Xarid yakunlandi. Qaytim: ${formatMoney(data.change_given)}` : `Покупка завершена. Сдача: ${formatMoney(data.change_given)}`)
+        : (lang === 'uz' ? "Karta orqali to'lov qabul qilindi" : "Оплата картой принята");
+      speakAloud(spkMsg, lang);
     } catch (err) {
       notify(err.message, 'error');
     } finally {
@@ -2527,26 +2776,27 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
   return (
     <div className="space-y-3">
-      {/* Non-blocking Checkout Success Toast Banner */}
+      {/* Success Non-blocking Toast Banner */}
       {successToast && (
-        <div className="bg-emerald-600 text-white p-3 sm:p-4 rounded-2xl shadow-xl flex items-center justify-between gap-3 animate-fade-in transition">
-          <div className="flex items-center gap-2">
+        <div className="bg-emerald-600 text-white rounded-2xl p-3 shadow-xl flex items-center justify-between gap-3 animate-fade-in border border-emerald-400">
+          <div className="flex items-center gap-3">
             <span className="text-2xl">✅</span>
             <div>
-              <div className="font-extrabold text-sm sm:text-base">
-                {lang === 'uz' ? "Savdo saqlandi: " : "Продажа сохранена: "}
-                {formatMoney(successToast.total)} ({successToast.method})
+              <div className="font-extrabold text-xs sm:text-sm">
+                {lang === 'uz' ? "Xarid muvaffaqiyatli yakunlandi!" : "Покупка успешно завершена!"} #{successToast.receiptNumber}
               </div>
-              <div className="text-xs text-emerald-100 font-mono">
-                Chek #{successToast.receiptNumber}
+              <div className="text-[11px] opacity-90 font-mono">
+                {formatMoney(successToast.total)} ({successToast.method})
+                {successToast.change > 0 && (
+                  <span className="ml-2 font-black text-amber-200">
+                    {lang === 'uz' ? "Qaytim:" : "Сдача:"} {formatMoney(successToast.change)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
           <button
-            onClick={() => {
-              setLastReceipt(successToast.data);
-              setSuccessToast(null);
-            }}
+            onClick={() => setLastReceipt(successToast.data)}
             className="bg-white text-emerald-800 hover:bg-emerald-50 px-3 py-1.5 rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5"
           >
             <span>🖨️</span>
@@ -2555,66 +2805,82 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
-        {/* Products & Fast Selection (8 cols) */}
+      {/* MoySklad 2-Column POS Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
+        
+        {/* LEFT COLUMN: Input tools + Quick items + Dense Cart Table (7-8 cols) */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-3">
-          {/* Search, Barcode & Action Tools */}
+          
+          {/* Top Barcode, Search & Voice AI Command Bar */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-sm flex flex-col sm:flex-row gap-2 transition-colors duration-200">
             {/* Barcode input & Submit */}
-            <form onSubmit={handleBarcodeSubmit} className="flex-1 flex gap-1.5">
+            <form onSubmit={handleBarcodeSubmit} className="flex-1 flex gap-1.5 items-center">
               <input
                 ref={barcodeInputRef}
                 type="text"
-                placeholder={t.barcodeScanPlaceholder || "Shtrixkodni kiriting yoki skanerlang..."}
+                placeholder={t.barcodeScanPlaceholder || "Shtrixkodni kiriting (F2)..."}
                 value={barcodeQuery}
                 onChange={(e) => setBarcodeQuery(e.target.value)}
-                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
               />
               <button
                 type="submit"
                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition"
+                title="Shtrixkodni qidirish"
               >
                 ↵
               </button>
             </form>
 
-            {/* Camera Scanner Button (works for both Cashiers and Owner!) */}
-            <button
-              type="button"
-              onClick={() => setScannerActive(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target"
-              title={lang === 'uz' ? "Kamera orqali shtrixkod skaneri" : "Сканер через камеру"}
-            >
-              <span>📷</span>
-              <span className="hidden sm:inline">{lang === 'uz' ? "Skaner" : "Сканер"}</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* Universal Voice Input Button for Barcode/Search */}
+              <VoiceInputBtn
+                onResult={(txt) => setBarcodeQuery(txt.replace(/\D/g, ''))}
+                lang={lang}
+                title="Shtrixkodni ovoz bilan aytish"
+              />
 
-            {/* Voice Search Button */}
-            <button
-              type="button"
-              onClick={startVoiceSearch}
-              className={`font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target ${
-                voiceListening
-                  ? 'bg-rose-600 text-white animate-pulse'
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-              }`}
-              title={lang === 'uz' ? "Ovozli qidiruv (O'zbekcha / Ruscha)" : "Голосовой поиск"}
-            >
-              <span>🎙️</span>
-              <span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
-            </button>
+              {/* Master AI Voice Assistant Button with Speech Synthesis */}
+              <button
+                type="button"
+                onClick={startMasterVoiceAI}
+                className={`font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target ${
+                  voiceAiActive
+                    ? 'bg-rose-600 text-white animate-pulse shadow-lg shadow-rose-600/40'
+                    : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/20'
+                }`}
+                title={lang === 'uz' ? "Ovozli AI boshqaruv (O'zbek / Rus): 'Skanerni och', '2 ta non qo'sh', 'qarz yoz'" : "Голосовой AI ассистент"}
+              >
+                <span>🤖🎙️</span>
+                <span className="hidden sm:inline font-extrabold">{lang === 'uz' ? "AI Ovoz" : "AI Голос"}</span>
+              </button>
 
-            {/* Text Search Input */}
-            <input
-              type="text"
-              placeholder={t.searchProductPlaceholder || "Tovar nomi bo'yicha qidirish..."}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-44 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
+              {/* Camera Scanner Button */}
+              <button
+                type="button"
+                onClick={() => setScannerActive(true)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target"
+                title={lang === 'uz' ? "Kamera orqali shtrixkod skaneri" : "Сканер через камеру"}
+              >
+                <span>📷</span>
+                <span className="hidden sm:inline">{lang === 'uz' ? "Skaner" : "Скан"}</span>
+              </button>
+            </div>
+
+            {/* Fast Product Search Input */}
+            <div className="flex items-center gap-1 w-full sm:w-44">
+              <input
+                type="text"
+                placeholder={t.searchProductPlaceholder || "Tovar nomi..."}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+              <VoiceInputBtn onResult={(txt) => setSearch(txt)} lang={lang} title="Tovar nomini ovoz bilan qidirish" />
+            </div>
           </div>
 
-          {/* Quick Non-Barcode Items (Essential for real grocery + tobacco speed) */}
+          {/* Quick 1-Click Items Bar */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-sm space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -2640,13 +2906,13 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                   onClick={() => addQuickItem(item)}
                   className="bg-emerald-50/80 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-emerald-200 dark:border-slate-700 rounded-xl p-2 text-left transition flex items-center gap-2 touch-target shadow-sm"
                 >
-                  <span className="text-xl">{item.icon}</span>
+                  <span className="text-xl">{item.icon || '⚡'}</span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate">
                       {item.name}
                     </div>
                     <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                      {formatMoney(item.price)}
+                      {formatMoney(item.sale_price || item.price)}
                     </div>
                   </div>
                 </button>
@@ -2654,180 +2920,240 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
             </div>
           </div>
 
-          {/* Categories Pills (Visible when catalog expanded or search active) */}
-          {(showAllCatalog || search) && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
-                  selectedCategory === null
-                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
-              >
-                {t.allCategories}
-              </button>
-              {categories.map((c) => (
+          {/* Professional Dense Cart Table (MoySklad style) */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <span>🧾</span>
+                  <span>{lang === 'uz' ? "Faol savdo cheki" : "Текущий чек"}</span>
+                </span>
+                <span className="text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full font-mono">
+                  {cart.length} {lang === 'uz' ? "pozitsiya" : "поз"}
+                </span>
+              </div>
+
+              {/* Parked Carts Queue Button */}
+              <div className="flex items-center gap-2">
                 <button
-                  key={c.id}
-                  onClick={() => setSelectedCategory(c.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
-                    selectedCategory === c.id
-                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
+                  type="button"
+                  onClick={parkCurrentCart}
+                  disabled={cart.length === 0}
+                  className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition disabled:opacity-40 flex items-center gap-1"
+                  title="Xaridorni navbatga qo'yib boshqasiga o'tish (Esc)"
                 >
-                  {c.name.split('/')[0].trim()}
+                  <span>⏸️</span>
+                  <span>{lang === 'uz' ? "Chekni saqlash (Esc)" : "Отложить чек (Esc)"}</span>
                 </button>
-              ))}
-            </div>
-          )}
 
-          {/* Products Grid (Shown when search active or expanded) */}
-          {(showAllCatalog || search) && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
-              {products.map((p) => {
-                const low = p.stock_quantity <= 5;
-                return (
-                  <div
-                    key={p.id}
-                    onClick={() => {
-                      playBeep();
-                      addToCart(p);
-                    }}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm hover:shadow-md hover:border-emerald-500 cursor-pointer transition flex flex-col justify-between"
+                {parkedCarts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setParkedModalOpen(true)}
+                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1 animate-pulse"
                   >
-                    <div>
-                      <div className="text-[10px] text-slate-400 font-mono flex items-center justify-between">
-                        <span>{p.barcode}</span>
-                        {low && <span className="text-amber-500 font-bold">⚠️</span>}
-                      </div>
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-2 mt-1">
-                        {p.name}
-                      </h4>
-                    </div>
+                    <span>📂</span>
+                    <span>{lang === 'uz' ? `Saqlanganlar (${parkedCarts.length})` : `Отложенные (${parkedCarts.length})`}</span>
+                  </button>
+                )}
 
-                    <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                        {p.stock_quantity} {p.unit}
-                      </span>
-                      <span className="font-extrabold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-mono">
-                        {formatMoney(p.sale_price)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                {cart.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearCart}
+                    className="text-xs text-rose-500 hover:text-rose-700 font-bold px-2 py-1 rounded-lg"
+                    title="Savatni tozalash"
+                  >
+                    🗑️ {t.clearCart || "Tozalash"}
+                  </button>
+                )}
+              </div>
             </div>
-          )}
+
+            {/* Dense Table */}
+            <div className="overflow-x-auto max-h-80 overflow-y-auto">
+              {cart.length === 0 ? (
+                <div className="h-44 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs">
+                  <span className="text-3xl mb-1.5 opacity-60">🛒</span>
+                  <p className="font-semibold text-slate-600 dark:text-slate-400">
+                    {lang === 'uz' ? "Chek bo'sh. Mahsulot shtrixkodini skanerlang yoki tezkor tovarlardan tanlang." : "Чек пуст. Отсканируйте штрихкод или выберите товар."}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Hotkeys: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">F2</span> Qidiruv | <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">F5</span> Naqd | <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">F6</span> Karta | <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">Esc</span> Saqlash
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 backdrop-blur">
+                    <tr>
+                      <th className="px-3 py-2 w-8">#</th>
+                      <th className="px-3 py-2">{lang === 'uz' ? "Mahsulot nomi" : "Наименование"}</th>
+                      <th className="px-3 py-2 text-right">{lang === 'uz' ? "Narxi" : "Цена"}</th>
+                      <th className="px-3 py-2 text-center w-32">{lang === 'uz' ? "Miqdor" : "Кол-во"}</th>
+                      <th className="px-3 py-2 text-right">{lang === 'uz' ? "Jami" : "Сумма"}</th>
+                      <th className="px-2 py-2 text-center w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200 font-medium">
+                    {cart.map((item, idx) => {
+                      const itemTotal = item.product.sale_price * item.quantity;
+                      return (
+                        <tr key={item.product.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                          <td className="px-3 py-2 text-[11px] text-slate-400 font-mono">{idx + 1}</td>
+                          <td className="px-3 py-2">
+                            <div className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-xs">{item.product.name}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{item.product.barcode}</div>
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            {formatMoney(item.product.sale_price)}
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.product.id, -1)}
+                                className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-black flex items-center justify-center text-xs"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                step="any"
+                                value={item.quantity}
+                                onChange={(e) => setItemExactQty(item.product.id, e.target.value)}
+                                className="w-12 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-bold font-mono text-xs py-0.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.product.id, 1)}
+                                className="w-6 h-6 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center justify-center text-xs"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            {formatMoney(itemTotal)}
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => removeFromCart(item.product.id)}
+                              className="text-slate-400 hover:text-rose-600 text-xs p-1"
+                              title="O'chirish"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Cart & Checkout Panel (4-5 cols) */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm h-full max-h-[calc(100vh-140px)] sticky top-20 transition-colors duration-200">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-2">
-            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>🛒</span>
-              <span>{t.cartTitle || "Savat"}</span>
-              <span className="text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
-                {cart.length}
-              </span>
-            </h3>
-            {cart.length > 0 && (
+        {/* RIGHT COLUMN: Big Numbers + Quick Banknotes + Checkout Actions (4-5 cols) */}
+        <div className="lg:col-span-5 xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4 transition-colors duration-200 sticky top-20">
+          
+          {/* Big Monospace Total Box */}
+          <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+              {lang === 'uz' ? "Jami to'lov miqdori" : "Итого к оплате"}
+            </span>
+            <div className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+              {formatMoney(cartTotal)}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-center gap-2">
+              <span>{cart.length} {lang === 'uz' ? "ta mahsulot" : "товаров"}</span>
+              <span>•</span>
+              <span>{cart.reduce((sum, it) => sum + it.quantity, 0)} {lang === 'uz' ? "dona" : "шт"}</span>
+            </div>
+          </div>
+
+          {/* Quick Banknotes for Fast Cash Change Calculation */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+              <span>💵 {lang === 'uz' ? "Xaridordan olingan naqd pul:" : "Получено наличными:"}</span>
               <button
-                onClick={clearCart}
-                className="text-xs text-rose-500 hover:text-rose-600 font-semibold"
+                type="button"
+                onClick={() => setSelectedCashReceived(cartTotal)}
+                className="text-emerald-600 hover:underline font-extrabold text-[11px]"
               >
-                {t.clearCart || "Tozalash"}
+                {lang === 'uz' ? "Aniq (Qaytimsiz)" : "Без сдачи"}
               </button>
-            )}
-          </div>
-
-          {/* Cart Items List */}
-          <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1 max-h-64 sm:max-h-80">
-            {cart.length === 0 ? (
-              <div className="h-40 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs">
-                <span className="text-3xl mb-2">🧺</span>
-                <p>{t.cartEmpty || "Savat bo'sh. Tovar skanerlang yoki tezkor tugmalardan tanlang."}</p>
-              </div>
-            ) : (
-              cart.map((item) => (
-                <div
-                  key={item.product.id}
-                  className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-2.5 flex items-center justify-between gap-2"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                      {item.product.name}
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                      {formatMoney(item.product.sale_price)} × {item.quantity} ={' '}
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        {formatMoney(item.product.sale_price * item.quantity)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => updateQuantity(item.product.id, -1)}
-                      className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-600 text-sm"
-                    >
-                      -
-                    </button>
-                    <span className="font-bold text-xs w-6 text-center text-slate-900 dark:text-slate-100">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(item.product.id, 1)}
-                      className="w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center hover:bg-emerald-500 text-sm"
-                    >
-                      +
-                    </button>
-                    <button
-                      onClick={() => removeFromCart(item.product.id)}
-                      className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-500 text-xs flex items-center justify-center ml-1"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Cart Bottom Summary & 1-Click Checkout Buttons */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {t.totalToPay || "Jami to'lov"}:
-              </span>
-              <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                {formatMoney(cartTotal)}
-              </span>
             </div>
 
-            {/* Fast 1-Click Checkout Actions */}
+            <div className="grid grid-cols-3 gap-1.5">
+              {[10000, 20000, 50000, 100000, 200000].map((note) => (
+                <button
+                  key={note}
+                  type="button"
+                  onClick={() => setSelectedCashReceived(note)}
+                  className={`py-2 rounded-xl text-xs font-mono font-bold transition border ${
+                    selectedCashReceived === note
+                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {formatMoney(note)}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setSelectedCashReceived(cartTotal)}
+                className={`py-2 rounded-xl text-xs font-mono font-bold transition border ${
+                  selectedCashReceived === cartTotal
+                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                {lang === 'uz' ? "Aniq" : "Ровно"}
+              </button>
+            </div>
+
+            {/* Instant Change Calculation Display */}
+            {cart.length > 0 && selectedCashReceived !== null && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl p-2.5 flex items-center justify-between animate-fade-in">
+                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                  {lang === 'uz' ? "Mijozga qaytim:" : "Сдача клиенту:"}
+                </span>
+                <span className="text-base font-black text-emerald-700 dark:text-emerald-300 font-mono">
+                  {formatMoney(cashChange)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Large 1-Click Payment Action Buttons */}
+          <div className="space-y-2 pt-1">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 disabled={cart.length === 0 || directLoading}
                 onClick={() => handleDirectCheckout('CASH')}
-                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 touch-target text-xs sm:text-sm"
-                title="1 bosishda naqd pul bilan yopish"
+                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold py-3 px-3 rounded-2xl shadow transition flex flex-col items-center justify-center gap-0.5 touch-target text-xs sm:text-sm"
               >
-                <span>💵</span>
-                <span>{lang === 'uz' ? "Naqd (Aniq)" : "Наличные (Ровно)"}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">💵</span>
+                  <span>{lang === 'uz' ? "Naqd pul" : "Наличные"}</span>
+                </div>
+                <span className="text-[10px] opacity-80 font-mono font-normal">Hotkey: F5</span>
               </button>
 
               <button
                 type="button"
                 disabled={cart.length === 0 || directLoading}
                 onClick={() => handleDirectCheckout('CARD')}
-                className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow-md transition flex items-center justify-center gap-1.5 touch-target text-xs sm:text-sm"
-                title="1 bosishda karta bilan yopish"
+                className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold py-3 px-3 rounded-2xl shadow transition flex flex-col items-center justify-center gap-0.5 touch-target text-xs sm:text-sm"
               >
-                <span>💳</span>
-                <span>{lang === 'uz' ? "Karta (Humo/Uz)" : "Карта"}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">💳</span>
+                  <span>{lang === 'uz' ? "Karta (Humo/Uz)" : "Карта"}</span>
+                </div>
+                <span className="text-[10px] opacity-80 font-mono font-normal">Hotkey: F6</span>
               </button>
             </div>
 
@@ -2836,28 +3162,88 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                 type="button"
                 disabled={cart.length === 0 || directLoading}
                 onClick={() => handleDirectCheckout('DEBT')}
-                className="bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-bold py-2.5 rounded-2xl shadow-sm transition flex items-center justify-center gap-1.5 touch-target text-xs"
+                className="bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-extrabold py-2.5 px-3 rounded-2xl shadow transition flex flex-col items-center justify-center gap-0.5 touch-target text-xs"
               >
-                <span>📓</span>
-                <span>{lang === 'uz' ? "Qarzga yozish" : "В долг"}</span>
+                <div className="flex items-center gap-1.5">
+                  <span>📓</span>
+                  <span>{lang === 'uz' ? "Qarzga berish" : "В долг"}</span>
+                </div>
+                <span className="text-[10px] opacity-80 font-mono font-normal">Hotkey: F7</span>
               </button>
 
               <button
                 type="button"
-                disabled={cart.length === 0 || directLoading}
-                onClick={() => {
-                  setCheckoutInitialMethod('CASH');
-                  setCheckoutModalOpen(true);
-                }}
-                className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-2.5 rounded-2xl border border-slate-300 dark:border-slate-700 transition flex items-center justify-center gap-1 touch-target text-xs"
+                disabled={cart.length === 0}
+                onClick={() => setCheckoutModalOpen(true)}
+                className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 font-extrabold py-2.5 px-3 rounded-2xl transition flex flex-col items-center justify-center gap-0.5 touch-target text-xs border border-slate-200 dark:border-slate-700"
               >
-                <span>⚙️</span>
-                <span>{lang === 'uz' ? "Boshqa to'lov..." : "Сдача / Сплит"}</span>
+                <div className="flex items-center gap-1.5">
+                  <span>⚙️</span>
+                  <span>{lang === 'uz' ? "Boshqa to'lov" : "Сплит / Сдача"}</span>
+                </div>
+                <span className="text-[10px] opacity-80 font-mono font-normal">F12</span>
               </button>
             </div>
           </div>
 
-          {/* Unknown Barcode Prompt Modal */}
+          {/* Big Confirm / Submit Button */}
+          <button
+            type="button"
+            disabled={cart.length === 0 || directLoading}
+            onClick={() => handleDirectCheckout('CASH')}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-black py-3.5 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm sm:text-base border border-emerald-400"
+          >
+            <span>✅</span>
+            <span>{lang === 'uz' ? "Chekni tasdiqlash (Enter / F12)" : "Пробить чек (Enter / F12)"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Parked Carts Modal */}
+      {parkedModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl text-slate-800 dark:text-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <span>📂</span>
+                <span>{lang === 'uz' ? "Saqlangan (otlojenny) cheklar" : "Отложенные чеки"}</span>
+              </h3>
+              <button onClick={() => setParkedModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+            </div>
+            
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {parkedCarts.map((h) => (
+                <div key={h.id} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-bold text-xs">Chek #{h.id} ({h.timestamp})</div>
+                    <div className="text-[11px] text-slate-500 font-mono">
+                      {h.itemCount} ta tovar • <span className="font-bold text-emerald-600">{formatMoney(h.total)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => resumeParkedCart(h.id)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow transition"
+                    >
+                      {lang === 'uz' ? "Davom etish" : "Восстановить"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeParkedCart(h.id)}
+                      className="text-slate-400 hover:text-rose-500 px-2 py-1.5 text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unknown Barcode Prompt Modal */}
       {notFoundBarcode && (
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-center">
@@ -2916,492 +3302,55 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       )}
 
       {/* Camera Scanner Modal */}
-          {scannerActive && (
-            <CameraScannerModal
-              onScan={(code) => {
-                setScannerActive(false);
-                processBarcode(code);
-              }}
-              onClose={() => setScannerActive(false)}
-              notify={notify}
-              t={t}
-              lang={lang}
-            />
-          )}
+      {scannerActive && (
+        <CameraScannerModal
+          onScan={(code) => {
+            setScannerActive(false);
+            processBarcode(code);
+          }}
+          onClose={() => setScannerActive(false)}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
 
-          {/* Checkout Payment Modal */}
-          {checkoutModalOpen && (
-            <CheckoutModal
-              token={token}
-              total={cartTotal}
-              cart={cart}
-              initialMethod={checkoutInitialMethod}
-              onClose={() => setCheckoutModalOpen(false)}
-              onSuccess={(receipt) => {
-                setCheckoutModalOpen(false);
-                playBeep();
-                setCart([]);
-                setSuccessToast({
-                  receiptNumber: receipt.receipt_number,
-                  total: cartTotal,
-                  method: receipt.payment_method,
-                  data: receipt
-                });
-                setTimeout(() => setSuccessToast(null), 6000);
-              }}
-              notify={notify}
-              t={t}
-              lang={lang}
-            />
-          )}
+      {/* Checkout Payment Modal */}
+      {checkoutModalOpen && (
+        <CheckoutModal
+          token={token}
+          total={cartTotal}
+          cart={cart}
+          initialMethod={checkoutInitialMethod}
+          onClose={() => setCheckoutModalOpen(false)}
+          onSuccess={(receipt) => {
+            setCheckoutModalOpen(false);
+            playBeep();
+            setCart([]);
+            setSelectedCashReceived(null);
+            setSuccessToast({
+              receiptNumber: receipt.receipt_number,
+              total: cartTotal,
+              change: receipt.change_given,
+              method: receipt.payment_method,
+              data: receipt
+            });
+            setTimeout(() => setSuccessToast(null), 6000);
+          }}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
 
-          {/* Receipt Modal (opened only when user taps print) */}
-          {lastReceipt && (
-            <ReceiptModal receipt={lastReceipt} onClose={() => setLastReceipt(null)} t={t} />
-          )}
-        </div>
-      </div>
+      {/* Receipt Modal (opened only when user taps print) */}
+      {lastReceipt && (
+        <ReceiptModal receipt={lastReceipt} onClose={() => setLastReceipt(null)} t={t} />
+      )}
     </div>
   );
 }
 
-
-function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, onSuccess, notify, t, lang = 'uz' }) {
-  const [method, setMethod] = useState(initialMethod); // CASH, CARD, DEBT
-  const [cashReceived, setCashReceived] = useState(total);
-  const [debtors, setDebtors] = useState([]);
-  const [debtorSearch, setDebtorSearch] = useState('');
-  const [selectedDebtor, setSelectedDebtor] = useState(null);
-  const [dueDate, setDueDate] = useState('');
-  const [newDebtorName, setNewDebtorName] = useState('');
-  const [newDebtorPhone, setNewDebtorPhone] = useState('');
-  const [creatingDebtor, setCreatingDebtor] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetchDebtors();
-  }, []);
-
-  const fetchDebtors = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/debts/debtors?limit=100`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setDebtors(data.items || []);
-      if (data.items && data.items.length > 0 && !selectedDebtor) {
-        setSelectedDebtor(data.items[0]);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleCreateDebtor = async () => {
-    if (!newDebtorName.trim()) {
-      notify(lang === 'uz' ? "Mijoz ismini kiriting" : "Введите имя клиента", 'error');
-      return;
-    }
-    try {
-      const res = await fetch(`${API_BASE}/debts/debtors`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          full_name: newDebtorName.trim(),
-          phone: newDebtorPhone.trim() || null,
-          initial_debt: 0
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Mijoz yaratishda xatolik");
-      notify(`Mijoz ${data.full_name} ro'yxatdan o'tdi`);
-      await fetchDebtors();
-      setSelectedDebtor(data);
-      setCreatingDebtor(false);
-      setNewDebtorName('');
-      setNewDebtorPhone('');
-    } catch (err) {
-      notify(err.message, 'error');
-    }
-  };
-
-  const filteredDebtors = debtors.filter((d) => {
-    if (!debtorSearch) return true;
-    const q = debtorSearch.toLowerCase();
-    return d.full_name.toLowerCase().includes(q) || (d.phone && d.phone.includes(q));
-  });
-
-  const change = Math.max(0, Math.round(Number(cashReceived) - total));
-
-  const UZS_QUICK_BILLS = [
-    { label: t.exactAmount || "Aniq", value: total },
-    { label: '10 000', value: 10000 },
-    { label: '20 000', value: 20000 },
-    { label: '50 000', value: 50000 },
-    { label: '100 000', value: 100000 },
-    { label: '200 000', value: 200000 }
-  ];
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    try {
-      const payload = {
-        items: cart.map((i) => ({
-          product_id: typeof i.product.id === 'number' ? i.product.id : null,
-          barcode: i.product.barcode,
-          name: i.product.name,
-          price: i.product.sale_price,
-          quantity: i.quantity
-        })),
-        payment_method: method,
-        cash_received: method === 'CASH' ? Number(cashReceived) : 0,
-        card_amount: method === 'CARD' ? total : 0,
-        debt_amount: method === 'DEBT' ? total : 0,
-        debtor_id: method === 'DEBT' ? (selectedDebtor ? selectedDebtor.id : null) : null,
-        due_date: method === 'DEBT' ? (dueDate || null) : null
-      };
-
-      const res = await fetch(`${API_BASE}/pos/checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "To'lovda xatolik yuz berdi");
-      onSuccess(data);
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl text-slate-800 dark:text-slate-100 transition-colors duration-200 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
-          <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
-            <span>💳 {t.checkoutTitle || "To'lov"}</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-extrabold font-mono">
-              {formatMoney(total)}
-            </span>
-          </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">
-            ✕
-          </button>
-        </div>
-
-        {/* Method Switcher Tabs */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => setMethod('CASH')}
-            className={`py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${
-              method === 'CASH'
-                ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            💵 {t.methodCash || "Naqd"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMethod('CARD')}
-            className={`py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${
-              method === 'CARD'
-                ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            💳 {t.methodCard || "Karta"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMethod('DEBT')}
-            className={`py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition border ${
-              method === 'DEBT'
-                ? 'bg-amber-600 border-amber-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            📓 {t.methodDebt || "Qarz"}
-          </button>
-        </div>
-
-        {/* CASH FORM */}
-        {method === 'CASH' && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {t.cashReceivedLabel || "Qabul qilingan summa (so'm)"}
-              </label>
-              <input
-                type="number"
-                value={cashReceived}
-                onChange={(e) => setCashReceived(Number(e.target.value))}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl px-4 py-2.5 text-lg font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* Quick cash bill buttons (UZS) */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-              {UZS_QUICK_BILLS.map((item, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setCashReceived(item.value)}
-                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-xl py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 transition"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="bg-slate-100 dark:bg-slate-800/80 rounded-2xl p-3.5 flex justify-between items-center">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">{t.changeLabel || "Qaytim"}:</span>
-              <span
-                className={`text-xl font-black font-mono ${
-                  cashReceived >= total ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
-                }`}
-              >
-                {formatMoney(change)}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* CARD FORM */}
-        {method === 'CARD' && (
-          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center space-y-2">
-            <div className="text-4xl">💳</div>
-            <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{t.cardSwipePrompt || "Terminal orqali to'lang"}</div>
-            <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-              {formatMoney(total)}
-            </div>
-          </div>
-        )}
-
-        {/* DEBT FORM WITH SEARCHABLE LIST & DUE DATE */}
-        {method === 'DEBT' && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                {lang === 'uz' ? "Qarzdor mijozni tanlang:" : "Выберите должника:"}
-              </label>
-              <button
-                type="button"
-                onClick={() => setCreatingDebtor(!creatingDebtor)}
-                className="text-xs text-amber-600 dark:text-amber-400 font-bold hover:underline"
-              >
-                {creatingDebtor ? (t.cancelBtn || "Bekor qilish") : "+ Yangi mijoz qo'shish"}
-              </button>
-            </div>
-
-            {creatingDebtor ? (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl space-y-2">
-                <input
-                  type="text"
-                  placeholder="Mijoz to'liq ismi (masalan: Rustam aka)"
-                  value={newDebtorName}
-                  onChange={(e) => setNewDebtorName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-                />
-                <input
-                  type="text"
-                  placeholder="+998 90 123-45-67"
-                  value={newDebtorPhone}
-                  onChange={(e) => setNewDebtorPhone(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-                />
-                <button
-                  type="button"
-                  onClick={handleCreateDebtor}
-                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs shadow"
-                >
-                  {t.saveBtn || "Saqlash"}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Mijozni qidirish (ism yoki telefon)..."
-                  value={debtorSearch}
-                  onChange={(e) => setDebtorSearch(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-                />
-
-                <div className="max-h-40 overflow-y-auto space-y-1 pr-1 border border-slate-200 dark:border-slate-800 rounded-xl p-1 bg-slate-50/50 dark:bg-slate-900/50">
-                  {filteredDebtors.map((d) => {
-                    const isSelected = selectedDebtor && selectedDebtor.id === d.id;
-                    return (
-                      <div
-                        key={d.id}
-                        onClick={() => setSelectedDebtor(d)}
-                        className={`p-2 rounded-xl cursor-pointer transition flex items-center justify-between text-xs ${
-                          isSelected
-                            ? 'bg-amber-600 text-white font-bold shadow-sm'
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
-                        }`}
-                      >
-                        <div className="truncate pr-2">
-                          <div>{d.full_name}</div>
-                          {d.phone && <div className="text-[10px] opacity-75 font-mono">{d.phone}</div>}
-                        </div>
-                        <div className="font-mono text-right font-bold whitespace-nowrap">
-                          {formatMoney(d.balance)} qarz
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Return Due Date */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                📅 {lang === 'uz' ? "Qaytarish muddati (Due date, ixtiyoriy):" : "Срок возврата долга (опционально):"}
-              </label>
-              <input
-                type="text"
-                placeholder={lang === 'uz' ? "Masalan: dushanba yoki 2026-11-20" : "Например: понедельник или 2026-11-20"}
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-              />
-            </div>
-
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl flex justify-between items-center border border-amber-200 dark:border-amber-800">
-              <span className="text-xs text-amber-800 dark:text-amber-200 font-semibold">
-                {lang === 'uz' ? "Qarzga yoziladigan summa:" : "Сумма в долг:"}
-              </span>
-              <span className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono">
-                {formatMoney(total)}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Submit Actions */}
-        <div className="mt-5 flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-3 rounded-2xl text-xs font-semibold transition"
-          >
-            {t.cancelBtn || "Bekor qilish"}
-          </button>
-          <button
-            type="button"
-            disabled={loading || (method === 'CASH' && cashReceived < total) || (method === 'DEBT' && !selectedDebtor)}
-            onClick={handleSubmit}
-            className="flex-2 w-2/3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white py-3 rounded-2xl text-xs sm:text-sm font-bold shadow-lg transition"
-          >
-            {loading ? (t.processing || "Bajarilmoqda...") : (t.confirmPayBtn || "To'lovni yakunlash")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function ReceiptModal({ receipt, onClose, t }) {
-  const print = () => window.print();
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-900 dark:text-slate-100">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
-          <h3 className="font-bold text-sm text-emerald-600 dark:text-emerald-400">✅ {t.receiptHeader}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
-        </div>
-
-        {/* Printable thermal receipt view (80mm) */}
-        <div id="printable-receipt" className="font-mono text-xs bg-white text-black p-4 rounded-xl border border-slate-200 space-y-2">
-          <div className="text-center pb-2 border-b border-dashed border-slate-400">
-            <div className="font-bold text-base">*** GROCERY STORE ***</div>
-            <div className="text-[10px]">Toshkent sh., Savdo markazi</div>
-            <div className="text-[10px]">Tel: +998 (71) 200-00-00</div>
-          </div>
-
-          <div className="space-y-0.5 text-[11px]">
-            <div>{t.receiptNumber} {receipt.receipt_number}</div>
-            <div>{t.dateLabel} {new Date(receipt.created_at).toLocaleString()}</div>
-            <div>{t.cashierLabel} {receipt.cashier_name}</div>
-            <div>{t.paymentMethodLabel} {receipt.payment_method}</div>
-            {receipt.debtor_name && <div>{t.clientName} {receipt.debtor_name}</div>}
-          </div>
-
-          <div className="py-2 border-y border-dashed border-slate-400 space-y-1">
-            {receipt.items && receipt.items.map((it, idx) => (
-              <div key={idx} className="flex justify-between text-[11px]">
-                <span className="truncate pr-2">{it.product_name}</span>
-                <span className="whitespace-nowrap font-bold">
-                  {it.quantity} × {it.unit_price} = {it.total_price}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="space-y-1 pt-1 font-bold text-[12px]">
-            <div className="flex justify-between text-sm">
-              <span>{t.totalToPay}</span>
-              <span>{formatMoney(receipt.total_amount)}</span>
-            </div>
-            {receipt.payment_method === 'CASH' && (
-              <>
-                <div className="flex justify-between text-[11px] text-slate-600 font-normal">
-                  <span>{t.cashReceivedLabel}</span>
-                  <span>{formatMoney(receipt.cash_received)}</span>
-                </div>
-                <div className="flex justify-between text-[11px] text-slate-600 font-normal">
-                  <span>{t.changeLabel}</span>
-                  <span>{formatMoney(receipt.change_given)}</span>
-                </div>
-              </>
-            )}
-            {receipt.debt_amount > 0 && (
-              <div className="flex justify-between text-[11px] text-amber-700">
-                <span>{t.debtRecorded}</span>
-                <span>{formatMoney(receipt.debt_amount)}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="text-center pt-3 border-t border-dashed border-slate-400 text-[10px] text-slate-500">
-            Xaridingiz uchun rahmat! / Спасибо за покупку!
-          </div>
-        </div>
-
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={print}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow"
-          >
-            <span>🖨️</span>
-            <span>{t.printReceipt}</span>
-          </button>
-          <button
-            onClick={onClose}
-            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl text-xs font-semibold transition"
-          >
-            {t.closeBtn}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ------------------- DEBTS NOTEBOOK (QARZLAR DAFTARI) -------------------
 function DebtsScreen({ token, notify, t }) {
   const [debtors, setDebtors] = useState([]);
   const [summary, setSummary] = useState(null);
