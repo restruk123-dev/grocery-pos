@@ -51,11 +51,18 @@ def generate_svg_qr(url: str) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure tables and seed initial catalog
-    init_db()
-    if settings.AUTO_SEED_CATALOG:
-        with Session(engine) as session:
-            seed_database(session, target_sku_count=2000)
+    # Startup: ensure tables and seed initial catalog safely
+    try:
+        init_db()
+    except Exception as e:
+        print(f"init_db warning: {e}")
+
+    try:
+        if settings.AUTO_SEED_CATALOG:
+            with Session(engine) as session:
+                seed_database(session, target_sku_count=2000)
+    except Exception as e:
+        print(f"seed_database warning: {e}")
     yield
     # Shutdown
 
