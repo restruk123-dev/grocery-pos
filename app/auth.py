@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 import time
 from typing import Optional, List
 from fastapi import Depends, HTTPException, status
@@ -14,15 +15,43 @@ from .models import User, UserRole
 
 security = HTTPBearer(auto_error=False)
 
+# The previous build used the published application SECRET_KEY as a fixed password
+# salt. Keep this value solely to verify and transparently upgrade existing hashes.
+_LEGACY_PASSWORD_SALT = "grocery-pos-super-secret-production-key-2026"
+_PASSWORD_HASH_ITERATIONS = 600_000
+
 def hash_password(password: str) -> str:
-    """Hashes password with SHA256 and a fixed application salt."""
-    salt = settings.SECRET_KEY.encode("utf-8")
-    pwd_bytes = password.encode("utf-8")
-    dk = hashlib.pbkdf2_hmac("sha256", pwd_bytes, salt, 100_000)
-    return dk.hex()
+    """Store PBKDF2-SHA256 with a per-password random salt and versioned parameters."""
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, _PASSWORD_HASH_ITERATIONS)
+    return f"pbkdf2_sha256${_PASSWORD_HASH_ITERATIONS}${salt.hex()}${digest.hex()}"
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return hmac.compare_digest(hash_password(plain_password), hashed_password)
+    try:
+        if hashed_password.startswith("pbkdf2_sha256$"):
+            scheme, iterations_text, salt_hex, digest_hex = hashed_password.split("$", 3)
+            if scheme != "pbkdf2_sha256":
+                return False
+            iterations = int(iterations_text)
+            if iterations < 100_000 or iterations > 2_000_000:
+                return False
+            expected = bytes.fromhex(digest_hex)
+            actual = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), bytes.fromhex(salt_hex), iterations)
+            return hmac.compare_digest(actual, expected)
+
+        # Legacy hashes were unsalted per user and depended on the old global key.
+        for legacy_salt in {_LEGACY_PASSWORD_SALT, settings.SECRET_KEY}:
+            legacy = hashlib.pbkdf2_hmac(
+                "sha256", plain_password.encode("utf-8"), legacy_salt.encode("utf-8"), 100_000
+            ).hex()
+            if hmac.compare_digest(legacy, hashed_password):
+                return True
+        return False
+    except (ValueError, TypeError, OverflowError):
+        return False
+
+def needs_password_rehash(hashed_password: str) -> bool:
+    return not hashed_password.startswith(f"pbkdf2_sha256${_PASSWORD_HASH_ITERATIONS}$")
 
 def create_access_token(data: dict, expires_delta_seconds: Optional[int] = None) -> str:
     if expires_delta_seconds is None:
@@ -48,6 +77,11 @@ def decode_access_token(token: str) -> Optional[dict]:
             return None
         header_b64, payload_b64, sig_b64 = parts
         
+        header_padding = len(header_b64) % 4
+        parsed_header = json.loads(base64.urlsafe_b64decode((header_b64 + "=" * ((4 - header_padding) % 4)).encode()).decode())
+        if not isinstance(parsed_header, dict) or parsed_header.get("alg") != "HS256":
+            return None
+
         # Verify signature
         signing_input = (header_b64 + "." + payload_b64).encode()
         expected_sig = hmac.new(settings.SECRET_KEY.encode(), signing_input, hashlib.sha256).digest()

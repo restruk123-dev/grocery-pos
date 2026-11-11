@@ -80,6 +80,9 @@ def session_fixture():
 
 
 def test_auth_and_cashier_switch(session):
+    assert client.get("/api/v1/auth/cashiers").status_code == 401
+    assert client.post("/api/v1/auth/switch-cashier", json={"cashier_id": 1, "password": "cashier123"}).status_code == 401
+
     # Login as cashier via /token
     res = client.post("/api/v1/auth/token", json={"username": "cashier_aziza", "password": "cashier123"})
     assert res.status_code == 200
@@ -92,10 +95,42 @@ def test_auth_and_cashier_switch(session):
     cashiers = c_res.json()
     assert len(cashiers) >= 1
 
-    # Switch cashier in 1 tap
-    sw_res = client.post("/api/v1/auth/switch-cashier", json={"cashier_id": cashiers[0]["id"]}, headers=headers)
+    # Switching requires both a valid session and the selected cashier's password.
+    wrong = client.post("/api/v1/auth/switch-cashier", json={"cashier_id": cashiers[0]["id"], "password": "wrong-password"}, headers=headers)
+    assert wrong.status_code == 401
+    sw_res = client.post("/api/v1/auth/switch-cashier", json={"cashier_id": cashiers[0]["id"], "password": "cashier123"}, headers=headers)
     assert sw_res.status_code == 200
     assert "access_token" in sw_res.json()
+
+
+def test_owner_can_rotate_password(session):
+    token = client.post("/api/v1/auth/token", json={"username": "owner", "password": "owner123"}).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    changed = client.post("/api/v1/auth/change-password", json={
+        "current_password": "owner123",
+        "new_password": "NewStorePassword-2026!"
+    }, headers=headers)
+    assert changed.status_code == 204
+    assert client.post("/api/v1/auth/token", json={"username": "owner", "password": "owner123"}).status_code == 401
+    assert client.post("/api/v1/auth/token", json={"username": "owner", "password": "NewStorePassword-2026!"}).status_code == 200
+
+
+def test_only_owner_can_create_cashiers(session):
+    cashier_token = client.post("/api/v1/auth/token", json={
+        "username": "cashier_aziza", "password": "cashier123"
+    }).json()["access_token"]
+    cashier_headers = {"Authorization": f"Bearer {cashier_token}"}
+    payload = {"username": "new_cashier", "full_name": "New Cashier", "password": "A-Strong-Password-2026!"}
+    assert client.post("/api/v1/auth/cashiers", json=payload, headers=cashier_headers).status_code == 403
+
+    owner_token = client.post("/api/v1/auth/token", json={
+        "username": "owner", "password": "owner123"
+    }).json()["access_token"]
+    owner_headers = {"Authorization": f"Bearer {owner_token}"}
+    assert client.post("/api/v1/auth/cashiers", json={**payload, "password": "short"}, headers=owner_headers).status_code == 422
+    created = client.post("/api/v1/auth/cashiers", json=payload, headers=owner_headers)
+    assert created.status_code == 201
+    assert created.json()["username"] == "new_cashier"
 
 
 def test_weight_barcode_parser(session):

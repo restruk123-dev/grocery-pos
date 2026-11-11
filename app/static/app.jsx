@@ -488,6 +488,7 @@ function App() {
   const [testSendOpen, setTestSendOpen] = useState(false);
   const [zReportOpen, setZReportOpen] = useState(false);
   const [cashierSwitchOpen, setCashierSwitchOpen] = useState(false);
+  const [passwordChangeOpen, setPasswordChangeOpen] = useState(false);
   const [storeAiOpen, setStoreAiOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
@@ -644,6 +645,15 @@ function App() {
           lang={lang}
         />
       )}
+      {passwordChangeOpen && (
+        <PasswordChangeModal
+          token={token}
+          lang={lang}
+          notify={notify}
+          onClose={() => setPasswordChangeOpen(false)}
+          onChanged={handleLogout}
+        />
+      )}
 
       {/* Store AI Assistant Modal */}
       {storeAiOpen && (
@@ -686,6 +696,15 @@ function App() {
 
           {/* Quick Header Actions */}
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPasswordChangeOpen(true)}
+              className="p-1.5 rounded-xl text-xs bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
+              title={lang === 'uz' ? 'Parolni almashtirish' : 'Сменить пароль'}
+              aria-label={lang === 'uz' ? 'Parolni almashtirish' : 'Сменить пароль'}
+            >
+              <span>🔑</span>
+            </button>
             {/* Install PWA Button */}
             {canInstall && (
               <button
@@ -865,8 +884,8 @@ function App() {
 
 // ------------------- LOGIN SCREEN -------------------
 function LoginScreen({ onLogin, notify, t, theme, toggleTheme, lang, toggleLang }) {
-  const [username, setUsername] = useState('owner');
-  const [password, setPassword] = useState('owner123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const submit = async (u, p) => {
@@ -950,25 +969,6 @@ function LoginScreen({ onLogin, notify, t, theme, toggleTheme, lang, toggleLang 
           </button>
         </form>
 
-        <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
-          <div className="text-xs text-slate-500 dark:text-slate-400 text-center mb-3">{t.quickDemo}</div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => { setUsername('owner'); setPassword('owner123'); submit('owner', 'owner123'); }}
-              className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs py-2 px-3 rounded-xl transition text-center font-medium"
-            >
-              {t.ownerBtn}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setUsername('cashier'); setPassword('cashier123'); submit('cashier', 'cashier123'); }}
-              className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs py-2 px-3 rounded-xl transition text-center font-medium"
-            >
-              {t.cashierBtn}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -1156,10 +1156,66 @@ function ZReportModal({ onClose, t }) {
 }
 
 
+function PasswordChangeModal({ token, onClose, onChanged, notify, lang }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const isUz = lang === 'uz';
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (newPassword.length < 12) {
+      notify(isUz ? 'Yangi parol kamida 12 belgidan iborat bo‘lsin' : 'Новый пароль должен быть не короче 12 символов', 'error');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      notify(isUz ? 'Parollar mos kelmadi' : 'Пароли не совпадают', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.detail || (isUz ? 'Parolni almashtirib bo‘lmadi' : 'Не удалось сменить пароль'));
+      }
+      notify(isUz ? 'Parol yangilandi. Yangi parol bilan qayta kiring.' : 'Пароль изменён. Войдите с новым паролем.');
+      onChanged();
+      onClose();
+    } catch (error) {
+      notify(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <form onSubmit={submit} className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-2xl space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold">{isUz ? 'Parolni almashtirish' : 'Смена пароля'}</h2>
+          <button type="button" onClick={onClose} aria-label={isUz ? 'Yopish' : 'Закрыть'}>✕</button>
+        </div>
+        <input autoComplete="current-password" type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder={isUz ? 'Joriy parol' : 'Текущий пароль'} className="w-full rounded-xl border bg-transparent p-3" />
+        <input autoComplete="new-password" type="password" minLength={12} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={isUz ? 'Yangi parol (kamida 12 belgi)' : 'Новый пароль (не менее 12 символов)'} className="w-full rounded-xl border bg-transparent p-3" />
+        <input autoComplete="new-password" type="password" minLength={12} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={isUz ? 'Yangi parolni takrorlang' : 'Повторите новый пароль'} className="w-full rounded-xl border bg-transparent p-3" />
+        <button type="submit" disabled={loading} className="w-full rounded-xl bg-emerald-600 p-3 font-bold text-white disabled:opacity-50">{loading ? (isUz ? 'Saqlanmoqda…' : 'Сохранение…') : (isUz ? 'Saqlash' : 'Сохранить')}</button>
+      </form>
+    </div>
+  );
+}
+
 // ------------------- CASHIER SWITCH MODAL (3-4 CASHIERS) -------------------
 function CashierSwitchModal({ token, currentUserId, onClose, onSwitch, notify, t, lang }) {
   const [cashiers, setCashiers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedCashier, setSelectedCashier] = useState(null);
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     fetchCashiers();
@@ -1177,13 +1233,15 @@ function CashierSwitchModal({ token, currentUserId, onClose, onSwitch, notify, t
     }
   };
 
-  const handleSelect = async (cashierId) => {
+  const handleSelect = async (event) => {
+    event.preventDefault();
+    if (!selectedCashier || !password) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/switch-cashier`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cashier_id: cashierId })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ cashier_id: selectedCashier.id, password })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Kassirni almashtirishda xatolik');
@@ -1224,7 +1282,7 @@ function CashierSwitchModal({ token, currentUserId, onClose, onSwitch, notify, t
             return (
               <button
                 key={c.id}
-                onClick={() => handleSelect(c.id)}
+                onClick={() => { setSelectedCashier(c); setPassword(''); }}
                 disabled={loading}
                 className={`w-full p-3 rounded-2xl flex items-center justify-between transition border text-left touch-target ${
                   isCurrent
@@ -1239,15 +1297,21 @@ function CashierSwitchModal({ token, currentUserId, onClose, onSwitch, notify, t
                     <div className="text-[10px] text-slate-400 uppercase font-mono">{c.role} • @{c.username}</div>
                   </div>
                 </div>
-                {isCurrent && (
+                {selectedCashier?.id === c.id && (
                   <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
-                    {lang === 'uz' ? 'Hozirgi' : 'Текущий'}
+                    {lang === 'uz' ? 'Tanlandi' : 'Выбран'}
                   </span>
                 )}
               </button>
             );
           })}
         </div>
+        {selectedCashier && (
+          <form onSubmit={handleSelect} className="mt-3 flex gap-2">
+            <input autoFocus type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={lang === 'uz' ? 'Kassir paroli' : 'Пароль кассира'} className="min-w-0 flex-1 rounded-xl border bg-transparent p-3 text-sm" required />
+            <button type="submit" disabled={loading} className="rounded-xl bg-emerald-600 px-4 font-bold text-white disabled:opacity-50">{loading ? '…' : (lang === 'uz' ? 'Kirish' : 'Войти')}</button>
+          </form>
+        )}
       </div>
     </div>
   );

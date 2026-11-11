@@ -41,8 +41,7 @@ def print_banner(local_ip: str, port: int):
     print(f"[*] Telefon / planshetda ochish:   {url}")
     print("-" * 64)
     print("🔑 Kirish ma'lumotlari (Demo):")
-    print("   • Xo'jayin (Owner):   login: owner   | parol: owner123")
-    print("   • Kassir   (Cashier): login: cashier | parol: cashier123")
+    print("   • Foydalanuvchi hisoblari uchun egasi sozlagan login va kuchli parollardan foydalaning.")
     print("-" * 64)
 
     try:

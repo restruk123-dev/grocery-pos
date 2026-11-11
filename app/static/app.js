@@ -516,6 +516,7 @@ function App() {
   const [testSendOpen, setTestSendOpen] = useState(false);
   const [zReportOpen, setZReportOpen] = useState(false);
   const [cashierSwitchOpen, setCashierSwitchOpen] = useState(false);
+  const [passwordChangeOpen, setPasswordChangeOpen] = useState(false);
   const [storeAiOpen, setStoreAiOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
@@ -707,6 +708,12 @@ function App() {
     notify: notify,
     t: t,
     lang: lang
+  }), passwordChangeOpen && /*#__PURE__*/React.createElement(PasswordChangeModal, {
+    token: token,
+    lang: lang,
+    notify: notify,
+    onClose: () => setPasswordChangeOpen(false),
+    onChanged: handleLogout
   }), storeAiOpen && /*#__PURE__*/React.createElement(StoreAiModal, {
     token: token,
     onClose: () => setStoreAiOpen(false),
@@ -741,7 +748,13 @@ function App() {
     className: "text-[10px]"
   }, "🔄")))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5"
-  }, canInstall && /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setPasswordChangeOpen(true),
+    className: "p-1.5 rounded-xl text-xs bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700",
+    title: lang === 'uz' ? 'Parolni almashtirish' : 'Сменить пароль',
+    "aria-label": lang === 'uz' ? 'Parolni almashtirish' : 'Сменить пароль'
+  }, /*#__PURE__*/React.createElement("span", null, "🔑")), canInstall && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: handleInstallApp,
     className: "px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow flex items-center gap-1 transition animate-bounce",
@@ -864,8 +877,8 @@ function LoginScreen({
   lang,
   toggleLang
 }) {
-  const [username, setUsername] = useState('owner');
-  const [password, setPassword] = useState('owner123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const submit = async (u, p) => {
     setLoading(true);
@@ -939,29 +952,7 @@ function LoginScreen({
     type: "submit",
     disabled: loading,
     className: "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm"
-  }, loading ? t.loggingIn : t.loginBtn)), /*#__PURE__*/React.createElement("div", {
-    className: "mt-6 pt-5 border-t border-slate-200 dark:border-slate-800"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-slate-500 dark:text-slate-400 text-center mb-3"
-  }, t.quickDemo), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-2"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => {
-      setUsername('owner');
-      setPassword('owner123');
-      submit('owner', 'owner123');
-    },
-    className: "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs py-2 px-3 rounded-xl transition text-center font-medium"
-  }, t.ownerBtn), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => {
-      setUsername('cashier');
-      setPassword('cashier123');
-      submit('cashier', 'cashier123');
-    },
-    className: "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs py-2 px-3 rounded-xl transition text-center font-medium"
-  }, t.cashierBtn)))));
+  }, loading ? t.loggingIn : t.loginBtn))));
 }
 
 // ------------------- NETWORK QR / MOBILE ACCESS MODAL -------------------
@@ -1124,6 +1115,99 @@ function ZReportModal({
     className: "w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl shadow-lg shadow-emerald-600/30 transition"
   }, loading ? 'Yuborilmoqda...' : 'Yuborish'))));
 }
+function PasswordChangeModal({
+  token,
+  onClose,
+  onChanged,
+  notify,
+  lang
+}) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const isUz = lang === 'uz';
+  const submit = async event => {
+    event.preventDefault();
+    if (newPassword.length < 12) {
+      notify(isUz ? 'Yangi parol kamida 12 belgidan iborat bo‘lsin' : 'Новый пароль должен быть не короче 12 символов', 'error');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      notify(isUz ? 'Parollar mos kelmadi' : 'Пароли не совпадают', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword
+        })
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.detail || (isUz ? 'Parolni almashtirib bo‘lmadi' : 'Не удалось сменить пароль'));
+      }
+      notify(isUz ? 'Parol yangilandi. Yangi parol bilan qayta kiring.' : 'Пароль изменён. Войдите с новым паролем.');
+      onChanged();
+      onClose();
+    } catch (error) {
+      notify(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm"
+  }, /*#__PURE__*/React.createElement("form", {
+    onSubmit: submit,
+    className: "w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-2xl space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "font-bold"
+  }, isUz ? 'Parolni almashtirish' : 'Смена пароля'), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onClose,
+    "aria-label": isUz ? 'Yopish' : 'Закрыть'
+  }, "✕")), /*#__PURE__*/React.createElement("input", {
+    autoComplete: "current-password",
+    type: "password",
+    required: true,
+    value: currentPassword,
+    onChange: e => setCurrentPassword(e.target.value),
+    placeholder: isUz ? 'Joriy parol' : 'Текущий пароль',
+    className: "w-full rounded-xl border bg-transparent p-3"
+  }), /*#__PURE__*/React.createElement("input", {
+    autoComplete: "new-password",
+    type: "password",
+    minLength: 12,
+    required: true,
+    value: newPassword,
+    onChange: e => setNewPassword(e.target.value),
+    placeholder: isUz ? 'Yangi parol (kamida 12 belgi)' : 'Новый пароль (не менее 12 символов)',
+    className: "w-full rounded-xl border bg-transparent p-3"
+  }), /*#__PURE__*/React.createElement("input", {
+    autoComplete: "new-password",
+    type: "password",
+    minLength: 12,
+    required: true,
+    value: confirmPassword,
+    onChange: e => setConfirmPassword(e.target.value),
+    placeholder: isUz ? 'Yangi parolni takrorlang' : 'Повторите новый пароль',
+    className: "w-full rounded-xl border bg-transparent p-3"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    disabled: loading,
+    className: "w-full rounded-xl bg-emerald-600 p-3 font-bold text-white disabled:opacity-50"
+  }, loading ? isUz ? 'Saqlanmoqda…' : 'Сохранение…' : isUz ? 'Saqlash' : 'Сохранить')));
+}
 
 // ------------------- CASHIER SWITCH MODAL (3-4 CASHIERS) -------------------
 function CashierSwitchModal({
@@ -1137,6 +1221,8 @@ function CashierSwitchModal({
 }) {
   const [cashiers, setCashiers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedCashier, setSelectedCashier] = useState(null);
+  const [password, setPassword] = useState('');
   useEffect(() => {
     fetchCashiers();
   }, []);
@@ -1153,16 +1239,20 @@ function CashierSwitchModal({
       console.error(e);
     }
   };
-  const handleSelect = async cashierId => {
+  const handleSelect = async event => {
+    event.preventDefault();
+    if (!selectedCashier || !password) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/switch-cashier`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          cashier_id: cashierId
+          cashier_id: selectedCashier.id,
+          password
         })
       });
       const data = await res.json();
@@ -1203,7 +1293,10 @@ function CashierSwitchModal({
     const isCurrent = c.id === currentUserId || c.username === currentUserId;
     return /*#__PURE__*/React.createElement("button", {
       key: c.id,
-      onClick: () => handleSelect(c.id),
+      onClick: () => {
+        setSelectedCashier(c);
+        setPassword('');
+      },
       disabled: loading,
       className: `w-full p-3 rounded-2xl flex items-center justify-between transition border text-left touch-target ${isCurrent ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-slate-800 dark:text-slate-200'}`
     }, /*#__PURE__*/React.createElement("div", {
@@ -1214,10 +1307,26 @@ function CashierSwitchModal({
       className: "text-xs font-bold"
     }, c.full_name), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 uppercase font-mono"
-    }, c.role, " • @", c.username))), isCurrent && /*#__PURE__*/React.createElement("span", {
+    }, c.role, " • @", c.username))), selectedCashier?.id === c.id && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full"
-    }, lang === 'uz' ? 'Hozirgi' : 'Текущий'));
-  }))));
+    }, lang === 'uz' ? 'Tanlandi' : 'Выбран'));
+  })), selectedCashier && /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleSelect,
+    className: "mt-3 flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    autoFocus: true,
+    type: "password",
+    autoComplete: "current-password",
+    value: password,
+    onChange: event => setPassword(event.target.value),
+    placeholder: lang === 'uz' ? 'Kassir paroli' : 'Пароль кассира',
+    className: "min-w-0 flex-1 rounded-xl border bg-transparent p-3 text-sm",
+    required: true
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    disabled: loading,
+    className: "rounded-xl bg-emerald-600 px-4 font-bold text-white disabled:opacity-50"
+  }, loading ? '…' : lang === 'uz' ? 'Kirish' : 'Войти'))));
 }
 
 // ------------------- CAMERA BARCODE SCANNER MODAL (MULTI-TIER SCANNER) ------------

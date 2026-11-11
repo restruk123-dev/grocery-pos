@@ -3,7 +3,6 @@ import os
 import socket
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from sqlmodel import Session
@@ -13,7 +12,7 @@ import qrcode.image.svg
 
 from .config import settings
 from .database import init_db, engine
-from .seed import seed_database
+from .seed import seed_accounts, seed_database
 from .routers import auth, products, pos, debts, suppliers, expenses, analytics, backup, ai, inventory
 
 def get_current_port() -> int:
@@ -57,6 +56,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"init_db warning: {e}")
 
+    # Create only explicitly configured accounts on a fresh database; never seed defaults.
+    try:
+        with Session(engine) as session:
+            seed_accounts(session)
+    except Exception as e:
+        print(f"seed_accounts warning: {e}")
+
     try:
         if settings.AUTO_SEED_CATALOG:
             with Session(engine) as session:
@@ -79,17 +85,14 @@ app = FastAPI(
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
     return response
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# The POS is same-origin by default; do not expose credentialed API requests cross-site.
 
 # API Routers
 api_prefix = settings.API_V1_STR

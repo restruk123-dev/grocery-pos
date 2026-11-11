@@ -1,4 +1,5 @@
 import os
+import secrets
 from pydantic import BaseModel
 
 DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "grocery_pos.db")
@@ -31,6 +32,15 @@ def resolve_database_url() -> str:
 
     return f"sqlite:///{DEFAULT_DB_PATH.replace(os.sep, '/')}"
 
+def load_secret_key() -> str:
+    secret = os.getenv("SECRET_KEY", "")
+    hosted = os.getenv("RENDER", "").lower() == "true" or bool(os.getenv("SPACE_ID"))
+    if secret and len(secret) < 32:
+        raise RuntimeError("SECRET_KEY must contain at least 32 characters.")
+    if hosted and not secret:
+        raise RuntimeError("Set SECRET_KEY to a random value of at least 32 characters before starting a hosted instance.")
+    return secret or secrets.token_urlsafe(48)
+
 class Settings(BaseModel):
     PROJECT_NAME: str = "GroceryStore POS & Accounting"
     VERSION: str = "1.0.0"
@@ -40,22 +50,22 @@ class Settings(BaseModel):
     DATABASE_URL: str = resolve_database_url()
     
     # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "grocery-pos-super-secret-production-key-2026")
+    SECRET_KEY: str = load_secret_key()
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8  # 8 hours
     
     # Default initial accounts
-    DEFAULT_OWNER_USERNAME: str = os.getenv("DEFAULT_OWNER_USERNAME", "owner")
-    DEFAULT_OWNER_PASSWORD: str = os.getenv("DEFAULT_OWNER_PASSWORD", "owner123")
-    DEFAULT_CASHIER_USERNAME: str = os.getenv("DEFAULT_CASHIER_USERNAME", "cashier")
-    DEFAULT_CASHIER_PASSWORD: str = os.getenv("DEFAULT_CASHIER_PASSWORD", "cashier123")
+    DEFAULT_OWNER_USERNAME: str = os.getenv("DEFAULT_OWNER_USERNAME", "")
+    DEFAULT_OWNER_PASSWORD: str = os.getenv("DEFAULT_OWNER_PASSWORD", "")
+    DEFAULT_CASHIER_USERNAME: str = os.getenv("DEFAULT_CASHIER_USERNAME", "")
+    DEFAULT_CASHIER_PASSWORD: str = os.getenv("DEFAULT_CASHIER_PASSWORD", "")
     
     # Seed options
-    AUTO_SEED_CATALOG: bool = os.getenv("AUTO_SEED_CATALOG", "true").lower() in ("true", "1", "yes")
+    AUTO_SEED_CATALOG: bool = os.getenv("AUTO_SEED_CATALOG", "false").lower() in ("true", "1", "yes")
 
     @property
     def is_persistent_storage(self) -> bool:
-        return self.DATABASE_URL.startswith("sqlite:////data")
+        return self.DATABASE_URL.startswith(("postgres://", "postgresql://", "sqlite:////data"))
 
     @property
     def sqlite_file_path(self) -> str | None:

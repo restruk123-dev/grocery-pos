@@ -79,9 +79,11 @@ Yoki uvicorn:
 uvicorn projects.grocery_pos.app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 3. Tizimga kirish (Standart hisoblar)
-- **Ega (Xo'jayin / Owner)**: login `owner`, parol `owner123`
-- **Kassir (Cashier)**: login `cashier`, parol `cashier123`
+### 3. Tizimga kirish
+- Production hisoblari umumiy standart parol bilan yaratilmaydi. Egasi kuchli noyob parolni o‘rnating va kassirlar uchun alohida hisoblar yarating.
+- Parollar kamida 12 belgidan iborat bo‘lishi, repozitoriyga yoki chatga joylanmasligi kerak.
+- Yangi, bo‘sh bazada boshlang‘ich egani yaratish uchun deploydan oldin `DEFAULT_OWNER_USERNAME` va `DEFAULT_OWNER_PASSWORD` ni Render Environment’da kiriting. Parol kamida 12 belgidan iborat bo‘lishi kerak. Mavjud hisoblar bu sozlama orqali o‘zgartirilmaydi.
+- `AUTO_SEED_CATALOG` standart holatda o‘chiq: yangi do‘konga demo mahsulotlar qo‘shilmaydi. Demo katalogni faqat ataylab yoqish mumkin.
 
 ---
 

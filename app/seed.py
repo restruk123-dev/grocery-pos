@@ -160,14 +160,14 @@ QUICK_STAPLE_NAMES = [
     "Piyoz oq", "Sut tabiiy", "Bug'doy uni", "Pista yog'i", "Tuxum"
 ]
 
-def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
-    """Populates database with initial users. Demo data is skipped if catalog_cleared == true."""
-    stats = {"users": 0, "categories": 0, "products": 0, "debtors": 0, "suppliers": 0}
+def seed_accounts(session: Session) -> int:
+    """Create explicitly configured initial accounts; never add known default passwords."""
+    created = 0
     now_utc = datetime.now(timezone.utc)
 
-    # 1. Seed Users (Owner & Cashier) - ALWAYS REQUIRED FOR LOGIN
-    owner = session.exec(select(User).where(User.username == settings.DEFAULT_OWNER_USERNAME)).first()
-    if not owner:
+    # Existing accounts are never modified by seeding.
+    owner = session.exec(select(User).where(User.username == settings.DEFAULT_OWNER_USERNAME)).first() if settings.DEFAULT_OWNER_USERNAME else None
+    if settings.DEFAULT_OWNER_USERNAME and len(settings.DEFAULT_OWNER_PASSWORD) >= 12 and not owner:
         owner = User(
             username=settings.DEFAULT_OWNER_USERNAME,
             hashed_password=hash_password(settings.DEFAULT_OWNER_PASSWORD),
@@ -177,13 +177,11 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
             created_at=now_utc
         )
         session.add(owner)
-        stats["users"] += 1
+        created += 1
 
-    cashiers_seed = [
-        (settings.DEFAULT_CASHIER_USERNAME, settings.DEFAULT_CASHIER_PASSWORD, "Aziza Karimova (1-smena)"),
-        ("cashier2", "cashier123", "Bobur Mirzayev (2-smena)"),
-        ("cashier3", "cashier123", "Malika Usmonova (3-smena)")
-    ]
+    cashiers_seed = []
+    if settings.DEFAULT_CASHIER_USERNAME and len(settings.DEFAULT_CASHIER_PASSWORD) >= 12:
+        cashiers_seed.append((settings.DEFAULT_CASHIER_USERNAME, settings.DEFAULT_CASHIER_PASSWORD, "Cashier"))
     for c_user, c_pass, c_name in cashiers_seed:
         c_exist = session.exec(select(User).where(User.username == c_user)).first()
         if not c_exist:
@@ -196,9 +194,16 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
                 created_at=now_utc
             )
             session.add(c_inst)
-            stats["users"] += 1
+            created += 1
 
     session.commit()
+
+    return created
+
+def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
+    """Populate demo catalog data; initial users require explicit strong credentials."""
+    stats = {"users": seed_accounts(session), "categories": 0, "products": 0, "debtors": 0, "suppliers": 0}
+    now_utc = datetime.now(timezone.utc)
 
     # 2. Always ensure default Categories exist
     category_map = {}
