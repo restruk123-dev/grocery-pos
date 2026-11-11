@@ -366,3 +366,69 @@ def test_scan_image_barcode(session):
     assert data['barcode'] == '4780009999999'
     assert data['product'] is not None
     assert data['product']['name'] == 'Test Non'
+
+
+def test_day_details_and_custom_date_analytics(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    from datetime import date
+    today_str = date.today().isoformat()
+
+    # Query day-details
+    res = client.get(f"/api/v1/analytics/day-details?date_str={today_str}", headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert "revenue" in data
+    assert "sales_count" in data
+    assert "cogs" in data
+    assert "net_profit" in data
+    assert "sales" in data
+
+    # Query custom date dashboard
+    res_dash = client.get(f"/api/v1/analytics/dashboard?period=custom&date={today_str}", headers=headers)
+    assert res_dash.status_code == 200
+    dash_data = res_dash.json()
+    assert "revenue" in dash_data
+    assert "daily_breakdown" in dash_data
+
+
+def test_supplier_reconciliation_and_autocreate_product(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Create a supplier
+    res_sup = client.post(
+        "/api/v1/suppliers",
+        json={"name": "Sut Mahsulotlari MCHJ", "phone": "+998901234567"},
+        headers=headers
+    )
+    assert res_sup.status_code == 200
+    supplier_id = res_sup.json()["id"]
+
+    # 2. Create invoice with missing product name -> auto creates product!
+    res_inv = client.post(
+        "/api/v1/suppliers/invoices",
+        json={
+            "supplier_id": supplier_id,
+            "items": [
+                {"product_name": "Qaymoq 200g", "quantity": 15, "purchase_price": 12000}
+            ],
+            "paid_amount": 50000
+        },
+        headers=headers
+    )
+    assert res_inv.status_code == 200
+    inv_data = res_inv.json()
+    assert inv_data["total_amount"] == 15 * 12000
+    assert inv_data["debt_to_supplier"] == (15 * 12000) - 50000
+
+    # 3. Check reconciliation endpoint
+    res_rec = client.get(f"/api/v1/suppliers/{supplier_id}/reconciliation", headers=headers)
+    assert res_rec.status_code == 200
+    rec_data = res_rec.json()
+    assert rec_data["supplier"]["id"] == supplier_id
+    assert rec_data["summary"]["total_invoiced"] == 180000
+    assert rec_data["summary"]["total_paid"] == 50000
+    assert rec_data["summary"]["current_debt"] == 130000
+    assert len(rec_data["invoices"]) >= 1

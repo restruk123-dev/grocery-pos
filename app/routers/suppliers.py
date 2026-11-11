@@ -22,7 +22,9 @@ class SupplierCreate(BaseModel):
     note: Optional[str] = None
 
 class InvoiceItemCreate(BaseModel):
-    product_id: int
+    product_id: Optional[int] = None
+    product_name: Optional[str] = None
+    barcode: Optional[str] = None
     quantity: float = Field(..., gt=0)
     purchase_price: float = Field(..., ge=0)
 
@@ -36,12 +38,34 @@ class InvoiceCreate(BaseModel):
 class SupplierPaymentRequest(BaseModel):
     amount: float = Field(..., gt=0)
 
-@router.get("", response_model=List[Supplier])
+@router.get("", response_model=List[dict])
 def list_suppliers(
     current_user: User = Depends(require_role([UserRole.OWNER])),
     session: Session = Depends(get_session)
 ):
-    return session.exec(select(Supplier).order_by(Supplier.name)).all()
+    suppliers = session.exec(select(Supplier).order_by(Supplier.name)).all()
+    results = []
+    for s in suppliers:
+        invoices = session.exec(select(SupplierInvoice).where(SupplierInvoice.supplier_id == s.id)).all()
+        total_invoiced = sum(inv.total_amount for inv in invoices)
+        total_paid = sum(inv.paid_amount for inv in invoices)
+        debt = round(total_invoiced - total_paid, 2)
+        last_inv = max((inv.invoice_date or inv.created_at for inv in invoices), default=None)
+        results.append({
+            "id": s.id,
+            "name": s.name,
+            "contact_person": s.contact_person,
+            "phone": s.phone,
+            "address": s.address,
+            "note": s.note,
+            "created_at": s.created_at,
+            "total_invoiced": round(total_invoiced, 2),
+            "total_paid": round(total_paid, 2),
+            "current_debt": debt,
+            "last_delivery_date": last_inv.isoformat() if last_inv else None,
+            "invoices_count": len(invoices)
+        })
+    return results
 
 @router.post("", response_model=Supplier)
 def create_supplier(
@@ -90,6 +114,75 @@ def list_invoices(
         })
     return results
 
+@router.get("/{supplier_id}/reconciliation", response_model=dict)
+def get_supplier_reconciliation(
+    supplier_id: int,
+    current_user: User = Depends(require_role([UserRole.OWNER])),
+    session: Session = Depends(get_session)
+):
+    supplier = session.get(Supplier, supplier_id)
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Поставщик не найден")
+
+    invoices = session.exec(
+        select(SupplierInvoice)
+        .where(SupplierInvoice.supplier_id == supplier.id)
+        .order_by(SupplierInvoice.created_at.desc())
+    ).all()
+
+    detailed_invoices = []
+    total_invoiced = 0.0
+    total_paid = 0.0
+    for inv in invoices:
+        items = session.exec(select(SupplierInvoiceItem).where(SupplierInvoiceItem.invoice_id == inv.id)).all()
+        item_details = []
+        for it in items:
+            p = session.get(Product, it.product_id)
+            item_details.append({
+                "product_id": it.product_id,
+                "product_name": p.name if p else "Товар",
+                "quantity": it.quantity,
+                "purchase_price": it.purchase_price,
+                "total_price": it.total_price
+            })
+        total_invoiced += inv.total_amount
+        total_paid += inv.paid_amount
+        detailed_invoices.append({
+            "id": inv.id,
+            "invoice_number": inv.invoice_number,
+            "invoice_date": (inv.invoice_date or inv.created_at).isoformat(),
+            "total_amount": inv.total_amount,
+            "paid_amount": inv.paid_amount,
+            "remaining_debt": round(inv.total_amount - inv.paid_amount, 2),
+            "status": inv.status,
+            "note": inv.note,
+            "items": item_details
+        })
+
+    tot_inv = round(total_invoiced, 2)
+    tot_pd = round(total_paid, 2)
+    cur_dbt = round(max(0.0, total_invoiced - total_paid), 2)
+    return {
+        "supplier": {
+            "id": supplier.id,
+            "name": supplier.name,
+            "phone": supplier.phone,
+            "contact_person": supplier.contact_person,
+            "address": supplier.address,
+            "note": supplier.note
+        },
+        "total_invoiced": tot_inv,
+        "total_paid": tot_pd,
+        "current_debt": cur_dbt,
+        "summary": {
+            "total_invoiced": tot_inv,
+            "total_paid": tot_pd,
+            "current_debt": cur_dbt
+        },
+        "invoices_count": len(detailed_invoices),
+        "invoices": detailed_invoices
+    }
+
 @router.post("/invoices", response_model=dict)
 def create_invoice(
     data: InvoiceCreate,
@@ -103,13 +196,7 @@ def create_invoice(
     if not data.items:
         raise HTTPException(status_code=400, detail="Накладная должна содержать хотя бы один товар")
 
-    products_by_id = {item.product_id: session.get(Product, item.product_id) for item in data.items}
-    missing_ids = [product_id for product_id, product in products_by_id.items() if not product or not product.is_active]
-    if missing_ids:
-        raise HTTPException(status_code=400, detail=f"Товары не найдены в каталоге: {', '.join(map(str, missing_ids))}")
-
     now_utc = datetime.now(timezone.utc)
-    # Generate invoice number if not provided
     inv_number = data.invoice_number
     if not inv_number:
         inv_number = f"INV-{now_utc.strftime('%Y%m%d')}-{uuid.uuid4().hex[:5].upper()}"
@@ -134,13 +221,39 @@ def create_invoice(
         invoice_date=now_utc,
         created_at=now_utc
     )
+
     try:
         session.add(invoice)
         session.flush()
 
-        # Insert the invoice and all stock updates in one transaction.
         for item in data.items:
-            product = products_by_id[item.product_id]
+            product = None
+            if item.product_id:
+                product = session.get(Product, item.product_id)
+            if not product and item.barcode:
+                product = session.exec(select(Product).where(Product.barcode == item.barcode.strip(), Product.is_active == True)).first()
+            if not product and item.product_name:
+                product = session.exec(select(Product).where(Product.name == item.product_name.strip(), Product.is_active == True)).first()
+
+            if not product:
+                # Auto-create new product from invoice item
+                p_barcode = item.barcode.strip() if item.barcode else f"INT-{uuid.uuid4().hex[:6].upper()}"
+                p_name = item.product_name.strip() if item.product_name else f"Tovar ({p_barcode})"
+                s_price = round(item.purchase_price * 1.25, 2)
+                product = Product(
+                    barcode=p_barcode,
+                    name=p_name,
+                    purchase_price=item.purchase_price,
+                    sale_price=s_price,
+                    stock_quantity=0.0,
+                    unit="dona",
+                    is_active=True,
+                    created_at=now_utc,
+                    updated_at=now_utc
+                )
+                session.add(product)
+                session.flush()
+
             product.stock_quantity = round(product.stock_quantity + item.quantity, 3)
             product.purchase_price = item.purchase_price
             product.updated_at = now_utc
@@ -158,10 +271,13 @@ def create_invoice(
         session.rollback()
         raise
 
+    debt = round(max(0.0, invoice.total_amount - invoice.paid_amount), 2)
     return {
-        "message": f"Накладная {invoice.invoice_number} успешно принята",
+        "message": f"Faktura {invoice.invoice_number} qabul qilindi",
         "invoice_id": invoice.id,
         "total_amount": invoice.total_amount,
+        "paid_amount": invoice.paid_amount,
+        "debt_to_supplier": debt,
         "items_count": len(data.items),
         "status": invoice.status
     }

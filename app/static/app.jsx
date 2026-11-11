@@ -590,6 +590,731 @@ function formatMoney(amount, currency = "so'm") {
   return `${parts.join(".")} ${currency}`;
 }
 
+
+function getInitials(name) {
+  if (!name || typeof name !== "string") return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function formatRelativeDate(dateStr, lang = "uz") {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return lang === "uz" ? "Bugun" : "Сегодня";
+    if (diffDays === 1) return lang === "uz" ? "Kecha" : "Вчера";
+    if (diffDays < 7) return lang === "uz" ? `${diffDays} kun oldin` : `${diffDays} дн. назад`;
+    if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return lang === "uz" ? `${weeks} hafta oldin` : `${weeks} нед. назад`;
+    }
+    const months = Math.floor(diffDays / 30);
+    return lang === "uz" ? `${months} oy oldin` : `${months} мес. назад`;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+function checkOverdueStatus(dueDateStr, balance, lang = "uz") {
+  if (!dueDateStr || Number(balance) <= 0) return null;
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDateStr);
+    due.setHours(0, 0, 0, 0);
+    const diffTime = today - due;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays > 0) {
+      return {
+        isOverdue: true,
+        days: diffDays,
+        badge: lang === "uz" ? `${diffDays} kun kechikdi` : `Просрочено на ${diffDays} дн.`,
+        color: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800"
+      };
+    } else if (diffDays === 0) {
+      return {
+        isOverdue: false,
+        days: 0,
+        badge: lang === "uz" ? "Bugun to'lov kuni" : "Оплата сегодня",
+        color: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800"
+      };
+    }
+  } catch (e) {}
+  return null;
+}
+
+// ------------------- UNIFIED SETTINGS MODAL -------------------
+function SettingsModal({
+  token,
+  user,
+  lang,
+  onLangChange,
+  theme,
+  onToggleTheme,
+  onOpenPasswordModal,
+  onOpenPhoneModal,
+  onLogout,
+  onClose,
+  notify,
+  t
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const [reseedLoading, setReseedLoading] = useState(false);
+  const [clearLoading, setClearLoading] = useState(false);
+
+  const downloadBackup = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch(`${API_BASE}/backup/dump`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(lang === "uz" ? "Zaxira nusxa yaratib bo'lmadi" : "Не удалось создать бэкап");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `grocery_pos_backup_${new Date().toISOString().slice(0, 10)}.sql`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      notify(lang === "uz" ? "Zaxira nusxa yuklab olindi!" : "Резервная копия скачана!");
+    } catch (e) {
+      notify(lang === "uz" ? "Yuklab olishda xatolik" : "Ошибка скачивания бэкапа", "error");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const reseedCatalog = async () => {
+    if (!confirm(lang === "uz" ? "2000 ta demo tovarlarni qayta tiklamoqchimisiz?" : "Восстановить 2000 демо-товаров?")) return;
+    setReseedLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/products/reseed-catalog?target_count=2000`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      notify(data.message || (lang === "uz" ? "Katalog yangilandi!" : "Каталог обновлен!"));
+    } catch (e) {
+      notify(lang === "uz" ? "Sinxronlashda xatolik" : "Ошибка синхронизации", "error");
+    } finally {
+      setReseedLoading(false);
+    }
+  };
+
+  const clearCatalog = async () => {
+    if (!confirm(lang === "uz" ? "Barcha test tovarlar va cheklar tozalanadi. Tasdiqlaysizmi?" : "Очистить все тестовые чеки и товары?")) return;
+    setClearLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/products/clear-catalog`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      notify(data.message || (lang === "uz" ? "Baza tozalandi!" : "База очищена!"));
+    } catch (e) {
+      notify(lang === "uz" ? "Tozalashda xatolik" : "Ошибка очистки", "error");
+    } finally {
+      setClearLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">⚙️</span>
+            <div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+                {lang === "uz" ? "Tizim sozlamalari" : "Настройки системы"}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {user?.full_name || user?.username} ({user?.role || "Kassir"})
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs">
+          {/* Language selection */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <label className="font-bold text-slate-700 dark:text-slate-300 block mb-2">
+              🌐 {lang === "uz" ? "Tilni tanlash / Язык интерфейса" : "Язык интерфейса / Til"}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onLangChange("uz")}
+                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  lang === "uz"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                <span>🇺🇿</span>
+                <span>O'zbekcha</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onLangChange("ru")}
+                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  lang === "ru"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                <span>🇷🇺</span>
+                <span>Русский</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Theme selection */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <label className="font-bold text-slate-700 dark:text-slate-300 block mb-2">
+              🌓 {lang === "uz" ? "Tungi / Kunduzgi mavzu" : "Тема оформления"}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onToggleTheme("light")}
+                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  theme === "light"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                <span>☀️</span>
+                <span>{lang === "uz" ? "Yorug'" : "Светлая"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleTheme("dark")}
+                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  theme === "dark"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                <span>🌙</span>
+                <span>{lang === "uz" ? "Qorong'i" : "Темная"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Account Security */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  🔑 {lang === "uz" ? "Parolni almashtirish" : "Сменить пароль"}
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  {lang === "uz" ? "Kassir yoki do'kon egasi paroli" : "Безопасность учетной записи"}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { onClose(); onOpenPasswordModal(); }}
+                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl text-xs font-bold transition text-slate-800 dark:text-slate-200"
+              >
+                {lang === "uz" ? "O'zgartirish" : "Сменить"}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+              <div>
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  📱 {lang === "uz" ? "Telefon raqami" : "Номер телефона"}
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  {user?.phone || (lang === "uz" ? "Kiritilmagan" : "Не указан")}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { onClose(); onOpenPhoneModal(); }}
+                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl text-xs font-bold transition text-slate-800 dark:text-slate-200"
+              >
+                {lang === "uz" ? "Bog'lash" : "Привязать"}
+              </button>
+            </div>
+          </div>
+
+          {/* Database Backup & Cloud Sync */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+            <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              ☁️ {lang === "uz" ? "Baza va Zaxira (Backup)" : "База данных и Синхронизация"}
+            </div>
+            <div className="text-[11px] text-slate-400">
+              {lang === "uz"
+                ? "PostgreSQL bulutli bazasi faol. Istalgan vaqtda SQL formatida zaxira nusxa olishingiz mumkin."
+                : "База данных PostgreSQL активна в облаке Render. Выгрузка полного дампа."}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                disabled={downloading}
+                onClick={downloadBackup}
+                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <span>💾</span>
+                <span>{downloading ? (lang === "uz" ? "Yuklanmoqda..." : "Выгрузка...") : (lang === "uz" ? "Zaxira nusxa yuklash (SQL)" : "Скачать бэкап (SQL)")}</span>
+              </button>
+              <button
+                type="button"
+                disabled={reseedLoading}
+                onClick={reseedCatalog}
+                className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <span>🔄</span>
+                <span>{reseedLoading ? "..." : (lang === "uz" ? "2000 ta demo tovar" : "2000 демо-товаров")}</span>
+              </button>
+              <button
+                type="button"
+                disabled={clearLoading}
+                onClick={clearCatalog}
+                className="px-3 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <span>🗑️</span>
+                <span>{clearLoading ? "..." : (lang === "uz" ? "Baza tozalash" : "Очистить базу")}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer with Logout */}
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
+          >
+            <span>🚪</span>
+            <span>{lang === "uz" ? "Tizimdan chiqish" : "Выйти из системы"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition"
+          >
+            {t.closeModal || "Yopish"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- EDIT PRODUCT MODAL -------------------
+function EditProductModal({ token, product, categories: propCategories, onClose, onSuccess, notify, t, lang: propLang }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
+  const [name, setName] = useState(product.name || "");
+  const [barcode, setBarcode] = useState(product.barcode || "");
+  const [categoryId, setCategoryId] = useState(product.category_id ? String(product.category_id) : "");
+  const [categories, setCategories] = useState(propCategories || []);
+  const [unit, setUnit] = useState(product.unit || "dona");
+  const [purchasePrice, setPurchasePrice] = useState(String(product.purchase_price ?? ""));
+  const [salePrice, setSalePrice] = useState(String(product.sale_price || ""));
+  const [stockQuantity, setStockQuantity] = useState(String(product.stock_quantity ?? "0"));
+  const [isQuick, setIsQuick] = useState(Boolean(product.is_quick));
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!categories || categories.length === 0) {
+      fetch(`${API_BASE}/products/categories/all`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      })
+        .then(r => r.json())
+        .then(data => {
+          const list = Array.isArray(data) ? data : (data?.categories || data?.items || []);
+          setCategories(list);
+          if (list.length > 0 && !categoryId) setCategoryId(String(list[0].id));
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || !salePrice) {
+      notify(lang === "uz" ? "Nom va sotish narxini to'ldiring" : "Заполните название и цену продажи", "error");
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = {
+        name: name.trim(),
+        barcode: barcode.trim() || undefined,
+        category_id: categoryId ? Number(categoryId) : null,
+        unit: unit || "dona",
+        purchase_price: purchasePrice !== "" ? Number(purchasePrice) : undefined,
+        sale_price: Number(salePrice),
+        stock_quantity: Number(stockQuantity) || 0,
+        is_quick: Boolean(isQuick)
+      };
+      const res = await fetch(`${API_BASE}/products/${product.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || (lang === "uz" ? "Mahsulotni yangilashda xatolik" : "Ошибка обновления товара"));
+      notify(lang === "uz" ? `Tovar yangilandi: ${name}` : `Товар обновлен: ${name}`);
+      onSuccess(data);
+      onClose();
+    } catch (err) {
+      notify(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">✏️</span>
+            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+              {lang === "uz" ? "Tovarni tahrirlash" : "Редактировать товар"}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        <form onSubmit={submit} className="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              {lang === "uz" ? "Mahsulot nomi *" : "Наименование товара *"}
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {lang === "uz" ? "Shtrixkod" : "Штрихкод"}
+              </label>
+              <input
+                type="text"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {lang === "uz" ? "Kategoriya" : "Категория"}
+              </label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium"
+              >
+                {safeArray(categories).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {lang === "uz" ? "Kirim narxi (so'm)" : "Закупочная цена (сум)"}
+              </label>
+              <input
+                type="number"
+                value={purchasePrice}
+                onChange={(e) => setPurchasePrice(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {lang === "uz" ? "Sotish narxi (so'm) *" : "Цена продажи (сум) *"}
+              </label>
+              <input
+                type="number"
+                required
+                value={salePrice}
+                onChange={(e) => setSalePrice(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-emerald-500 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                {lang === "uz" ? "Qoldiq" : "Остаток"}
+              </label>
+              <input
+                type="number"
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isQuick}
+                onChange={(e) => setIsQuick(e.target.checked)}
+                className="rounded text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                ⚡ {lang === "uz" ? "Tezkor tovarlar panelida ko'rsatish" : "Показывать в панели быстрых товаров"}
+              </span>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-xs font-bold transition text-slate-600 dark:text-slate-300"
+            >
+              {t.cancelBtn || "Bekor qilish"}
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
+            >
+              {loading ? (lang === "uz" ? "Saqlanmoqda..." : "Сохранение...") : (lang === "uz" ? "Saqlash" : "Сохранить")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- SUPPLIER RECONCILIATION MODAL -------------------
+function SupplierReconciliationModal({ token, supplierId, onClose, notify, lang: propLang, t }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/suppliers/${supplierId}/reconciliation`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(res => { setData(res); setLoading(false); })
+      .catch(() => { notify(lang === "uz" ? "Sverka yuklashda xatolik" : "Ошибка загрузки акта сверки", "error"); setLoading(false); });
+  }, [supplierId]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🧾</span>
+            <div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+                {lang === "uz" ? "Ta'minotchi bilan hisob-kitob (Акт сверки)" : "Акт сверки расчётов с поставщиком"}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {data?.supplier?.name} {data?.supplier?.phone ? `• 📞 ${data.supplier.phone}` : ""}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        {loading || !data ? (
+          <div className="py-12 text-center text-xs text-slate-400">Yuklanmoqda...</div>
+        ) : (
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs">
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">{lang === "uz" ? "Jami yetkazilgan" : "Всего отгружено"}</span>
+                <span className="text-sm font-black text-slate-800 dark:text-slate-200 font-mono">{formatMoney(data.summary.total_invoiced)}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">{lang === "uz" ? "To'langan summa" : "Оплачено"}</span>
+                <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono">{formatMoney(data.summary.total_paid)}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">{lang === "uz" ? "Qarz qoldig'i" : "Остаток долга"}</span>
+                <span className={`text-sm font-black font-mono ${data.summary.current_debt > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600"}`}>
+                  {formatMoney(data.summary.current_debt)}
+                </span>
+              </div>
+            </div>
+
+            {/* Invoices list */}
+            <div>
+              <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2">
+                📦 {lang === "uz" ? "Yuk xatlari (Fakturalar)" : "Накладные и оплаты"} ({data.invoices.length})
+              </h4>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                {data.invoices.map((inv) => (
+                  <div key={inv.id} className="p-3 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <div>
+                      <div className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                        № {inv.invoice_number}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {inv.date ? inv.date.slice(0, 10) : ""}
+                      </div>
+                    </div>
+                    <div className="text-right font-mono">
+                      <div className="font-bold text-slate-900 dark:text-slate-100">{formatMoney(inv.total_amount)}</div>
+                      <div className="text-[11px] text-emerald-600">To'landi: {formatMoney(inv.paid_amount)}</div>
+                      {inv.debt_to_supplier > 0 && (
+                        <div className="text-[11px] text-amber-600 font-bold">Qarz: {formatMoney(inv.debt_to_supplier)}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition"
+          >
+            {t.closeModal || "Yopish"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- DAY DETAILS MODAL (ACCOUNTING) -------------------
+function DayDetailsModal({ token, dateStr, onClose, notify, lang: propLang, t }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/analytics/day-details?date_str=${dateStr}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(res => { setData(res); setLoading(false); })
+      .catch(() => { notify(lang === "uz" ? "Kunlik hisobotni yuklashda xatolik" : "Ошибка загрузки отчета за день", "error"); setLoading(false); });
+  }, [dateStr]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">📅</span>
+            <div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+                {lang === "uz" ? `${data?.date_label || dateStr} hisoboti` : `Отчет за ${data?.date_label || dateStr}`}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {lang === "uz" ? "Cheklar, tushum, tannarx va foyda" : "Выручка, себестоимость, чеки и прибыль"}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+        </div>
+
+        {loading || !data ? (
+          <div className="py-12 text-center text-xs text-slate-400">Yuklanmoqda...</div>
+        ) : (
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">{lang === "uz" ? "Tushum (Выручка)" : "Выручка"}</span>
+                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">{formatMoney(data.revenue)}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">{lang === "uz" ? "Cheklar soni" : "Чеков"}</span>
+                <span className="text-base font-extrabold text-slate-800 dark:text-slate-200 font-mono">{data.sales_count}</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">O'rtacha: {formatMoney(data.average_receipt)}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">{lang === "uz" ? "Tannarx (COGS)" : "Себестоимость"}</span>
+                <span className="text-base font-extrabold text-slate-700 dark:text-slate-300 font-mono">{formatMoney(data.cogs)}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">{lang === "uz" ? "Sof foyda" : "Чистая прибыль"}</span>
+                <span className={`text-base font-extrabold font-mono ${data.net_profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>
+                  {formatMoney(data.net_profit)}
+                </span>
+              </div>
+            </div>
+
+            {/* Sales breakdown */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                  🧾 {lang === "uz" ? "Kunning barcha cheklari" : "Список чеков за день"} ({data.sales.length})
+                </h4>
+              </div>
+              {data.sales.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400">
+                  {lang === "uz" ? "Ushbu kunda savdo bo'lmagan" : "В этот день продаж не было"}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {data.sales.map((sale) => (
+                    <div key={sale.id} className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <span>🧾 Chek #{sale.receipt_number || sale.id}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 font-mono">
+                            {sale.payment_method}
+                          </span>
+                        </div>
+                        <div className="font-mono font-black text-emerald-600 dark:text-emerald-400">
+                          {formatMoney(sale.total_amount)}
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {sale.time ? sale.time.slice(0, 5) : ""} • {sale.cashier_name || "Kassir"}
+                      </div>
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300 font-mono">
+                        {sale.items_summary}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition"
+          >
+            {t.closeModal || "Yopish"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ------------------- MAIN APPLICATION ROOT -------------------
 function App() {
   const [token, setToken] = useState(localStorage.getItem('pos_token') || null);
@@ -618,6 +1343,7 @@ function App() {
   const [zReportOpen, setZReportOpen] = useState(false);
   const [cashierSwitchOpen, setCashierSwitchOpen] = useState(false);
   const [passwordChangeOpen, setPasswordChangeOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
   const [pwaBannerDismissed, setPwaBannerDismissed] = useState(() => {
@@ -784,6 +1510,22 @@ function App() {
       )}
 
       {zReportOpen && <ZReportModal onClose={() => setZReportOpen(false)} t={t} />}
+      {settingsModalOpen && (
+        <SettingsModal
+          token={token}
+          user={user}
+          lang={lang}
+          onLangChange={(newLang) => setLang(newLang)}
+          theme={theme}
+          onToggleTheme={(newTheme) => setTheme(newTheme)}
+          onOpenPasswordModal={() => setPasswordChangeOpen(true)}
+          onOpenPhoneModal={() => setNetworkModalOpen(true)}
+          onLogout={handleLogout}
+          onClose={() => setSettingsModalOpen(false)}
+          notify={notify}
+          t={t}
+        />
+      )}
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
@@ -808,66 +1550,28 @@ function App() {
             </div>
           </div>
 
-          {/* Quick Header Actions */}
+          {/* Unified Header Settings Action */}
           <div className="app-header-actions flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setPasswordChangeOpen(true)}
-              className="p-1.5 rounded-xl text-xs bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
-              title={lang === 'uz' ? 'Parolni almashtirish' : 'Сменить пароль'}
-              aria-label={lang === 'uz' ? 'Parolni almashtirish' : 'Сменить пароль'}
-            >
-              <span>🔑</span>
-            </button>
-            {/* Install PWA Button */}
             {canInstall && (
               <button
                 type="button"
                 onClick={handleInstallApp}
-                className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow flex items-center gap-1 transition animate-bounce"
-                title={lang === 'uz' ? "Ilovani smartfoningizga o'rnatish" : "Установить на рабочий стол"}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow flex items-center gap-1 transition"
+                title={lang === "uz" ? "Ilovani o'rnatish" : "Установить"}
               >
                 <span>📲</span>
-                <span className="hidden sm:inline">{lang === 'uz' ? "O'rnatish" : "Установить"}</span>
+                <span className="hidden sm:inline">{lang === "uz" ? "O'rnatish" : "Установить"}</span>
               </button>
             )}
 
-            {/* Mobile QR */}
             <button
               type="button"
-              onClick={() => setNetworkModalOpen(true)}
-              className="p-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 transition shadow-sm"
-              title="Mobil telefon orqali ochish"
+              onClick={() => setSettingsModalOpen(true)}
+              className="px-3 py-1.5 rounded-2xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm flex items-center gap-1.5 touch-target"
+              title={lang === "uz" ? "Sozlamalar" : "Настройки"}
             >
-              <span>📱</span>
-            </button>
-
-            {/* Language Switch */}
-            <button
-              type="button"
-              onClick={toggleLang}
-              className="px-2 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 transition"
-            >
-              <span>{lang === 'uz' ? '🇺🇿 UZ' : '🇷🇺 RU'}</span>
-            </button>
-
-            {/* Theme Switch */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-1.5 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700"
-            >
-              <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
-            </button>
-
-            {/* Logout */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="p-1.5 rounded-xl text-xs bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800"
-              title={t.logout}
-            >
-              <span>🚪</span>
+              <span className="text-sm">⚙️</span>
+              <span className="font-bold">{lang === "uz" ? "Sozlamalar" : "Настройки"}</span>
             </button>
           </div>
         </div>
@@ -1935,6 +2639,20 @@ function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
 // ------------------- CREATE / EDIT PRODUCT MODAL -------------------
 function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, notify, t, lang }) {
   const [barcode, setBarcode] = useState(initialBarcode);
+  const [noBarcode, setNoBarcode] = useState(false);
+
+  const toggleNoBarcode = (enabled) => {
+    setNoBarcode(enabled);
+    if (enabled) {
+      if (!barcode || barcode.startsWith('INT-')) {
+        const randomCode = 'INT-' + Math.floor(100000 + Math.random() * 900000);
+        setBarcode(randomCode);
+      }
+      setIsQuick(true);
+    } else {
+      if (barcode.startsWith('INT-')) setBarcode('');
+    }
+  };
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [categories, setCategories] = useState([]);
@@ -2049,9 +2767,22 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
         <form onSubmit={submit} className="flex-1 overflow-y-auto space-y-3 pr-1">
           {/* Barcode with Camera Scan button */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              {t.barcodeLabel || "Shtrixkod *"}
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                {t.colBarcode}
+              </label>
+              <button
+                type="button"
+                onClick={() => toggleNoBarcode(!noBarcode)}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-lg border transition ${
+                  noBarcode
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                }`}
+              >
+                📦 {lang === 'uz' ? "Shtrixkodsiz (Ichki kod)" : "Без штрихкода"}
+              </button>
+            </div>
             <div className="flex gap-1.5">
               <input
                 type="text"
@@ -2846,22 +3577,30 @@ function OcrInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, 
         const selected = catalogSample.find(product => product.id === Number(val));
         copy[idx].matched_product_id = selected?.id || null;
         if (selected) copy[idx].product_name = selected.name;
+      } else if (field === 'product_name') {
+        copy[idx].product_name = val;
       } else {
         copy[idx][field] = Number(val);
       }
-      copy[idx].total_price = Math.round(Number(copy[idx].quantity) * Number(copy[idx].purchase_price));
+      copy[idx].total_price = Math.round(Number(copy[idx].quantity || 0) * Number(copy[idx].purchase_price || 0));
       return copy;
     });
   };
 
   const handleSaveInvoice = async () => {
-    if (parsedItems.length === 0 || !supplierId || parsedItems.some(it => !it.matched_product_id || !(Number(it.quantity) > 0) || !(Number(it.purchase_price) >= 0))) return;
+    if (parsedItems.length === 0 || !supplierId) return;
+    const invalidItem = parsedItems.find(it => !(Number(it.quantity) > 0) || !(Number(it.purchase_price) >= 0) || (!it.matched_product_id && !it.product_name));
+    if (invalidItem) {
+      notify(lang === 'uz' ? "Barcha tovarlar miqdori va kirim narxini to'g'ri ko'rsating" : 'Проверьте название, количество и закупочную цену каждой строки', 'warn');
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
         supplier_id: Number(supplierId),
         items: parsedItems.map(it => ({
-          product_id: it.matched_product_id,
+          product_id: it.matched_product_id || undefined,
+          product_name: it.product_name,
           quantity: Number(it.quantity),
           purchase_price: Number(it.purchase_price)
         })),
@@ -2889,10 +3628,15 @@ function OcrInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">📑</span>
-            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-              {lang === 'uz' ? 'Faktura / Yuk xatini skanerlash' : 'Фото-сканер накладных (Kirim)'}
-            </h3>
+            <span className="text-2xl">📸</span>
+            <div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+                {lang === 'uz' ? 'Faktura / Yuk xatini skanerlash' : 'Фото-сканер накладных (Kirim)'}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {lang === 'uz' ? "Kirim qog'ozini rasmga oling va tovarlarni omborga qabul qiling" : "Сфотографируйте накладную для автоматической приемки на склад"}
+              </p>
+            </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
         </div>
@@ -2916,18 +3660,18 @@ function OcrInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, 
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow touch-target"
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow touch-target flex items-center gap-1.5"
           >
-            📷 {lang === 'uz' ? 'Rasmga olish' : 'Сделать фото'}
+            <span>📷</span>
+            <span>{lang === 'uz' ? 'Rasmga olish' : 'Сделать фото'}</span>
           </button>
         </div>
 
         {ocrText && (
           <div className="mb-3 space-y-2">
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">{lang === 'uz' ? 'Tanilgan matn — tekshiring va tuzating:' : 'Распознанный текст — проверьте и исправьте:'}</label>
-            <textarea rows={3} value={ocrText} onChange={(e) => setOcrText(e.target.value)} className="w-full resize-y bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-xs leading-relaxed" />
-            <button type="button" onClick={() => parseInvoiceText(ocrText)} disabled={loading} className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold disabled:opacity-50">{lang === 'uz' ? 'Matnni qayta ajratish' : 'Повторно разобрать текст'}</button>
-            <p className="text-[11px] text-amber-700 dark:text-amber-300">{lang === 'uz' ? 'Qabul qilishdan oldin har bir tovar, miqdor va kirim narxini tekshiring.' : 'Перед приёмкой проверьте товар, количество и закупочную цену каждой строки.'}</p>
+            <textarea rows={3} value={ocrText} onChange={(e) => setOcrText(e.target.value)} className="w-full resize-y bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-xs leading-relaxed font-mono" />
+            <button type="button" onClick={() => parseInvoiceText(ocrText)} disabled={loading} className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-xs font-bold disabled:opacity-50">{lang === 'uz' ? 'Matnni qayta ajratish' : 'Повторно разобрать текст'}</button>
           </div>
         )}
 
@@ -2940,40 +3684,44 @@ function OcrInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, 
             <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold">
                   <th className="py-2">{lang === 'uz' ? 'Tovar' : 'Товар'}</th>
-                  <th className="py-2">{lang === 'uz' ? 'Miqdor' : 'Количество'}</th>
-                  <th className="py-2">{lang === 'uz' ? 'Kirim narxi' : 'Цена закупки'}</th>
-                  <th className="py-2">{lang === 'uz' ? 'Jami' : 'Итого'}</th>
+                  <th className="py-2 text-right">{lang === 'uz' ? 'Miqdor' : 'Количество'}</th>
+                  <th className="py-2 text-right">{lang === 'uz' ? 'Kirim narxi' : 'Цена закупки'}</th>
+                  <th className="py-2 text-right">{lang === 'uz' ? 'Jami' : 'Итого'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {safeArray(parsedItems).map((it, idx) => (
                   <tr key={idx}>
                     <td className="py-1.5 pr-2">
-                      <select value={it.matched_product_id || ''} onChange={(e) => updateItem(idx, 'matched_product_id', e.target.value)} className={`w-full min-w-48 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 py-2 text-xs ${it.matched_product_id ? 'border-emerald-300 dark:border-emerald-700' : 'border-amber-400 dark:border-amber-600'}`}>
-                        <option value="">{lang === 'uz' ? `Katalogdan tanlang: ${it.product_name}` : `Выберите товар: ${it.product_name}`}</option>
+                      <select value={it.matched_product_id || ''} onChange={(e) => updateItem(idx, 'matched_product_id', e.target.value)} className={`w-full min-w-48 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 py-1.5 text-xs ${it.matched_product_id ? 'border-emerald-300 dark:border-emerald-700' : 'border-amber-400 dark:border-amber-600'}`}>
+                        <option value="">{lang === 'uz' ? `Katalogdan tanlang (${it.product_name})` : `Выберите из каталога (${it.product_name})`}</option>
                         {safeArray(catalogSample).map(product => <option key={product.id} value={product.id}>{product.name} · {product.barcode}</option>)}
                       </select>
-                      {!it.matched_product_id && <span className="text-[10px] text-amber-600 dark:text-amber-300">{lang === 'uz' ? 'Aniq moslik topilmadi — katalogdan tanlang' : 'Нет точного совпадения — выберите из каталога'}</span>}
+                      {!it.matched_product_id && (
+                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
+                          ✨ {lang === 'uz' ? `Yangi tovar sifatida qo'shiladi: "${it.product_name}"` : `Будет создан новый товар: "${it.product_name}"`}
+                        </div>
+                      )}
                     </td>
-                    <td className="py-1.5 pr-2">
+                    <td className="py-1.5 pr-2 text-right">
                       <input
                         type="number"
                         value={it.quantity}
                         onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                        className="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 text-xs"
+                        className="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-right font-mono"
                       />
                     </td>
-                    <td className="py-1.5 pr-2">
+                    <td className="py-1.5 pr-2 text-right">
                       <input
                         type="number"
                         value={it.purchase_price}
                         onChange={(e) => updateItem(idx, 'purchase_price', e.target.value)}
-                        className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1 text-xs font-mono"
+                        className="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-right"
                       />
                     </td>
-                    <td className="py-1.5 font-bold font-mono text-emerald-600">{formatMoney(it.total_price)}</td>
+                    <td className="py-1.5 font-bold font-mono text-emerald-600 text-right">{formatMoney(it.total_price)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2986,10 +3734,11 @@ function OcrInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, 
           <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500">{t.cancelBtn}</button>
           <button
             onClick={handleSaveInvoice}
-            disabled={parsedItems.length === 0 || loading || !supplierId || parsedItems.some(it => !it.matched_product_id || !(Number(it.quantity) > 0) || !(Number(it.purchase_price) >= 0))}
-            className="px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+            disabled={parsedItems.length === 0 || loading || !supplierId}
+            className="px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition flex items-center gap-1.5 touch-target"
           >
-            {loading ? t.saving : (lang === 'uz' ? 'Tekshirilgan qatorlarni qabul qilish' : 'Принять проверенные строки')}
+            <span>📥</span>
+            <span>{loading ? t.saving : (lang === 'uz' ? 'Omborga qabul qilish' : 'Принять на склад')}</span>
           </button>
         </div>
       </div>
@@ -3647,47 +4396,28 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
               </button>
             </form>
 
-            <div className="flex items-center gap-1.5">
-              {/* Universal Voice Input Button for Barcode/Search */}
-              <VoiceInputBtn
-                onResult={(txt) => setBarcodeQuery(txt.replace(/\D/g, ''))}
-                lang={lang}
-                title="Shtrixkodni ovoz bilan aytish"
-              />
-
-              {/* Full Voice POS Assistant Button */}
-              <button
-                type="button"
-                onClick={() => setVoiceAssistantOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target"
-                title={lang === 'uz' ? "Ovozli boshqaruv va qidiruv (F3)" : "Голосовой помощник и поиск (F3)"}
-              >
-                <span className="text-sm">🎙️</span>
-                <span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
-              </button>
-
-              {/* Camera Scanner Button */}
+            <div className="flex items-center gap-2">
+              {/* Prominent Large Camera Scanner Button */}
               <button
                 type="button"
                 onClick={() => setScannerActive(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target"
+                className="h-11 sm:h-12 px-5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black rounded-2xl text-sm sm:text-base shadow-lg shadow-emerald-600/30 active:scale-95 transition flex items-center justify-center gap-2 touch-target"
                 title={lang === 'uz' ? "Kamera orqali shtrixkod skaneri" : "Сканер через камеру"}
               >
-                <span>📷</span>
-                <span className="hidden sm:inline">{lang === 'uz' ? "Skaner" : "Скан"}</span>
+                <span className="text-xl">📷</span>
+                <span className="font-extrabold">{lang === 'uz' ? "Skaner" : "Сканер"}</span>
               </button>
             </div>
 
             {/* Fast Product Search Input */}
-            <div className="flex items-center gap-1 w-full sm:w-44">
+            <div className="flex items-center gap-1 w-full sm:w-48">
               <input
                 type="text"
                 placeholder={t.searchProductPlaceholder || "Tovar nomi..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
               />
-              <VoiceInputBtn onResult={(txt) => setSearch(txt)} lang={lang} title="Tovar nomini ovoz bilan qidirish" />
             </div>
           </div>
 
@@ -4220,6 +4950,7 @@ function DebtsScreen({ token, notify, t }) {
   const [summary, setSummary] = useState(null);
   const [search, setSearch] = useState('');
   const [onlyWithDebt, setOnlyWithDebt] = useState(false);
+  const [sortBy, setSortBy] = useState('overdue'); // 'overdue' | 'max_debt' | 'recent' | 'name'
   const [selectedDebtor, setSelectedDebtor] = useState(null);
 
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -4237,7 +4968,7 @@ function DebtsScreen({ token, notify, t }) {
 
   const fetchDebtors = async () => {
     try {
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams({ limit: '150' });
       if (search) params.append('search', search);
       if (onlyWithDebt) params.append('only_with_debt', 'true');
 
@@ -4267,15 +4998,38 @@ function DebtsScreen({ token, notify, t }) {
     }
   };
 
+  const sortedDebtors = useMemo(() => {
+    const list = [...safeArray(debtors)];
+    if (sortBy === 'overdue') {
+      return list.sort((a, b) => {
+        const aOverdue = checkOverdueStatus(a.due_date, a.balance, lang);
+        const bOverdue = checkOverdueStatus(b.due_date, b.balance, lang);
+        if (aOverdue && !bOverdue) return -1;
+        if (!aOverdue && bOverdue) return 1;
+        return Number(b.balance) - Number(a.balance);
+      });
+    } else if (sortBy === 'max_debt') {
+      return list.sort((a, b) => Number(b.balance) - Number(a.balance));
+    } else if (sortBy === 'recent') {
+      return list.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+    } else if (sortBy === 'name') {
+      return list.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    }
+    return list;
+  }, [debtors, sortBy, lang]);
+
   return (
     <div className="space-y-4">
-      {/* Summary KPI Card */}
+      {/* Summary KPI Cards & Haqqim.uz Header */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.totalOutstandingDebt}</div>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono">
-              {summary ? formatMoney(summary.total_outstanding_debt) : '0 so\'m'}
+            <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1 font-mono">
+              -{summary ? formatMoney(summary.total_outstanding_debt) : '0 so\'m'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              haqqim.uz qarz daftari
             </div>
           </div>
           <span className="text-3xl">📓</span>
@@ -4283,128 +5037,214 @@ function DebtsScreen({ token, notify, t }) {
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.debtorsWithDebt || (lang === 'uz' ? "Qarzdor mijozlar:" : "Клиенты с долгом:")}</div>
-            <div className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1">
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+              {lang === 'uz' ? "Qarzdor mijozlar soni:" : "Клиенты с задолженностью:"}
+            </div>
+            <div className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1 font-mono">
               {summary ? summary.active_debtors_with_debt : 0}{' '}
-              <span className="text-xs font-normal text-slate-400">/ {summary ? summary.debtors_count : 0}</span>
+              <span className="text-xs font-normal text-slate-400">/ {summary ? summary.debtors_count : 0} mijoz</span>
+            </div>
+            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+              Faol hisob-kitob
             </div>
           </div>
           <span className="text-3xl">👥</span>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 shadow-sm flex flex-col justify-center gap-1.5">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 shadow-sm flex flex-col justify-center gap-2">
           <button
             onClick={() => setCreateDebtorModalOpen(true)}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl shadow transition text-xs flex items-center justify-center gap-1.5"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-2xl shadow transition text-xs flex items-center justify-center gap-1.5 touch-target"
           >
             <span>➕</span>
-            <span>{t.addDebtorModalTitle || "Yangi mijoz"}</span>
+            <span>{lang === 'uz' ? "Yangi mijoz qo'shish" : "Новый клиент"}</span>
           </button>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setVoiceDebtOpen(true)}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-1.5 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1"
+              className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1 touch-target"
               title="Ovozli qarz yozish"
             >
               <span>🎙️</span>
-              <span>{t.voiceDebtPrompt || (lang === 'uz' ? "Ovozli" : "Голосом")}</span>
+              <span>{lang === 'uz' ? "Ovozli qarz" : "Голосовой ввод"}</span>
             </button>
             <button
               onClick={() => setOcrDebtOpen(true)}
-              className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-1.5 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1"
+              className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1 touch-target"
               title="Daftardan rasm olish"
             >
               <span>📸</span>
-              <span>{t.ocrDebtTitle || (lang === 'uz' ? "Daftar OCR" : "Фото тетради")}</span>
+              <span>{lang === 'uz' ? "Daftar OCR" : "Фото тетради"}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2">
-        <input
-          type="text"
-          placeholder={t.searchDebtorPlaceholder}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full sm:w-80 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-        />
-
-        <button
-          onClick={() => setOnlyWithDebt(!onlyWithDebt)}
-          className={`px-3 py-2 rounded-xl text-xs font-bold transition border ${
-            onlyWithDebt
-              ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300'
-              : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-          }`}
-        >
-          {t.onlyWithDebtFilter}
-        </button>
-      </div>
-
-      {/* Debtors List Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {safeArray(debtors).map((debtor) => (
-          <div
-            key={debtor.id}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex flex-col justify-between space-y-3"
+      {/* Search, Sorting & Filter Bar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2 w-full md:w-auto flex-1">
+          <input
+            type="text"
+            placeholder={lang === 'uz' ? "Ism yoki telefon bo'yicha qidiruv..." : "Поиск по имени или телефону..."}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full md:w-80 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+          />
+          <button
+            onClick={() => setOnlyWithDebt(!onlyWithDebt)}
+            className={`px-3 py-2 rounded-2xl text-xs font-bold transition border whitespace-nowrap ${
+              onlyWithDebt
+                ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">{debtor.full_name}</h4>
-                {debtor.phone && (
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                    📞 {debtor.phone}
-                  </div>
-                )}
-                {debtor.note && (
-                  <div className="text-[11px] text-slate-400 mt-1 italic">"{debtor.note}"</div>
-                )}
-                {debtor.due_date && (
-                  <div className="text-[11px] text-amber-600 dark:text-amber-400 font-bold mt-1 flex items-center gap-1">
-                    <span>⏳</span>
-                    <span>{t.dueDateLabel || "Muddati"}: {debtor.due_date}</span>
-                  </div>
-                )}
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-400 block">{t.currentDebtBalance}</span>
-                <span
-                  className={`text-base font-black font-mono ${
-                    debtor.balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
-                  }`}
-                >
-                  {formatMoney(debtor.balance)}
-                </span>
-              </div>
-            </div>
+            {lang === 'uz' ? "Faqat qarzi borlar" : "Только с долгом"}
+          </button>
+        </div>
 
-            <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <button
-                onClick={() => { setSelectedDebtor(debtor); setPayModalOpen(true); }}
-                className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-1.5 rounded-xl text-xs font-bold transition text-center"
-              >
-                💵 {t.payDebtBtn}
-              </button>
-              <button
-                onClick={() => { setSelectedDebtor(debtor); setAddDebtModalOpen(true); }}
-                className="bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 py-1.5 rounded-xl text-xs font-bold transition text-center"
-              >
-                ➕ {t.addDebtBtn}
-              </button>
-              <button
-                onClick={() => { setSelectedDebtor(debtor); setHistoryModalOpen(true); }}
-                className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-1.5 rounded-xl text-xs font-bold transition text-center"
-              >
-                📜 {t.historyBtn}
-              </button>
-            </div>
-          </div>
-        ))}
+        {/* Sorting selection */}
+        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto no-scrollbar">
+          <span className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">
+            {lang === 'uz' ? "Saralash:" : "Сортировка:"}
+          </span>
+          {[
+            { id: 'overdue', label: lang === 'uz' ? "Muddati o'tganlar" : "Просроченные" },
+            { id: 'max_debt', label: lang === 'uz' ? "Katta qarzlar" : "По сумме" },
+            { id: 'recent', label: lang === 'uz' ? "Yangi" : "Свежие" },
+            { id: 'name', label: lang === 'uz' ? "A-Z" : "Имя" }
+          ].map(s => (
+            <button
+              key={s.id}
+              onClick={() => setSortBy(s.id)}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap border ${
+                sortBy === s.id
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 dark:border-slate-100'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Pay Debt Modal */}
+      {/* Client Counter Header */}
+      <div className="flex items-center justify-between px-1">
+        <h3 className="font-bold text-xs text-slate-500 dark:text-slate-400">
+          {lang === 'uz' ? `Mijozlar (${sortedDebtors.length})` : `Клиенты (${sortedDebtors.length})`}
+        </h3>
+      </div>
+
+      {/* Redesigned Debtors Cards (Haqqim.uz style) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {sortedDebtors.map((debtor) => {
+          const overdue = checkOverdueStatus(debtor.due_date, debtor.balance, lang);
+          const hasDebt = Number(debtor.balance) > 0;
+
+          return (
+            <div
+              key={debtor.id}
+              className={`bg-white dark:bg-slate-900 border rounded-3xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-3 ${
+                overdue?.isOverdue
+                  ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10'
+                  : 'border-slate-200 dark:border-slate-800'
+              }`}
+            >
+              <div>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    {/* Round Avatar with Initials */}
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 text-slate-800 dark:text-slate-200 font-extrabold flex items-center justify-center text-sm font-mono shrink-0 shadow-inner">
+                      {getInitials(debtor.full_name)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 leading-tight">
+                        {debtor.full_name}
+                      </h4>
+                      {debtor.phone && (
+                        <a
+                          href={`tel:${debtor.phone}`}
+                          className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 inline-flex items-center gap-1 hover:underline"
+                        >
+                          <span>📞</span>
+                          <span>{debtor.phone}</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Overdue / Due Date Badge */}
+                  <div>
+                    {overdue ? (
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${overdue.color}`}>
+                        {overdue.badge}
+                      </span>
+                    ) : debtor.due_date ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        ⏳ {debtor.due_date}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                {debtor.note && (
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl italic">
+                    "{debtor.note}"
+                  </div>
+                )}
+
+                {/* Prominent Debt Amount */}
+                <div className="mt-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-medium">
+                      {lang === 'uz' ? "Haqqimiz (Qarz):" : "Сумма долга:"}
+                    </span>
+                    <span
+                      className={`text-lg font-black font-mono tracking-tight ${
+                        hasDebt ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      {hasDebt ? '-' : ''}{formatMoney(debtor.balance)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 block">
+                      {lang === 'uz' ? "Oxirgi o'zgarish:" : "Обновлено:"}
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      {formatRelativeDate(debtor.updated_at || debtor.created_at, lang) || (lang === 'uz' ? "Yaqinda" : "Недавно")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={() => { setSelectedDebtor(debtor); setPayModalOpen(true); }}
+                  className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold transition text-center touch-target"
+                >
+                  💵 {lang === 'uz' ? "To'lash" : "Оплата"}
+                </button>
+                <button
+                  onClick={() => { setSelectedDebtor(debtor); setAddDebtModalOpen(true); }}
+                  className="bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 py-2 rounded-xl text-xs font-bold transition text-center touch-target"
+                >
+                  ➕ {lang === 'uz' ? "Qarz yozish" : "Записать"}
+                </button>
+                <button
+                  onClick={() => { setSelectedDebtor(debtor); setHistoryModalOpen(true); }}
+                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2 rounded-xl text-xs font-bold transition text-center touch-target"
+                >
+                  📜 {lang === 'uz' ? "Tarix" : "История"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modals */}
       {payModalOpen && selectedDebtor && (
         <PayDebtModal
           token={token}
@@ -4415,14 +5255,13 @@ function DebtsScreen({ token, notify, t }) {
             setPayModalOpen(false);
             fetchDebtors();
             fetchSummary();
-            notify('Qarz to\'lovi qabul qilindi / Оплата долга принята');
+            notify(lang === 'uz' ? "Qarz to'lovi qabul qilindi!" : "Оплата долга принята!");
           }}
           notify={notify}
           t={t}
         />
       )}
 
-      {/* Add Debt Modal */}
       {addDebtModalOpen && selectedDebtor && (
         <AddDebtModal
           token={token}
@@ -4433,59 +5272,23 @@ function DebtsScreen({ token, notify, t }) {
             setAddDebtModalOpen(false);
             fetchDebtors();
             fetchSummary();
-            notify('Qo\'shimcha qarz yozildi / Долг записан');
+            notify(lang === 'uz' ? "Yangi qarz yozildi!" : "Долг успешно записан!");
           }}
           notify={notify}
           t={t}
         />
       )}
 
-      {/* History Modal */}
       {historyModalOpen && selectedDebtor && (
         <DebtorHistoryModal
           token={token}
-          lang={lang}
           debtor={selectedDebtor}
           onClose={() => setHistoryModalOpen(false)}
-          t={t}
-        />
-      )}
-
-      {/* Voice Debt Recording Modal */}
-      {voiceDebtOpen && (
-        <VoiceDebtModal
-          token={token}
-          onClose={() => setVoiceDebtOpen(false)}
-          onSuccess={() => {
-            setVoiceDebtOpen(false);
-            fetchDebtors();
-            fetchSummary();
-            notify(lang === 'uz' ? "Ovozli qarz muvaffaqiyatli saqlandi!" : "Голосовой долг сохранен!");
-          }}
           notify={notify}
           t={t}
-          lang={lang}
         />
       )}
 
-      {/* OCR Debt Notebook Modal */}
-      {ocrDebtOpen && (
-        <OcrDebtNotebookModal
-          token={token}
-          onClose={() => setOcrDebtOpen(false)}
-          onSuccess={() => {
-            setOcrDebtOpen(false);
-            fetchDebtors();
-            fetchSummary();
-            notify(lang === 'uz' ? "Daftar yozuvlari kiritildi!" : "Записи из тетради распознаны и внесены!");
-          }}
-          notify={notify}
-          t={t}
-          lang={lang}
-        />
-      )}
-
-      {/* Create Debtor Modal */}
       {createDebtorModalOpen && (
         <CreateDebtorModal
           token={token}
@@ -4495,7 +5298,35 @@ function DebtsScreen({ token, notify, t }) {
             setCreateDebtorModalOpen(false);
             fetchDebtors();
             fetchSummary();
-            notify('Yangi mijoz qo\'shildi / Новый клиент зарегистрирован');
+            notify(lang === 'uz' ? "Yangi mijoz qo'shildi!" : "Клиент успешно добавлен!");
+          }}
+          notify={notify}
+          t={t}
+        />
+      )}
+
+      {voiceDebtOpen && (
+        <VoiceDebtModal
+          token={token}
+          onClose={() => setVoiceDebtOpen(false)}
+          onSuccess={() => {
+            setVoiceDebtOpen(false);
+            fetchDebtors();
+            fetchSummary();
+          }}
+          notify={notify}
+          t={t}
+        />
+      )}
+
+      {ocrDebtOpen && (
+        <OcrDebtModal
+          token={token}
+          onClose={() => setOcrDebtOpen(false)}
+          onSuccess={() => {
+            setOcrDebtOpen(false);
+            fetchDebtors();
+            fetchSummary();
           }}
           notify={notify}
           t={t}
@@ -4505,360 +5336,10 @@ function DebtsScreen({ token, notify, t }) {
   );
 }
 
-// ------------------- PAY DEBT MODAL -------------------
-function PayDebtModal({ token, debtor, onClose, onSuccess, notify, t, lang: propLang }) {
-  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
-  const [amount, setAmount] = useState(debtor.balance > 0 ? debtor.balance : 10000);
-  const [note, setNote] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}/pay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ amount: Number(amount), note: note.trim() || undefined })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'To\'lov xatosi');
-      onSuccess(data);
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-1">
-          💵 {t.payDebtModalTitle}
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          {debtor.full_name} ({t.currentDebtBalance} {formatMoney(debtor.balance)})
-        </p>
-
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              {t.paymentAmountLabel}
-            </label>
-            <input
-              type="number"
-              step="any"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              {t.noteLabel}
-            </label>
-            <input
-              type="text"
-              placeholder="Qarz to'lovi / Погашение"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-xs font-semibold">
-            {t.cancelBtn}
-          </button>
-          <button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold shadow">
-            {loading ? t.saving : t.saveBtn}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ------------------- ADD DEBT MODAL -------------------
-function AddDebtModal({ token, debtor, onClose, onSuccess, notify, t, lang: propLang }) {
-  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
-  const [amount, setAmount] = useState(25000);
-  const [note, setNote] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}/add-debt`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ amount: Number(amount), note: note.trim() || undefined })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Qarz yozish xatosi');
-      onSuccess(data);
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-1">
-          📓 {t.addDebtModalTitle}
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          {debtor.full_name} ({t.currentDebtBalance} {formatMoney(debtor.balance)})
-        </p>
-
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              {t.debtAmountLabel}
-            </label>
-            <input
-              type="number"
-              step="any"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              {t.noteLabel}
-            </label>
-            <input
-              type="text"
-              placeholder="Masalan: Yog' va guruch oldi"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-500"
-            />
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-xs font-semibold">
-            {t.cancelBtn}
-          </button>
-          <button type="submit" disabled={loading} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-xl text-xs font-bold shadow">
-            {loading ? t.saving : t.saveBtn}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ------------------- DEBTOR HISTORY MODAL -------------------
-function DebtorHistoryModal({ token, debtor, onClose, t, lang: propLang }) {
-  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchHistory();
-  }, []);
-
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}/history`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        setHistory([]);
-        return;
-      }
-      const data = await res.json();
-      setHistory(safeArray(data));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 sm:p-6 shadow-2xl text-slate-800 dark:text-slate-100 flex flex-col max-h-[85vh]">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
-          <div>
-            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">{t.historyModalTitle}</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {debtor.full_name} • {t.currentDebtBalance}{' '}
-              <span className="font-bold font-mono text-amber-600 dark:text-amber-400">{formatMoney(debtor.balance)}</span>
-            </p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-2 py-2 pr-1">
-          {loading ? (
-            <div className="text-center py-8 text-xs text-slate-400">{t.processing}</div>
-          ) : history.length === 0 ? (
-            <div className="text-center py-8 text-xs text-slate-400">Tarix bo'sh</div>
-          ) : (
-            safeArray(history).map((tx) => {
-              const isIncrease = tx.transaction_type === 'DEBT_INCREASE';
-              return (
-                <div
-                  key={tx.id}
-                  className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between"
-                >
-                  <div>
-                    <div className="flex items-center gap-1.5 text-xs font-bold">
-                      <span className={isIncrease ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}>
-                        {isIncrease ? '➕ Qarz qo\'shildi' : '💵 To\'lov qabul qilindi'}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      {tx.note || '-'}
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      {new Date(tx.created_at).toLocaleString()} • {tx.created_by_name}
-                    </div>
-                  </div>
-
-                  <div className={`font-mono font-bold text-sm ${isIncrease ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {isIncrease ? '+' : '-'}{formatMoney(tx.amount)}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
-          <button
-            onClick={onClose}
-            className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-2 rounded-xl text-xs transition"
-          >
-            {t.closeBtn}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ------------------- CREATE DEBTOR MODAL -------------------
-function CreateDebtorModal({ token, onClose, onSuccess, notify, t, lang: propLang }) {
-  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [note, setNote] = useState('');
-  const [initialDebt, setInitialDebt] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/debts/debtors`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          full_name: fullName.trim(),
-          phone: phone.trim() || undefined,
-          note: note.trim() || undefined,
-          initial_debt: Number(initialDebt) || 0
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Yaratishda xatolik');
-      onSuccess(data);
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-3">{t.addDebtorModalTitle}</h3>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.debtorNameLabel}</label>
-            <input
-              type="text"
-              placeholder="Alisher Rahimov (qo'shni)"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.phoneLabel}</label>
-            <input
-              type="text"
-              placeholder="+998 (90) 123-45-67"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.noteLabel}</label>
-            <input
-              type="text"
-              placeholder="44-xonadon"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.debtAmountLabel}</label>
-            <input
-              type="number"
-              step="any"
-              value={initialDebt}
-              onChange={(e) => setInitialDebt(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-xs font-semibold">
-            {t.cancelBtn}
-          </button>
-          <button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold shadow">
-            {loading ? t.creating : t.createBtn}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ------------------- CATALOG SCREEN (2000 SKU) -------------------
 function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
   const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
   const [createProductOpen, setCreateProductOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -4895,32 +5376,24 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
     }
   };
 
-  const reseed = async () => {
+  const deleteProduct = async (p) => {
+    const confirmMsg = lang === 'uz'
+      ? `Rostdan ham "${p.name}" tovarini o'chirmoqchimisiz?`
+      : `Действительно удалить товар "${p.name}"?`;
+    if (!confirm(confirmMsg)) return;
     try {
-      const res = await fetch(`${API_BASE}/products/reseed-catalog?target_count=2000`, {
-        method: 'POST',
+      const res = await fetch(`${API_BASE}/products/${p.id}`, {
+        method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
-      notify(`Katalog yangilandi: ${data.message}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'O\'chirishda xatolik');
+      }
+      notify(lang === 'uz' ? `"${p.name}" muvaffaqiyatli o'chirildi` : `Товар "${p.name}" удален`);
       fetchProducts();
     } catch (e) {
-      notify('Sinxronlashda xatolik', 'error');
-    }
-  };
-
-  const clearCatalog = async () => {
-    if (!confirm(t.clearCatalogWarning || "Rostdan ham barcha test tovarlar va cheklarni tozalamoqchimisiz? Kechki savdo uchun toza baza tayyorlanadi.")) return;
-    try {
-      const res = await fetch(`${API_BASE}/products/clear-catalog`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      notify(data.message || "Baza tozalandi!");
-      fetchProducts();
-    } catch (e) {
-      notify('Tozalashda xatolik', 'error');
+      notify(e.message, 'error');
     }
   };
 
@@ -4932,32 +5405,16 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span>📦</span>
             <span>{t.catalogTitle}</span>
-            <span className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded-full font-mono font-bold">
+            <span className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 rounded-full font-mono font-bold">
               {total} SKU
             </span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Shtrixkodlar, tovar narxlari va qoldiq monitoringi
+            {lang === 'uz' ? "Shtrixkodlar, tovar narxlari va qoldiq monitoringi" : "Штрихкоды, цены и управление складскими остатками"}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <button
-            onClick={clearCatalog}
-            className="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1 touch-target"
-            title="Test tovarlar va savdolarni tozalash"
-          >
-            <span>🗑️</span>
-            <span>{t.clearCatalogBtn || "Toza varaqdan boshlash"}</span>
-          </button>
-          <button
-            onClick={reseed}
-            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition border border-slate-300 dark:border-slate-700 flex items-center gap-1 touch-target"
-            title="2000 ta demo tovarlarni qaytarish"
-          >
-            <span>🔄</span>
-            <span>{t.reseedCatalogBtn || "2000 ta tovar"}</span>
-          </button>
           <input
             type="text"
             placeholder={t.searchProductPlaceholder}
@@ -4975,14 +5432,13 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
           >
             {t.lowStockFilter}
           </button>
-          {isOwner && (
-            <button
-              onClick={reseed}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition whitespace-nowrap shadow"
-            >
-              {t.syncCatalogBtn}
-            </button>
-          )}
+          <button
+            onClick={() => setCreateProductOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5 touch-target whitespace-nowrap"
+          >
+            <span>➕</span>
+            <span>{lang === 'uz' ? 'Yangi tovar' : 'Новый товар'}</span>
+          </button>
         </div>
       </div>
 
@@ -4991,7 +5447,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
         {/* Mobile Product Cards (< 768px) */}
         <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {safeArray(products).map((p) => (
-            <div key={p.id} className="p-3 flex flex-col gap-2">
+            <div key={p.id} className="p-3.5 flex flex-col gap-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-bold text-sm text-slate-900 dark:text-slate-100">{p.name}</div>
@@ -5031,6 +5487,22 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
                   </span>
                 </div>
               </div>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={() => setEditingProduct(p)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition flex items-center gap-1"
+                >
+                  <span>✏️</span>
+                  <span>{lang === 'uz' ? 'Tahrirlash' : 'Редактировать'}</span>
+                </button>
+                <button
+                  onClick={() => deleteProduct(p)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition flex items-center gap-1"
+                >
+                  <span>🗑️</span>
+                  <span>{lang === 'uz' ? "O'chirish" : 'Удалить'}</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -5047,6 +5519,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
                 <th className="px-4 py-3 text-right">{t.colSalePrice}</th>
                 <th className="px-4 py-3 text-right">{t.colStock}</th>
                 <th className="px-4 py-3 text-center">{t.colStatus}</th>
+                <th className="px-4 py-3 text-center">{lang === 'uz' ? 'Amallar' : 'Действия'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
@@ -5079,6 +5552,24 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
                       </span>
                     )}
                   </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={() => setEditingProduct(p)}
+                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition"
+                        title={lang === 'uz' ? 'Tahrirlash' : 'Редактировать'}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => deleteProduct(p)}
+                        className="p-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg text-rose-600 dark:text-rose-400 transition"
+                        title={lang === 'uz' ? "O'chirish" : 'Удалить'}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -5108,12 +5599,42 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {createProductOpen && (
+        <CreateProductModal
+          token={token}
+          onClose={() => setCreateProductOpen(false)}
+          onSuccess={() => {
+            setCreateProductOpen(false);
+            fetchProducts();
+          }}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
+
+      {editingProduct && (
+        <EditProductModal
+          token={token}
+          product={editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSuccess={() => {
+            setEditingProduct(null);
+            fetchProducts();
+          }}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
     </div>
   );
 }
 
-// ------------------- SUPPLIERS & INCOMING INVOICES -------------------
 function SuppliersScreen({ token, notify, t }) {
+  const [activeTab, setActiveTab] = useState('suppliers'); // 'suppliers' | 'invoices'
   const [suppliers, setSuppliers] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [catalogSample, setCatalogSample] = useState([]);
@@ -5122,6 +5643,8 @@ function SuppliersScreen({ token, notify, t }) {
   const [payInvoiceModalOpen, setPayInvoiceModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [ocrInvoiceOpen, setOcrInvoiceOpen] = useState(false);
+  const [reconciliationSupplier, setReconciliationSupplier] = useState(null);
+  const [searchSupplier, setSearchSupplier] = useState('');
   const lang = (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
 
   useEffect(() => {
@@ -5181,10 +5704,16 @@ function SuppliersScreen({ token, notify, t }) {
     }
   };
 
+  const filteredSuppliers = safeArray(suppliers).filter(s => {
+    if (!searchSupplier.trim()) return true;
+    const q = searchSupplier.toLowerCase();
+    return (s.name || '').toLowerCase().includes(q) || (s.phone || '').includes(q) || (s.contact_person || '').toLowerCase().includes(q);
+  });
+
   return (
     <div className="space-y-4">
-      {/* Top Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
+      {/* Top Actions & Sub-Tabs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span>🚚</span>
@@ -5195,145 +5724,272 @@ function SuppliersScreen({ token, notify, t }) {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        {/* Sub tabs */}
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <button
+            onClick={() => setActiveTab('suppliers')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              activeTab === 'suppliers'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            🏢 {lang === 'uz' ? "Ta'minotchilar" : 'Поставщики'} ({suppliers.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('invoices')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              activeTab === 'invoices'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            📦 {lang === 'uz' ? 'Kirim fakturalari' : 'Накладные'} ({invoices.length})
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setCreateSupplierModalOpen(true)}
-            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-sm"
+            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm"
           >
             {t.addSupplierBtn}
           </button>
           <button
             onClick={() => setOcrInvoiceOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-md flex items-center gap-1.5 touch-target"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5 touch-target"
           >
             <span>📸</span>
             <span>{t.scanInvoiceBtn || "Faktura OCR"}</span>
           </button>
           <button
             onClick={() => setCreateInvoiceModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-md"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-md"
           >
             {t.addInvoiceBtn}
           </button>
         </div>
       </div>
 
-      {/* Invoices List */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-        {/* Mobile Invoice Cards (< 768px) */}
-        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-          {safeArray(invoices).map((inv) => (
-            <div key={inv.id} className="p-3 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
-                    📦 № {inv.invoice_number}
-                  </div>
-                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
-                    {inv.supplier_name}
-                  </div>
-                </div>
-                <div>
-                  {inv.debt_to_supplier > 0 ? (
-                    <span className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold">
-                      {t.statusHasDebt || "Qarz bor"}
-                    </span>
-                  ) : (
-                    <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
-                      {t.statusFullyPaid || "To'langan"}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-center font-mono text-[11px]">
-                <div>
-                  <span className="text-[10px] text-slate-400 block">{t.totalToPay}</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{formatMoney(inv.total_amount)}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block">{t.paidAmountLabel}</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(inv.paid_amount)}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block">{t.debtToSupplierLabel}</span>
-                  <span className="font-bold text-amber-600 dark:text-amber-400">{formatMoney(inv.debt_to_supplier)}</span>
-                </div>
-              </div>
-              {inv.debt_to_supplier > 0 && (
-                <button
-                  onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }}
-                  className="w-full mt-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm"
-                >
-                  💵 {t.payInvoiceBtn}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+      {/* TAB 1: SUPPLIERS LIST / CARDS */}
+      {activeTab === 'suppliers' && (
+        <div className="space-y-3">
+          {/* Search bar */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder={lang === 'uz' ? "Ta'minotchi nomi yoki telefon..." : "Поиск по имени или телефону..."}
+              value={searchSupplier}
+              onChange={(e) => setSearchSupplier(e.target.value)}
+              className="w-full md:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 shadow-sm"
+            />
+          </div>
 
-        {/* Desktop Table (>= 768px) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-              <tr>
-                <th className="px-4 py-3">{t.invoiceNumberLabel}</th>
-                <th className="px-4 py-3">{t.supplierNameLabel}</th>
-                <th className="px-4 py-3 text-right">{t.totalToPay}</th>
-                <th className="px-4 py-3 text-right">{t.paidAmountLabel}</th>
-                <th className="px-4 py-3 text-right">{t.debtToSupplierLabel}</th>
-                <th className="px-4 py-3 text-center">{t.colStatus}</th>
-                <th className="px-4 py-3 text-center">{t.colActions || (lang === 'uz' ? 'Amal' : 'Действие')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-              {safeArray(invoices).map((inv) => (
-                <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  <td className="px-4 py-2.5 font-mono font-bold text-slate-900 dark:text-slate-100">
-                    {inv.invoice_number}
-                  </td>
-                  <td className="px-4 py-2.5 font-medium">{inv.supplier_name}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold">
-                    {formatMoney(inv.total_amount)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400">
-                    {formatMoney(inv.paid_amount)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono text-amber-600 dark:text-amber-400">
-                    {formatMoney(inv.debt_to_supplier)}
-                  </td>
-                  <td className="px-4 py-2.5 text-center">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        inv.status === 'PAID'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                          : inv.status === 'PARTIAL'
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
-                      }`}
-                    >
-                      {inv.status === 'PAID'
-                        ? t.invoiceStatusPaid
-                        : inv.status === 'PARTIAL'
-                        ? t.invoiceStatusPartial
-                        : t.invoiceStatusPending}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-center">
-                    {inv.debt_to_supplier > 0 && (
-                      <button
-                        onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-xl text-[11px] font-bold transition"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredSuppliers.map((s) => (
+              <div
+                key={s.id}
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-sm font-mono shrink-0">
+                        {getInitials(s.name)}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{s.name}</h3>
+                        {s.contact_person && (
+                          <div className="text-[11px] text-slate-400">{s.contact_person}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      {s.current_debt > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                          {lang === 'uz' ? 'Qarz bor' : 'Задолженность'}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
+                          {lang === 'uz' ? "Qarz yo'q" : 'Расчёт закрыт'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Phone link */}
+                  <div className="mt-2 text-xs">
+                    {s.phone ? (
+                      <a
+                        href={`tel:${s.phone}`}
+                        className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                        title={lang === 'uz' ? "Qo'ng'iroq qilish" : "Позвонить"}
                       >
-                        {t.payInvoiceBtn}
-                      </button>
+                        <span>📞</span>
+                        <span>{s.phone}</span>
+                      </a>
+                    ) : (
+                      <span className="text-slate-400 text-[11px]">{lang === 'uz' ? 'Telefon kiritilmagan' : 'Телефон не указан'}</span>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+
+                  {/* Debt amount */}
+                  <div className="mt-3 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                    <div className="text-[10px] text-slate-400 font-medium">
+                      {lang === 'uz' ? "Ta'minotchi oldidagi qarz:" : 'Долг перед поставщиком:'}
+                    </div>
+                    <div className={`text-base font-black font-mono mt-0.5 ${s.current_debt > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                      {formatMoney(s.current_debt || 0)}
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1 flex justify-between">
+                      <span>{lang === 'uz' ? 'Oxirgi yetkazish:' : 'Поставка:'} {s.last_delivery_date ? formatRelativeDate(s.last_delivery_date, lang) : (lang === 'uz' ? "Mavjud emas" : "Нет")}</span>
+                      <span>{s.invoices_count || 0} {lang === 'uz' ? 'faktura' : 'накладных'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                  <button
+                    onClick={() => setReconciliationSupplier(s)}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                  >
+                    <span>🧾</span>
+                    <span>{lang === 'uz' ? 'Sverka akti' : 'Акт сверки'}</span>
+                  </button>
+                  <button
+                    onClick={() => setCreateInvoiceModalOpen(true)}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1"
+                    title={lang === 'uz' ? 'Yangi kirim qilish' : 'Принять накладную'}
+                  >
+                    <span>➕</span>
+                    <span>{lang === 'uz' ? 'Kirim' : 'Прием'}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* TAB 2: INVOICES LIST */}
+      {activeTab === 'invoices' && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+          {/* Mobile Invoice Cards (< 768px) */}
+          <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+            {safeArray(invoices).map((inv) => (
+              <div key={inv.id} className="p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                      📦 № {inv.invoice_number}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
+                      {inv.supplier_name}
+                    </div>
+                  </div>
+                  <div>
+                    {inv.debt_to_supplier > 0 ? (
+                      <span className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                        {t.statusHasDebt || "Qarz bor"}
+                      </span>
+                    ) : (
+                      <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                        {t.statusFullyPaid || "To'langan"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-center font-mono text-[11px]">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">{t.totalToPay}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{formatMoney(inv.total_amount)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">{t.paidAmountLabel}</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(inv.paid_amount)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">{t.debtToSupplierLabel}</span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400">{formatMoney(inv.debt_to_supplier)}</span>
+                  </div>
+                </div>
+                {inv.debt_to_supplier > 0 && (
+                  <button
+                    onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }}
+                    className="w-full mt-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm"
+                  >
+                    💵 {t.payInvoiceBtn}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table (>= 768px) */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="px-4 py-3">{t.invoiceNumberLabel}</th>
+                  <th className="px-4 py-3">{t.supplierNameLabel}</th>
+                  <th className="px-4 py-3 text-right">{t.totalToPay}</th>
+                  <th className="px-4 py-3 text-right">{t.paidAmountLabel}</th>
+                  <th className="px-4 py-3 text-right">{t.debtToSupplierLabel}</th>
+                  <th className="px-4 py-3 text-center">{t.colStatus}</th>
+                  <th className="px-4 py-3 text-center">{t.colActions || (lang === 'uz' ? 'Amal' : 'Действие')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
+                {safeArray(invoices).map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                    <td className="px-4 py-2.5 font-mono font-bold text-slate-900 dark:text-slate-100">
+                      {inv.invoice_number}
+                    </td>
+                    <td className="px-4 py-2.5 font-medium">{inv.supplier_name}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold">
+                      {formatMoney(inv.total_amount)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400">
+                      {formatMoney(inv.paid_amount)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-amber-600 dark:text-amber-400">
+                      {formatMoney(inv.debt_to_supplier)}
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          inv.status === 'PAID'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                            : inv.status === 'PARTIAL'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                        }`}
+                      >
+                        {inv.status === 'PAID'
+                          ? t.invoiceStatusPaid
+                          : inv.status === 'PARTIAL'
+                          ? t.invoiceStatusPartial
+                          : t.invoiceStatusPending}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      {inv.debt_to_supplier > 0 && (
+                        <button
+                          onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-xl text-[11px] font-bold transition"
+                        >
+                          {t.payInvoiceBtn}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {createSupplierModalOpen && (
@@ -5344,7 +6000,7 @@ function SuppliersScreen({ token, notify, t }) {
           onSuccess={() => {
             setCreateSupplierModalOpen(false);
             fetchSuppliers();
-            notify(lang === 'uz' ? 'Yetkazib beruvchi qo\'shildi' : 'Поставщик добавлен');
+            notify(lang === 'uz' ? "Yetkazib beruvchi qo'shildi" : 'Поставщик добавлен');
           }}
           notify={notify}
           t={t}
@@ -5360,6 +6016,7 @@ function SuppliersScreen({ token, notify, t }) {
           onSuccess={() => {
             setOcrInvoiceOpen(false);
             fetchInvoices();
+            fetchSuppliers();
             notify(lang === 'uz' ? 'Nakladnaya omborga qabul qilindi' : 'Накладная принята на склад');
           }}
           notify={notify}
@@ -5378,6 +6035,7 @@ function SuppliersScreen({ token, notify, t }) {
           onSuccess={() => {
             setCreateInvoiceModalOpen(false);
             fetchInvoices();
+            fetchSuppliers();
             notify(lang === 'uz' ? 'Yuk xati qabul qilindi va ombor yangilandi' : 'Накладная принята, остатки обновлены');
           }}
           notify={notify}
@@ -5394,9 +6052,21 @@ function SuppliersScreen({ token, notify, t }) {
           onSuccess={() => {
             setPayInvoiceModalOpen(false);
             fetchInvoices();
-            notify(lang === 'uz' ? 'Ta\'minotchiga to\'lov saqlandi' : 'Оплата поставщику сохранена');
+            fetchSuppliers();
+            notify(lang === 'uz' ? "Ta'minotchiga to'lov saqlandi" : 'Оплата поставщику сохранена');
           }}
           notify={notify}
+          t={t}
+        />
+      )}
+
+      {reconciliationSupplier && (
+        <SupplierReconciliationModal
+          token={token}
+          supplierId={reconciliationSupplier.id}
+          onClose={() => setReconciliationSupplier(null)}
+          notify={notify}
+          lang={lang}
           t={t}
         />
       )}
@@ -5404,330 +6074,6 @@ function SuppliersScreen({ token, notify, t }) {
   );
 }
 
-// ------------------- CREATE SUPPLIER MODAL -------------------
-function CreateSupplierModal({ token, onClose, onSuccess, notify, t, lang: propLang }) {
-  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
-  const [name, setName] = useState('');
-  const [contactPerson, setContactPerson] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/suppliers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          contact_person: contactPerson.trim() || undefined,
-          phone: phone.trim() || undefined,
-          address: address.trim() || undefined
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Ta\'minotchi yaratishda xatolik');
-      onSuccess(data);
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-3">{t.addSupplierBtn}</h3>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.supplierNameLabel}</label>
-            <input
-              type="text"
-              placeholder="MCHJ 'Musaffo Sut Alyansi'"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.contactPersonLabel}</label>
-            <input
-              type="text"
-              placeholder="Akmal Karimov"
-              value={contactPerson}
-              onChange={(e) => setContactPerson(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.phoneLabel}</label>
-            <input
-              type="text"
-              placeholder="+998 (71) 200-11-22"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.addressLabel}</label>
-            <input
-              type="text"
-              placeholder="Toshkent sh."
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-            />
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-xs font-semibold">
-            {t.cancelBtn}
-          </button>
-          <button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold shadow">
-            {loading ? t.creating : t.createBtn}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ------------------- CREATE INVOICE MODAL -------------------
-function CreateInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, notify, t, lang: propLang }) {
-  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
-  const [supplierId, setSupplierId] = useState(suppliers.length > 0 ? suppliers[0].id : '');
-  const [items, setItems] = useState([
-    {
-      product_id: catalogSample.length > 0 ? catalogSample[0].id : '',
-      quantity: 50,
-      purchase_price: catalogSample.length > 0 && catalogSample[0].purchase_price ? catalogSample[0].purchase_price : 10000
-    }
-  ]);
-  const [paidAmount, setPaidAmount] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  const addItem = () => {
-    setItems((prev) => [
-      ...prev,
-      {
-        product_id: catalogSample.length > 0 ? catalogSample[0].id : '',
-        quantity: 10,
-        purchase_price: 10000
-      }
-    ]);
-  };
-
-  const updateItem = (index, field, value) => {
-    setItems((prev) => {
-      const copy = [...prev];
-      copy[index][field] = Number(value);
-      return copy;
-    });
-  };
-
-  const removeItem = (index) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const total = items.reduce((sum, it) => sum + (it.quantity * it.purchase_price), 0);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (items.length === 0) {
-      notify('Kamida bitta tovar qo\'shing', 'error');
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/suppliers/invoices`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          supplier_id: Number(supplierId),
-          items: safeArray(items).map((it) => ({
-            product_id: Number(it.product_id),
-            quantity: Number(it.quantity),
-            purchase_price: Number(it.purchase_price)
-          })),
-          paid_amount: Number(paidAmount)
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Yuk xatini saqlashda xatolik');
-      onSuccess(data);
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 flex flex-col max-h-[90vh]">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-3">{t.addInvoiceBtn}</h3>
-
-        <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.supplierNameLabel}</label>
-            <select
-              value={supplierId}
-              onChange={(e) => setSupplierId(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-            >
-              {safeArray(suppliers).map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{t.invoiceItemsLabel}</label>
-              <button type="button" onClick={addItem} className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
-                {t.addItemBtn || (lang === 'uz' ? "+ Tovar qo'shish" : "+ Добавить товар")}
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {safeArray(items).map((it, idx) => (
-                <div key={idx} className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                  <select
-                    value={it.product_id}
-                    onChange={(e) => updateItem(idx, 'product_id', e.target.value)}
-                    className="flex-2 w-1/2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100"
-                  >
-                    {safeArray(catalogSample).map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="number"
-                    placeholder="Miqdor"
-                    value={it.quantity}
-                    onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                    className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-900 dark:text-slate-100 text-center"
-                  />
-
-                  <input
-                    type="number"
-                    placeholder="Tannarx"
-                    value={it.purchase_price}
-                    onChange={(e) => updateItem(idx, 'purchase_price', e.target.value)}
-                    className="w-24 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 text-right"
-                  />
-
-                  <button type="button" onClick={() => removeItem(idx)} className="text-rose-500 font-bold px-1.5">✕</button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.paidAmountLabel}</label>
-              <input
-                type="number"
-                value={paidAmount}
-                onChange={(e) => setPaidAmount(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl flex flex-col justify-center text-right">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">{t.totalToPay}</span>
-              <span className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">{formatMoney(total)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-          <button type="button" onClick={onClose} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-xs font-semibold">
-            {t.cancelBtn}
-          </button>
-          <button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold shadow">
-            {loading ? t.saving : t.saveBtn}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ------------------- PAY INVOICE MODAL -------------------
-function PayInvoiceModal({ token, invoice, onClose, onSuccess, notify, t, lang: propLang }) {
-  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
-  const [amount, setAmount] = useState(invoice.debt_to_supplier);
-  const [loading, setLoading] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/suppliers/invoices/${invoice.id}/pay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ amount: Number(amount) })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'To\'lov xatosi');
-      onSuccess(data);
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-1">{t.payInvoiceBtn}</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Yuk xati № {invoice.invoice_number} ({t.debtToSupplierLabel} {formatMoney(invoice.debt_to_supplier)})
-        </p>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">To'lov summasi (so'm) *</label>
-          <input
-            type="number"
-            step="any"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold font-mono text-slate-900 dark:text-slate-100"
-            required
-          />
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-xs font-semibold">
-            {t.cancelBtn}
-          </button>
-          <button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold shadow">
-            {loading ? t.saving : t.saveBtn}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ------------------- OPERATIONAL EXPENSES & SPOILAGE -------------------
 function ExpensesScreen({ token, notify, t }) {
   const lang = (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
   const [expenses, setExpenses] = useState([]);
@@ -6028,17 +6374,22 @@ function CreateExpenseModal({ token, catalogSample, isSpoilage, onClose, onSucce
 function AnalyticsScreen({ token, notify, t }) {
   const lang = (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
   const [period, setPeriod] = useState('today');
+  const [selectedDate, setSelectedDate] = useState('');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [viewingDayDetails, setViewingDayDetails] = useState(null);
 
   useEffect(() => {
     fetchDashboard();
-  }, [period]);
+  }, [period, selectedDate]);
 
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/analytics/dashboard?period=${period}`, {
+      const url = selectedDate
+        ? `${API_BASE}/analytics/dashboard?period=custom&date=${selectedDate}`
+        : `${API_BASE}/analytics/dashboard?period=${period}`;
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const resData = await res.json();
@@ -6050,30 +6401,60 @@ function AnalyticsScreen({ token, notify, t }) {
     }
   };
 
+  const handlePeriodChange = (newPeriod) => {
+    setSelectedDate('');
+    setPeriod(newPeriod);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Period Toggles Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-sm">
-        <div className="font-bold text-sm text-slate-800 dark:text-slate-200">{t.periodLabel}</div>
-        <div className="flex gap-1">
-          {[
-            { id: 'today', label: t.periodToday },
-            { id: 'week', label: t.periodWeek },
-            { id: 'month', label: t.periodMonth },
-            { id: 'all', label: t.periodAll }
-          ].map((item) => (
+      {/* Period Toggles & Date Picker Bar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="font-bold text-sm text-slate-800 dark:text-slate-200">{t.periodLabel}</div>
+          <div className="flex gap-1">
+            {[
+              { id: 'today', label: t.periodToday },
+              { id: 'week', label: t.periodWeek },
+              { id: 'month', label: t.periodMonth },
+              { id: 'all', label: t.periodAll }
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handlePeriodChange(item.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
+                  period === item.id && !selectedDate
+                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date picker */}
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-3 py-1.5 shadow-inner">
+          <span className="text-xs">📅</span>
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            {lang === 'uz' ? 'Kunni tanlash:' : 'Выбрать дату:'}
+          </span>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
+          />
+          {selectedDate && (
             <button
-              key={item.id}
-              onClick={() => setPeriod(item.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
-                period === item.id
-                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
+              onClick={() => setSelectedDate('')}
+              className="text-xs text-rose-500 hover:text-rose-700 font-bold ml-1 px-1 rounded"
+              title={lang === 'uz' ? 'Tozalash' : 'Сбросить дату'}
             >
-              {item.label}
+              ✕
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -6125,6 +6506,47 @@ function AnalyticsScreen({ token, notify, t }) {
               </div>
             </div>
           </div>
+
+          {/* Interactive Daily Breakdown (for Week and Month periods) */}
+          {!selectedDate && (period === 'week' || period === 'month') && data.daily_breakdown && data.daily_breakdown.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span>📅</span>
+                  <span>{lang === 'uz' ? "Kunlik srez va taqvim (Har bir kun bo'yicha hisobot)" : 'Разбивка по дням (кликните на день для полного среза)'}</span>
+                </h3>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {lang === 'uz' ? 'Kunni tanlang' : 'Нажмите для деталей дня'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                {safeArray(data.daily_breakdown).map((day) => (
+                  <button
+                    key={day.date}
+                    onClick={() => setViewingDayDetails(day.date)}
+                    className="p-3 rounded-2xl border text-left transition hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between bg-slate-50 hover:bg-emerald-50/60 dark:bg-slate-800/60 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-emerald-500 group shadow-sm"
+                  >
+                    <div>
+                      <div className="text-[11px] font-bold text-slate-700 dark:text-slate-200 group-hover:text-emerald-600 transition">
+                        {day.date}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {day.sales_count} {lang === 'uz' ? 'ta chek' : 'чеков'}
+                      </div>
+                    </div>
+                    <div className="mt-2.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
+                      <div className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        {formatMoney(day.revenue)}
+                      </div>
+                      <div className={`text-[10px] font-mono mt-0.5 font-semibold ${day.net_profit >= 0 ? 'text-slate-500 dark:text-slate-400' : 'text-rose-500'}`}>
+                        {day.net_profit >= 0 ? '+' : ''}{formatMoney(day.net_profit)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Breakdown Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -6188,11 +6610,22 @@ function AnalyticsScreen({ token, notify, t }) {
           )}
         </>
       )}
+
+      {/* Day Details Modal */}
+      {viewingDayDetails && (
+        <DayDetailsModal
+          dateStr={viewingDayDetails}
+          token={token}
+          onClose={() => setViewingDayDetails(null)}
+          notify={notify}
+          lang={lang}
+          t={t}
+        />
+      )}
     </div>
   );
 }
 
-// ------------------- PRICE TAG MODAL -------------------
 function PriceTagModal({ onClose, t, sessionLocal }) {
   const [productId, setProductId] = useState(0);
   const [price, setPrice] = useState(0);

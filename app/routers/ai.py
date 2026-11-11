@@ -764,21 +764,53 @@ def parse_debt_voice(
     
     extracted_name = ""
     note_tokens = []
+    known_items = {
+        "хлеб", "хлеба", "буханка", "буханку", "молоко", "молока", "чай", "чая", "сахар", "сахара",
+        "масло", "масла", "мясо", "мяса", "картошка", "картошки", "лук", "яйца", "яиц", "сигареты",
+        "сигарет", "кола", "колы", "вода", "воды", "пиво", "печенье", "конфеты", "продукты", "продуктов",
+        "non", "nonga", "sut", "sutga", "choy", "choyga", "shakar", "shakarga", "yog'", "yog'ga",
+        "yog", "yogga", "go'sht", "go'shtga", "gosht", "goshtga", "kartoshka", "kartoshkaga",
+        "piyoz", "piyozga", "sabzi", "sabziga", "tuxum", "tuxumga", "sigaret", "sigaretga",
+        "kola", "kolaga", "cola", "suv", "suvga", "buxanka", "makaron", "guruch", "pivo"
+    }
+    honorifics = {"aka", "opa", "uka", "tog'a", "toga", "amaki", "amak", "xola", "kelin", "pochcha", "usta"}
+    verbs_to_drop = {
+        "вернет", "вернёт", "вернуть", "отдаст", "отдать", "принесет", "принесёт", "занесет", "занесёт",
+        "взял", "взяла", "брал", "брала", "на", "за", "в", "до",
+        "qaytaradi", "beradi", "beraman", "oldi", "olgan", "oladi", "yoz", "yozib", "to'laydi", "tolaydi", "olib"
+    }
+
     if tokens:
         first_word = tokens[0].lower()
         if first_word in RUSSIAN_NAME_ENDINGS:
             extracted_name = RUSSIAN_NAME_ENDINGS[first_word]
-        elif first_word.endswith("ga") or first_word.endswith("ka") or first_word.endswith("qa"):
+            idx = 1
+        elif first_word.endswith(("ga", "ka", "qa")):
             extracted_name = re_module.sub(r"(?:ga|ka|qa)$", "", first_word).capitalize()
+            idx = 1
         elif first_word.endswith("а") and len(first_word) > 4 and first_word[:-1] in RUSSIAN_NAME_ENDINGS.values():
             extracted_name = first_word[:-1].capitalize()
+            idx = 1
         else:
             extracted_name = first_word.capitalize()
-            if len(tokens) > 1 and tokens[1].lower() not in ["хлеб", "кола", "сигареты", "сахар", "масло", "non", "sut", "shakar", "cola"]:
-                extracted_name += " " + tokens[1].capitalize()
-                note_tokens = tokens[2:]
+            idx = 1
+
+        if idx < len(tokens):
+            next_w = tokens[idx].lower()
+            if next_w in honorifics:
+                extracted_name += " " + next_w
+                idx += 1
+            elif next_w not in known_items and next_w not in verbs_to_drop and len(next_w) > 2:
+                extracted_name += " " + tokens[idx].capitalize()
+                idx += 1
+
+        raw_note = [w for w in tokens[idx:] if w.lower() not in verbs_to_drop]
+        for w in raw_note:
+            lw = w.lower()
+            if lw.endswith("ga") and len(lw) > 3 and (lw[:-2] in known_items or lw in known_items):
+                note_tokens.append(lw[:-2])
             else:
-                note_tokens = tokens[1:]
+                note_tokens.append(w)
     else:
         extracted_name = "Новый должник" if lang.startswith("ru") else "Yangi mijoz"
 
@@ -934,19 +966,23 @@ def parse_invoice_ocr(
         usable = [(raw, value) for raw, value in numbers if len(re_module.sub(r"\D", "", raw)) <= 7]
         if len(usable) < 2:
             continue
+        # Drop row sequence counter (e.g. 1, 2, 3...) if present
+        if len(usable) >= 3 and usable[0][1].is_integer() and 1 <= usable[0][1] <= 1000 and len(usable) in (3, 4):
+            if len(usable) == 4 or abs(usable[1][1] * usable[2][1] - usable[-1][1]) <= max(2, usable[-1][1] * 0.05):
+                usable = usable[1:]
+
+        qty, price = 0.0, 0.0
         if len(usable) == 2:
             qty, price = usable[0][1], usable[1][1]
-        elif len(usable) == 3:
-            first, second, third = (item[1] for item in usable)
-            if abs(first * second - third) <= max(2, third * 0.03):
+        elif len(usable) >= 3:
+            first, second, third = usable[0][1], usable[1][1], usable[2][1]
+            if abs(first * second - third) <= max(2, third * 0.05):
                 qty, price = first, second
-            elif abs(second * third - first) <= max(2, first * 0.03):
+            elif abs(second * third - first) <= max(2, first * 0.05):
                 qty, price = second, third
             else:
-                # Ambiguous rows need correction in the editable preview.
-                continue
+                qty, price = usable[0][1], usable[1][1]
         else:
-            # Several numeric fields (codes, dates, quantities, totals) are ambiguous.
             continue
         if qty <= 0 or price <= 0 or qty > 100_000:
             continue
