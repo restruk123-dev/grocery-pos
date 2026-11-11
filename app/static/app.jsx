@@ -565,6 +565,24 @@ function VoiceInputBtn({ onResult, lang = 'uz', title = 'Ovozli kiritish', class
   );
 }
 
+function safeArray(val) {
+  if (Array.isArray(val)) return val;
+  if (val && typeof val === 'object') {
+    if (Array.isArray(val.categories)) return val.categories;
+    if (Array.isArray(val.items)) return val.items;
+    if (Array.isArray(val.products)) return val.products;
+    if (Array.isArray(val.debtors)) return val.debtors;
+    if (Array.isArray(val.suppliers)) return val.suppliers;
+    if (Array.isArray(val.invoices)) return val.invoices;
+    if (Array.isArray(val.expenses)) return val.expenses;
+    if (Array.isArray(val.history)) return val.history;
+    if (Array.isArray(val.cashiers)) return val.cashiers;
+    if (Array.isArray(val.data)) return val.data;
+    if (Array.isArray(val.results)) return val.results;
+  }
+  return [];
+}
+
 function formatMoney(amount, currency = "so'm") {
   if (amount === undefined || amount === null || isNaN(amount)) return `0 ${currency}`;
   const parts = Math.round(Number(amount)).toString().split(".");
@@ -1303,12 +1321,17 @@ function CashierSwitchModal({ token, currentUserId, onClose, onSwitch, notify, t
   const fetchCashiers = async () => {
     try {
       const res = await fetch(`${API_BASE}/auth/cashiers`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
+      if (!res.ok) {
+        setCashiers([]);
+        return;
+      }
       const data = await res.json();
-      setCashiers(data || []);
+      setCashiers(safeArray(data));
     } catch (e) {
       console.error(e);
+      setCashiers([]);
     }
   };
 
@@ -1356,7 +1379,7 @@ function CashierSwitchModal({ token, currentUserId, onClose, onSwitch, notify, t
         </p>
 
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-          {cashiers.map((c) => {
+          {safeArray(cashiers).map((c) => {
             const isCurrent = (c.id === currentUserId || c.username === currentUserId);
             return (
               <button
@@ -1930,13 +1953,22 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_BASE}/products/categories/all`);
-      const data = await res.json();
-      setCategories(data || []);
-      if (data && data.length > 0 && !categoryId) {
-        setCategoryId(data[0].id.toString());
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/products/categories/all`, { headers });
+      if (!res.ok) {
+        setCategories([]);
+        return;
       }
-    } catch (e) {}
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data?.categories || data?.items || []);
+      setCategories(list);
+      if (list.length > 0 && !categoryId) {
+        setCategoryId(list[0].id.toString());
+      }
+    } catch (e) {
+      console.error('Error fetching categories:', e);
+      setCategories([]);
+    }
   };
 
   const startVoiceName = () => {
@@ -2079,9 +2111,13 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
                 onChange={(e) => setCategoryId(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium"
               >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name.split('/')[0].trim()}</option>
-                ))}
+                {(Array.isArray(categories) ? categories : (categories?.categories || [])).length === 0 ? (
+                  <option value="">{lang === 'uz' ? "Kategoriya yo'q" : "Без категории"}</option>
+                ) : (
+                  (Array.isArray(categories) ? categories : (categories?.categories || [])).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name ? c.name.split('/')[0].trim() : c.name}</option>
+                  ))
+                )}
               </select>
             </div>
             <div>
@@ -2707,7 +2743,7 @@ function OcrDebtNotebookModal({ token, onClose, onSuccess, notify, t, lang }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {parsedRows.map((r, i) => (
+                {safeArray(parsedRows).map((r, i) => (
                   <tr key={i}>
                     <td className="py-1.5 pr-2">
                       <input
@@ -2870,7 +2906,7 @@ function OcrInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, 
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold"
             >
               <option value="">{lang === 'uz' ? "Ta'minotchini tanlang" : 'Выберите поставщика'}</option>
-              {suppliers.map(s => (
+              {safeArray(suppliers).map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
@@ -2912,12 +2948,12 @@ function OcrInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, 
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {parsedItems.map((it, idx) => (
+                {safeArray(parsedItems).map((it, idx) => (
                   <tr key={idx}>
                     <td className="py-1.5 pr-2">
                       <select value={it.matched_product_id || ''} onChange={(e) => updateItem(idx, 'matched_product_id', e.target.value)} className={`w-full min-w-48 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 py-2 text-xs ${it.matched_product_id ? 'border-emerald-300 dark:border-emerald-700' : 'border-amber-400 dark:border-amber-600'}`}>
                         <option value="">{lang === 'uz' ? `Katalogdan tanlang: ${it.product_name}` : `Выберите товар: ${it.product_name}`}</option>
-                        {catalogSample.map(product => <option key={product.id} value={product.id}>{product.name} · {product.barcode}</option>)}
+                        {safeArray(catalogSample).map(product => <option key={product.id} value={product.id}>{product.name} · {product.barcode}</option>)}
                       </select>
                       {!it.matched_product_id && <span className="text-[10px] text-amber-600 dark:text-amber-300">{lang === 'uz' ? 'Aniq moslik topilmadi — katalogdan tanlang' : 'Нет точного совпадения — выберите из каталога'}</span>}
                     </td>
@@ -3238,11 +3274,17 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_BASE}/products/categories/all`);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/products/categories/all`, { headers });
+      if (!res.ok) {
+        setCategories([]);
+        return;
+      }
       const data = await res.json();
-      setCategories(data || []);
+      setCategories(Array.isArray(data) ? data : (data?.categories || data?.items || []));
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching categories:', e);
+      setCategories([]);
     }
   };
 
@@ -3253,23 +3295,29 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       if (selectedCategory) params.append('category_id', selectedCategory.toString());
 
       const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
+      if (!res.ok) {
+        setProducts([]);
+        return;
+      }
       const data = await res.json();
-      setProducts(data.items || []);
+      setProducts(safeArray(data));
     } catch (e) {
       console.error(e);
+      setProducts([]);
     }
   };
 
   const fetchQuickProducts = async () => {
     try {
       const res = await fetch(`${API_BASE}/products/quick`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (res.ok) {
         const data = await res.json();
-        if (data && data.length > 0) setQuickProducts(data);
+        const list = safeArray(data);
+        if (list.length > 0) setQuickProducts(list);
       }
     } catch (e) {
       console.error('Quick products fetch error:', e);
@@ -3494,7 +3542,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     try {
       const cashVal = paymentMethod === 'CASH' ? cashGiven : 0;
       const payload = {
-        items: cart.map((i) => ({
+        items: safeArray(cart).map((i) => ({
           product_id: typeof i.product.id === 'number' ? i.product.id : null,
           barcode: i.product.barcode,
           name: i.product.name,
@@ -3661,8 +3709,38 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
               </button>
             </div>
 
+            {showAllCatalog && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 pt-1 no-scrollbar">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+                    selectedCategory === null
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {t.allCategories || (lang === 'uz' ? "Barcha toifalar" : "Все категории")}
+                </button>
+                {(Array.isArray(categories) ? categories : (categories?.categories || [])).map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+                      selectedCategory === cat.id
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {cat.name ? cat.name.split('/')[0].trim() : cat.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-              {(quickProducts.length > 0 ? quickProducts : QUICK_ITEMS).map((item) => (
+              {(safeArray(quickProducts).length > 0 ? safeArray(quickProducts) : QUICK_ITEMS).map((item) => (
                 <button
                   key={item.id}
                   type="button"
@@ -3758,7 +3836,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200 font-medium">
-                    {cart.map((item, idx) => {
+                    {safeArray(cart).map((item, idx) => {
                       const itemTotal = item.product.sale_price * item.quantity;
                       return (
                         <tr key={item.product.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
@@ -3975,7 +4053,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
             </div>
             
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {parkedCarts.map((h) => (
+              {safeArray(parkedCarts).map((h) => (
                 <div key={h.id} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between gap-3">
                   <div>
                     <div className="font-bold text-xs">Chek #{h.id} ({h.timestamp})</div>
@@ -4166,8 +4244,12 @@ function DebtsScreen({ token, notify, t }) {
       const res = await fetch(`${API_BASE}/debts/debtors?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setDebtors([]);
+        return;
+      }
       const data = await res.json();
-      setDebtors(data.items || []);
+      setDebtors(safeArray(data));
     } catch (e) {
       notify('Qarzdorlar ro\'yxatini yuklashda xatolik', 'error');
     }
@@ -4263,7 +4345,7 @@ function DebtsScreen({ token, notify, t }) {
 
       {/* Debtors List Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {debtors.map((debtor) => (
+        {safeArray(debtors).map((debtor) => (
           <div
             key={debtor.id}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex flex-col justify-between space-y-3"
@@ -4600,8 +4682,12 @@ function DebtorHistoryModal({ token, debtor, onClose, t, lang: propLang }) {
       const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}/history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setHistory([]);
+        return;
+      }
       const data = await res.json();
-      setHistory(data || []);
+      setHistory(safeArray(data));
     } catch (e) {
       console.error(e);
     } finally {
@@ -4629,7 +4715,7 @@ function DebtorHistoryModal({ token, debtor, onClose, t, lang: propLang }) {
           ) : history.length === 0 ? (
             <div className="text-center py-8 text-xs text-slate-400">Tarix bo'sh</div>
           ) : (
-            history.map((tx) => {
+            safeArray(history).map((tx) => {
               const isIncrease = tx.transaction_type === 'DEBT_INCREASE';
               return (
                 <div
@@ -4796,9 +4882,14 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
       const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setProducts([]);
+        setTotal(0);
+        return;
+      }
       const data = await res.json();
-      setProducts(data.items || []);
-      setTotal(data.total || 0);
+      setProducts(safeArray(data));
+      setTotal(data.total || safeArray(data).length || 0);
     } catch (e) {
       notify('Katalog yuklashda xatolik', 'error');
     }
@@ -4899,7 +4990,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm transition-colors duration-200">
         {/* Mobile Product Cards (< 768px) */}
         <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-          {products.map((p) => (
+          {safeArray(products).map((p) => (
             <div key={p.id} className="p-3 flex flex-col gap-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -4959,7 +5050,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-              {products.map((p) => (
+              {safeArray(products).map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                   <td className="px-4 py-2.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">{p.barcode}</td>
                   <td className="px-4 py-2.5 font-medium text-slate-900 dark:text-slate-100">{p.name}</td>
@@ -5044,10 +5135,15 @@ function SuppliersScreen({ token, notify, t }) {
       const res = await fetch(`${API_BASE}/suppliers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setSuppliers([]);
+        return;
+      }
       const data = await res.json();
-      setSuppliers(data || []);
+      setSuppliers(safeArray(data));
     } catch (e) {
       console.error(e);
+      setSuppliers([]);
     }
   };
 
@@ -5056,10 +5152,15 @@ function SuppliersScreen({ token, notify, t }) {
       const res = await fetch(`${API_BASE}/suppliers/invoices`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setInvoices([]);
+        return;
+      }
       const data = await res.json();
-      setInvoices(data || []);
+      setInvoices(safeArray(data));
     } catch (e) {
       console.error(e);
+      setInvoices([]);
     }
   };
 
@@ -5068,10 +5169,15 @@ function SuppliersScreen({ token, notify, t }) {
       const res = await fetch(`${API_BASE}/products?limit=2000`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setCatalogSample([]);
+        return;
+      }
       const data = await res.json();
-      setCatalogSample(data.items || []);
+      setCatalogSample(safeArray(data));
     } catch (e) {
       console.error(e);
+      setCatalogSample([]);
     }
   };
 
@@ -5116,7 +5222,7 @@ function SuppliersScreen({ token, notify, t }) {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
         {/* Mobile Invoice Cards (< 768px) */}
         <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-          {invoices.map((inv) => (
+          {safeArray(invoices).map((inv) => (
             <div key={inv.id} className="p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -5180,7 +5286,7 @@ function SuppliersScreen({ token, notify, t }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-              {invoices.map((inv) => (
+              {safeArray(invoices).map((inv) => (
                 <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                   <td className="px-4 py-2.5 font-mono font-bold text-slate-900 dark:text-slate-100">
                     {inv.invoice_number}
@@ -5450,7 +5556,7 @@ function CreateInvoiceModal({ token, suppliers, catalogSample, onClose, onSucces
         },
         body: JSON.stringify({
           supplier_id: Number(supplierId),
-          items: items.map((it) => ({
+          items: safeArray(items).map((it) => ({
             product_id: Number(it.product_id),
             quantity: Number(it.quantity),
             purchase_price: Number(it.purchase_price)
@@ -5481,7 +5587,7 @@ function CreateInvoiceModal({ token, suppliers, catalogSample, onClose, onSucces
               onChange={(e) => setSupplierId(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
             >
-              {suppliers.map((s) => (
+              {safeArray(suppliers).map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
@@ -5496,14 +5602,14 @@ function CreateInvoiceModal({ token, suppliers, catalogSample, onClose, onSucces
             </div>
 
             <div className="space-y-2">
-              {items.map((it, idx) => (
+              {safeArray(items).map((it, idx) => (
                 <div key={idx} className="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center gap-2">
                   <select
                     value={it.product_id}
                     onChange={(e) => updateItem(idx, 'product_id', e.target.value)}
                     className="flex-2 w-1/2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100"
                   >
-                    {catalogSample.map((p) => (
+                    {safeArray(catalogSample).map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
@@ -5639,10 +5745,15 @@ function ExpensesScreen({ token, notify, t }) {
       const res = await fetch(`${API_BASE}/expenses`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setExpenses([]);
+        return;
+      }
       const data = await res.json();
-      setExpenses(data || []);
+      setExpenses(safeArray(data));
     } catch (e) {
       console.error(e);
+      setExpenses([]);
     }
   };
 
@@ -5651,10 +5762,15 @@ function ExpensesScreen({ token, notify, t }) {
       const res = await fetch(`${API_BASE}/products?limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setCatalogSample([]);
+        return;
+      }
       const data = await res.json();
-      setCatalogSample(data.items || []);
+      setCatalogSample(safeArray(data));
     } catch (e) {
       console.error(e);
+      setCatalogSample([]);
     }
   };
 
@@ -5692,7 +5808,7 @@ function ExpensesScreen({ token, notify, t }) {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
         {/* Mobile Expenses Cards (< 768px) */}
         <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-          {expenses.map((exp) => (
+          {safeArray(expenses).map((exp) => (
             <div key={exp.id} className="p-3 space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
@@ -5729,7 +5845,7 @@ function ExpensesScreen({ token, notify, t }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-              {expenses.map((exp) => (
+              {safeArray(expenses).map((exp) => (
                 <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                   <td className="px-4 py-2.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">
                     {new Date(exp.expense_date).toLocaleDateString()}
@@ -5849,7 +5965,7 @@ function CreateExpenseModal({ token, catalogSample, isSpoilage, onClose, onSucce
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
                   required
                 >
-                  {catalogSample.map((p) => (
+                  {safeArray(catalogSample).map((p) => (
                     <option key={p.id} value={p.id}>{p.name} ({p.stock_quantity} {p.unit})</option>
                   ))}
                 </select>
@@ -6035,10 +6151,10 @@ function AnalyticsScreen({ token, notify, t }) {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
               <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">{t.expensesBreakdownTitle}</h3>
               <div className="space-y-2">
-                {Object.entries(data.expenses_by_category).length === 0 ? (
+                {Object.entries(data?.expenses_by_category || {}).length === 0 ? (
                   <div className="text-xs text-slate-400 text-center py-4">{lang === 'uz' ? 'Xarajatlar mavjud emas' : 'Расходов пока нет'}</div>
                 ) : (
-                  Object.entries(data.expenses_by_category).map(([cat, amt]) => (
+                  Object.entries(data?.expenses_by_category || {}).map(([cat, amt]) => (
                     <div key={cat} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl">
                       <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{expenseCategoryName(cat, lang)}</span>
                       <span className="font-mono font-bold text-rose-600 dark:text-rose-400">-{formatMoney(amt)}</span>
@@ -6054,7 +6170,7 @@ function AnalyticsScreen({ token, notify, t }) {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
               <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">{t.topSellingTitle}</h3>
               <div className="space-y-2">
-                {data.top_selling_products.map((item, idx) => (
+                {safeArray(data?.top_selling_products).map((item, idx) => (
                   <div key={item.product_id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl">
                     <div className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-bold flex items-center justify-center">

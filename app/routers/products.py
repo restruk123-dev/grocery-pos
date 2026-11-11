@@ -382,6 +382,14 @@ def get_product_by_barcode(
         "detected_weight": detected_weight
     }
 
+# Categories
+@router.get("/categories", response_model=List[Category])
+@router.get("/categories/all", response_model=List[Category])
+def get_categories(
+    session: Session = Depends(get_session),
+):
+    return session.exec(select(Category)).all()
+
 @router.get("/{product_id}", response_model=dict)
 def get_product(
     product_id: int,
@@ -543,13 +551,6 @@ def reseed_catalog(
     stats = seed_database(session, target_sku_count=target_count)
     return {"message": f"Katalog yangilandi: {stats['products']} ta yangi SKU / Добавлено {stats['products']} SKU"}
 
-# Categories
-@router.get("/categories/all", response_model=List[Category])
-def get_categories(
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
-    return session.exec(select(Category)).all()
 
 @router.post("/categories", response_model=Category)
 def create_category(

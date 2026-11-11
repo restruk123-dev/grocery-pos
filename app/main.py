@@ -2,7 +2,7 @@ import io
 import os
 import socket
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from sqlmodel import Session
@@ -11,7 +11,10 @@ import qrcode
 import qrcode.image.svg
 
 from .config import settings
-from .database import init_db, engine
+from typing import List
+from sqlmodel import select
+from .models import Category
+from .database import init_db, engine, get_session
 from .seed import seed_accounts, seed_database
 from .routers import auth, products, pos, debts, suppliers, expenses, analytics, backup, ai, inventory
 
@@ -105,6 +108,12 @@ app.include_router(expenses.router, prefix=api_prefix)
 app.include_router(inventory.router, prefix=api_prefix)
 app.include_router(analytics.router, prefix=api_prefix)
 app.include_router(ai.router, prefix=api_prefix)
+
+# Root category aliases for public catalog discovery
+@app.get(f"{api_prefix}/categories", response_model=List[Category], tags=["Categories"])
+@app.get(f"{api_prefix}/categories/all", response_model=List[Category], tags=["Categories"])
+def get_root_categories(session: Session = Depends(get_session)):
+    return session.exec(select(Category)).all()
 
 # Backup endpoints: both /api/backup and /api/v1/backup
 app.include_router(backup.router, prefix="/api/backup")

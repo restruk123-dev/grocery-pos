@@ -611,6 +611,23 @@ function VoiceInputBtn({
     title: title
   }, /*#__PURE__*/React.createElement("span", null, "🎙️"));
 }
+function safeArray(val) {
+  if (Array.isArray(val)) return val;
+  if (val && typeof val === 'object') {
+    if (Array.isArray(val.categories)) return val.categories;
+    if (Array.isArray(val.items)) return val.items;
+    if (Array.isArray(val.products)) return val.products;
+    if (Array.isArray(val.debtors)) return val.debtors;
+    if (Array.isArray(val.suppliers)) return val.suppliers;
+    if (Array.isArray(val.invoices)) return val.invoices;
+    if (Array.isArray(val.expenses)) return val.expenses;
+    if (Array.isArray(val.history)) return val.history;
+    if (Array.isArray(val.cashiers)) return val.cashiers;
+    if (Array.isArray(val.data)) return val.data;
+    if (Array.isArray(val.results)) return val.results;
+  }
+  return [];
+}
 function formatMoney(amount, currency = "so'm") {
   if (amount === undefined || amount === null || isNaN(amount)) return `0 ${currency}`;
   const parts = Math.round(Number(amount)).toString().split(".");
@@ -1336,14 +1353,19 @@ function CashierSwitchModal({
   const fetchCashiers = async () => {
     try {
       const res = await fetch(`${API_BASE}/auth/cashiers`, {
-        headers: {
+        headers: token ? {
           Authorization: `Bearer ${token}`
-        }
+        } : {}
       });
+      if (!res.ok) {
+        setCashiers([]);
+        return;
+      }
       const data = await res.json();
-      setCashiers(data || []);
+      setCashiers(safeArray(data));
     } catch (e) {
       console.error(e);
+      setCashiers([]);
     }
   };
   const handleSelect = async event => {
@@ -1396,7 +1418,7 @@ function CashierSwitchModal({
     className: "text-xs text-slate-500 dark:text-slate-400 mb-3"
   }, lang === 'uz' ? 'Kun davomida smenani almashtirish uchun kassir nomini bosing:' : 'Нажмите на имя кассира для мгновенного переключения смены:'), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2 max-h-72 overflow-y-auto pr-1"
-  }, cashiers.map(c => {
+  }, safeArray(cashiers).map(c => {
     const isCurrent = c.id === currentUserId || c.username === currentUserId;
     return /*#__PURE__*/React.createElement("button", {
       key: c.id,
@@ -1914,13 +1936,26 @@ function CreateProductModal({
   }, []);
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_BASE}/products/categories/all`);
-      const data = await res.json();
-      setCategories(data || []);
-      if (data && data.length > 0 && !categoryId) {
-        setCategoryId(data[0].id.toString());
+      const headers = token ? {
+        Authorization: `Bearer ${token}`
+      } : {};
+      const res = await fetch(`${API_BASE}/products/categories/all`, {
+        headers
+      });
+      if (!res.ok) {
+        setCategories([]);
+        return;
       }
-    } catch (e) {}
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data?.categories || data?.items || [];
+      setCategories(list);
+      if (list.length > 0 && !categoryId) {
+        setCategoryId(list[0].id.toString());
+      }
+    } catch (e) {
+      console.error('Error fetching categories:', e);
+      setCategories([]);
+    }
   };
   const startVoiceName = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2045,10 +2080,12 @@ function CreateProductModal({
     value: categoryId,
     onChange: e => setCategoryId(e.target.value),
     className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium"
-  }, categories.map(c => /*#__PURE__*/React.createElement("option", {
+  }, (Array.isArray(categories) ? categories : categories?.categories || []).length === 0 ? /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, lang === 'uz' ? "Kategoriya yo'q" : "Без категории") : (Array.isArray(categories) ? categories : categories?.categories || []).map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
-  }, c.name.split('/')[0].trim())))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, c.name ? c.name.split('/')[0].trim() : c.name)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
   }, t.unitLabel || "Birlik"), /*#__PURE__*/React.createElement("select", {
     value: unit,
@@ -2624,7 +2661,7 @@ function OcrDebtNotebookModal({
     className: "py-2 text-right"
   }, lang === 'uz' ? "O'chirish" : 'Удалить'))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100 dark:divide-slate-800"
-  }, parsedRows.map((r, i) => /*#__PURE__*/React.createElement("tr", {
+  }, safeArray(parsedRows).map((r, i) => /*#__PURE__*/React.createElement("tr", {
     key: i
   }, /*#__PURE__*/React.createElement("td", {
     className: "py-1.5 pr-2"
@@ -2787,7 +2824,7 @@ function OcrInvoiceModal({
     className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, lang === 'uz' ? "Ta'minotchini tanlang" : 'Выберите поставщика'), suppliers.map(s => /*#__PURE__*/React.createElement("option", {
+  }, lang === 'uz' ? "Ta'minotchini tanlang" : 'Выберите поставщика'), safeArray(suppliers).map(s => /*#__PURE__*/React.createElement("option", {
     key: s.id,
     value: s.id
   }, s.name)))), /*#__PURE__*/React.createElement("input", {
@@ -2837,7 +2874,7 @@ function OcrInvoiceModal({
     className: "py-2"
   }, lang === 'uz' ? 'Jami' : 'Итого'))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100 dark:divide-slate-800"
-  }, parsedItems.map((it, idx) => /*#__PURE__*/React.createElement("tr", {
+  }, safeArray(parsedItems).map((it, idx) => /*#__PURE__*/React.createElement("tr", {
     key: idx
   }, /*#__PURE__*/React.createElement("td", {
     className: "py-1.5 pr-2"
@@ -2847,7 +2884,7 @@ function OcrInvoiceModal({
     className: `w-full min-w-48 bg-slate-50 dark:bg-slate-800 border rounded-lg px-2 py-2 text-xs ${it.matched_product_id ? 'border-emerald-300 dark:border-emerald-700' : 'border-amber-400 dark:border-amber-600'}`
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, lang === 'uz' ? `Katalogdan tanlang: ${it.product_name}` : `Выберите товар: ${it.product_name}`), catalogSample.map(product => /*#__PURE__*/React.createElement("option", {
+  }, lang === 'uz' ? `Katalogdan tanlang: ${it.product_name}` : `Выберите товар: ${it.product_name}`), safeArray(catalogSample).map(product => /*#__PURE__*/React.createElement("option", {
     key: product.id,
     value: product.id
   }, product.name, " · ", product.barcode))), !it.matched_product_id && /*#__PURE__*/React.createElement("span", {
@@ -3188,11 +3225,21 @@ function PosScreen({
   }, [selectedCategory, search]);
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_BASE}/products/categories/all`);
+      const headers = token ? {
+        Authorization: `Bearer ${token}`
+      } : {};
+      const res = await fetch(`${API_BASE}/products/categories/all`, {
+        headers
+      });
+      if (!res.ok) {
+        setCategories([]);
+        return;
+      }
       const data = await res.json();
-      setCategories(data || []);
+      setCategories(Array.isArray(data) ? data : data?.categories || data?.items || []);
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching categories:', e);
+      setCategories([]);
     }
   };
   const fetchProducts = async () => {
@@ -3203,26 +3250,32 @@ function PosScreen({
       if (search) params.append('search', search);
       if (selectedCategory) params.append('category_id', selectedCategory.toString());
       const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
-        headers: {
+        headers: token ? {
           Authorization: `Bearer ${token}`
-        }
+        } : {}
       });
+      if (!res.ok) {
+        setProducts([]);
+        return;
+      }
       const data = await res.json();
-      setProducts(data.items || []);
+      setProducts(safeArray(data));
     } catch (e) {
       console.error(e);
+      setProducts([]);
     }
   };
   const fetchQuickProducts = async () => {
     try {
       const res = await fetch(`${API_BASE}/products/quick`, {
-        headers: {
+        headers: token ? {
           Authorization: `Bearer ${token}`
-        }
+        } : {}
       });
       if (res.ok) {
         const data = await res.json();
-        if (data && data.length > 0) setQuickProducts(data);
+        const list = safeArray(data);
+        if (list.length > 0) setQuickProducts(list);
       }
     } catch (e) {
       console.error('Quick products fetch error:', e);
@@ -3448,7 +3501,7 @@ function PosScreen({
     try {
       const cashVal = paymentMethod === 'CASH' ? cashGiven : 0;
       const payload = {
-        items: cart.map(i => ({
+        items: safeArray(cart).map(i => ({
           product_id: typeof i.product.id === 'number' ? i.product.id : null,
           barcode: i.product.barcode,
           name: i.product.name,
@@ -3570,9 +3623,20 @@ function PosScreen({
     type: "button",
     onClick: () => setShowAllCatalog(!showAllCatalog),
     className: "text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
-  }, showAllCatalog ? lang === 'uz' ? "Yashirish" : "Скрыть каталог" : lang === 'uz' ? "Barcha tovarlar (2000+)" : "Показать все товары")), /*#__PURE__*/React.createElement("div", {
+  }, showAllCatalog ? lang === 'uz' ? "Yashirish" : "Скрыть каталог" : lang === 'uz' ? "Barcha tovarlar (2000+)" : "Показать все товары")), showAllCatalog && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 overflow-x-auto pb-2 pt-1 no-scrollbar"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setSelectedCategory(null),
+    className: `px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${selectedCategory === null ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`
+  }, t.allCategories || (lang === 'uz' ? "Barcha toifalar" : "Все категории")), (Array.isArray(categories) ? categories : categories?.categories || []).map(cat => /*#__PURE__*/React.createElement("button", {
+    key: cat.id,
+    type: "button",
+    onClick: () => setSelectedCategory(cat.id === selectedCategory ? null : cat.id),
+    className: `px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${selectedCategory === cat.id ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`
+  }, cat.name ? cat.name.split('/')[0].trim() : cat.name))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 sm:grid-cols-5 gap-1.5"
-  }, (quickProducts.length > 0 ? quickProducts : QUICK_ITEMS).map(item => /*#__PURE__*/React.createElement("button", {
+  }, (safeArray(quickProducts).length > 0 ? safeArray(quickProducts) : QUICK_ITEMS).map(item => /*#__PURE__*/React.createElement("button", {
     key: item.id,
     type: "button",
     onClick: () => addQuickItem(item),
@@ -3648,7 +3712,7 @@ function PosScreen({
     className: "px-2 py-2 text-center w-8"
   }))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200 font-medium"
-  }, cart.map((item, idx) => {
+  }, safeArray(cart).map((item, idx) => {
     const itemTotal = item.product.sale_price * item.quantity;
     return /*#__PURE__*/React.createElement("tr", {
       key: item.product.id,
@@ -3790,7 +3854,7 @@ function PosScreen({
     className: "text-slate-400 hover:text-slate-600 text-lg"
   }, "✕")), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2 max-h-72 overflow-y-auto pr-1"
-  }, parkedCarts.map(h => /*#__PURE__*/React.createElement("div", {
+  }, safeArray(parkedCarts).map(h => /*#__PURE__*/React.createElement("div", {
     key: h.id,
     className: "bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
@@ -3939,8 +4003,12 @@ function DebtsScreen({
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setDebtors([]);
+        return;
+      }
       const data = await res.json();
-      setDebtors(data.items || []);
+      setDebtors(safeArray(data));
     } catch (e) {
       notify('Qarzdorlar ro\'yxatini yuklashda xatolik', 'error');
     }
@@ -4008,7 +4076,7 @@ function DebtsScreen({
     className: `px-3 py-2 rounded-xl text-xs font-bold transition border ${onlyWithDebt ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`
   }, t.onlyWithDebtFilter)), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
-  }, debtors.map(debtor => /*#__PURE__*/React.createElement("div", {
+  }, safeArray(debtors).map(debtor => /*#__PURE__*/React.createElement("div", {
     key: debtor.id,
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex flex-col justify-between space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
@@ -4297,8 +4365,12 @@ function DebtorHistoryModal({
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setHistory([]);
+        return;
+      }
       const data = await res.json();
-      setHistory(data || []);
+      setHistory(safeArray(data));
     } catch (e) {
       console.error(e);
     } finally {
@@ -4326,7 +4398,7 @@ function DebtorHistoryModal({
     className: "text-center py-8 text-xs text-slate-400"
   }, t.processing) : history.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "text-center py-8 text-xs text-slate-400"
-  }, "Tarix bo'sh") : history.map(tx => {
+  }, "Tarix bo'sh") : safeArray(history).map(tx => {
     const isIncrease = tx.transaction_type === 'DEBT_INCREASE';
     return /*#__PURE__*/React.createElement("div", {
       key: tx.id,
@@ -4478,9 +4550,14 @@ function CatalogScreen({
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setProducts([]);
+        setTotal(0);
+        return;
+      }
       const data = await res.json();
-      setProducts(data.items || []);
-      setTotal(data.total || 0);
+      setProducts(safeArray(data));
+      setTotal(data.total || safeArray(data).length || 0);
     } catch (e) {
       notify('Katalog yuklashda xatolik', 'error');
     }
@@ -4558,7 +4635,7 @@ function CatalogScreen({
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm transition-colors duration-200"
   }, /*#__PURE__*/React.createElement("div", {
     className: "block md:hidden divide-y divide-slate-100 dark:divide-slate-800"
-  }, products.map(p => /*#__PURE__*/React.createElement("div", {
+  }, safeArray(products).map(p => /*#__PURE__*/React.createElement("div", {
     key: p.id,
     className: "p-3 flex flex-col gap-2"
   }, /*#__PURE__*/React.createElement("div", {
@@ -4611,7 +4688,7 @@ function CatalogScreen({
     className: "px-4 py-3 text-center"
   }, t.colStatus))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200"
-  }, products.map(p => /*#__PURE__*/React.createElement("tr", {
+  }, safeArray(products).map(p => /*#__PURE__*/React.createElement("tr", {
     key: p.id,
     className: "hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
   }, /*#__PURE__*/React.createElement("td", {
@@ -4676,10 +4753,15 @@ function SuppliersScreen({
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setSuppliers([]);
+        return;
+      }
       const data = await res.json();
-      setSuppliers(data || []);
+      setSuppliers(safeArray(data));
     } catch (e) {
       console.error(e);
+      setSuppliers([]);
     }
   };
   const fetchInvoices = async () => {
@@ -4689,10 +4771,15 @@ function SuppliersScreen({
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setInvoices([]);
+        return;
+      }
       const data = await res.json();
-      setInvoices(data || []);
+      setInvoices(safeArray(data));
     } catch (e) {
       console.error(e);
+      setInvoices([]);
     }
   };
   const fetchCatalogSample = async () => {
@@ -4702,10 +4789,15 @@ function SuppliersScreen({
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setCatalogSample([]);
+        return;
+      }
       const data = await res.json();
-      setCatalogSample(data.items || []);
+      setCatalogSample(safeArray(data));
     } catch (e) {
       console.error(e);
+      setCatalogSample([]);
     }
   };
   return /*#__PURE__*/React.createElement("div", {
@@ -4731,7 +4823,7 @@ function SuppliersScreen({
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "block md:hidden divide-y divide-slate-100 dark:divide-slate-800"
-  }, invoices.map(inv => /*#__PURE__*/React.createElement("div", {
+  }, safeArray(invoices).map(inv => /*#__PURE__*/React.createElement("div", {
     key: inv.id,
     className: "p-3 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
@@ -4786,7 +4878,7 @@ function SuppliersScreen({
     className: "px-4 py-3 text-center"
   }, t.colActions || (lang === 'uz' ? 'Amal' : 'Действие')))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200"
-  }, invoices.map(inv => /*#__PURE__*/React.createElement("tr", {
+  }, safeArray(invoices).map(inv => /*#__PURE__*/React.createElement("tr", {
     key: inv.id,
     className: "hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
   }, /*#__PURE__*/React.createElement("td", {
@@ -5013,7 +5105,7 @@ function CreateInvoiceModal({
         },
         body: JSON.stringify({
           supplier_id: Number(supplierId),
-          items: items.map(it => ({
+          items: safeArray(items).map(it => ({
             product_id: Number(it.product_id),
             quantity: Number(it.quantity),
             purchase_price: Number(it.purchase_price)
@@ -5045,7 +5137,7 @@ function CreateInvoiceModal({
     value: supplierId,
     onChange: e => setSupplierId(e.target.value),
     className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100"
-  }, suppliers.map(s => /*#__PURE__*/React.createElement("option", {
+  }, safeArray(suppliers).map(s => /*#__PURE__*/React.createElement("option", {
     key: s.id,
     value: s.id
   }, s.name)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
@@ -5058,14 +5150,14 @@ function CreateInvoiceModal({
     className: "text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
   }, t.addItemBtn || (lang === 'uz' ? "+ Tovar qo'shish" : "+ Добавить товар"))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
-  }, items.map((it, idx) => /*#__PURE__*/React.createElement("div", {
+  }, safeArray(items).map((it, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
     className: "bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("select", {
     value: it.product_id,
     onChange: e => updateItem(idx, 'product_id', e.target.value),
     className: "flex-2 w-1/2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100"
-  }, catalogSample.map(p => /*#__PURE__*/React.createElement("option", {
+  }, safeArray(catalogSample).map(p => /*#__PURE__*/React.createElement("option", {
     key: p.id,
     value: p.id
   }, p.name))), /*#__PURE__*/React.createElement("input", {
@@ -5201,10 +5293,15 @@ function ExpensesScreen({
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setExpenses([]);
+        return;
+      }
       const data = await res.json();
-      setExpenses(data || []);
+      setExpenses(safeArray(data));
     } catch (e) {
       console.error(e);
+      setExpenses([]);
     }
   };
   const fetchCatalogSample = async () => {
@@ -5214,10 +5311,15 @@ function ExpensesScreen({
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        setCatalogSample([]);
+        return;
+      }
       const data = await res.json();
-      setCatalogSample(data.items || []);
+      setCatalogSample(safeArray(data));
     } catch (e) {
       console.error(e);
+      setCatalogSample([]);
     }
   };
   return /*#__PURE__*/React.createElement("div", {
@@ -5246,7 +5348,7 @@ function ExpensesScreen({
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "block md:hidden divide-y divide-slate-100 dark:divide-slate-800"
-  }, expenses.map(exp => /*#__PURE__*/React.createElement("div", {
+  }, safeArray(expenses).map(exp => /*#__PURE__*/React.createElement("div", {
     key: exp.id,
     className: "p-3 space-y-1.5"
   }, /*#__PURE__*/React.createElement("div", {
@@ -5277,7 +5379,7 @@ function ExpensesScreen({
     className: "px-4 py-3 text-right"
   }, lang === 'ru' ? 'Сумма' : 'Summa'))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200"
-  }, expenses.map(exp => /*#__PURE__*/React.createElement("tr", {
+  }, safeArray(expenses).map(exp => /*#__PURE__*/React.createElement("tr", {
     key: exp.id,
     className: "hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
   }, /*#__PURE__*/React.createElement("td", {
@@ -5379,7 +5481,7 @@ function CreateExpenseModal({
     onChange: e => setProductId(e.target.value),
     className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100",
     required: true
-  }, catalogSample.map(p => /*#__PURE__*/React.createElement("option", {
+  }, safeArray(catalogSample).map(p => /*#__PURE__*/React.createElement("option", {
     key: p.id,
     value: p.id
   }, p.name, " (", p.stock_quantity, " ", p.unit, ")")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -5542,9 +5644,9 @@ function AnalyticsScreen({
     className: "font-bold text-sm text-slate-900 dark:text-slate-100 mb-3"
   }, t.expensesBreakdownTitle), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
-  }, Object.entries(data.expenses_by_category).length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, Object.entries(data?.expenses_by_category || {}).length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-slate-400 text-center py-4"
-  }, lang === 'uz' ? 'Xarajatlar mavjud emas' : 'Расходов пока нет') : Object.entries(data.expenses_by_category).map(([cat, amt]) => /*#__PURE__*/React.createElement("div", {
+  }, lang === 'uz' ? 'Xarajatlar mavjud emas' : 'Расходов пока нет') : Object.entries(data?.expenses_by_category || {}).map(([cat, amt]) => /*#__PURE__*/React.createElement("div", {
     key: cat,
     className: "flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl"
   }, /*#__PURE__*/React.createElement("span", {
@@ -5557,7 +5659,7 @@ function AnalyticsScreen({
     className: "font-bold text-sm text-slate-900 dark:text-slate-100 mb-3"
   }, t.topSellingTitle), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
-  }, data.top_selling_products.map((item, idx) => /*#__PURE__*/React.createElement("div", {
+  }, safeArray(data?.top_selling_products).map((item, idx) => /*#__PURE__*/React.createElement("div", {
     key: item.product_id,
     className: "flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl"
   }, /*#__PURE__*/React.createElement("div", {
