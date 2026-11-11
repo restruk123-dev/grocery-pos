@@ -35,6 +35,16 @@ class DebtIncreaseRequest(BaseModel):
     due_date: Optional[str] = Field(default=None, max_length=100)
     note: Optional[str] = Field(default="Qarz qo'shish / Запись долга", max_length=255)
 
+class DebtImportItem(BaseModel):
+    debtor_id: Optional[int] = Field(default=None, gt=0)
+    debtor_name: Optional[str] = Field(default=None, max_length=150)
+    amount: float = Field(..., gt=0.0, le=1000000000.0)
+    note: Optional[str] = Field(default=None, max_length=255)
+    due_date: Optional[str] = Field(default=None, max_length=100)
+
+class DebtImportRequest(BaseModel):
+    items: List[DebtImportItem] = Field(..., min_length=1, max_length=200)
+
 class DebtorResponse(BaseModel):
     id: int
     full_name: str
@@ -256,6 +266,67 @@ def add_debt(
         "new_balance": debtor.balance,
         "transaction_id": tx.id
     }
+
+@router.post("/import-batch", response_model=dict)
+def import_debt_batch(
+    data: DebtImportRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Atomically import reviewed notebook rows as debtors and debt transactions."""
+    now_utc = datetime.now(timezone.utc)
+    created_count = 0
+    updated_count = 0
+    try:
+        for row in data.items:
+            if row.debtor_id:
+                debtor = session.get(Debtor, row.debtor_id)
+                if not debtor or not debtor.is_active:
+                    raise HTTPException(status_code=400, detail=f"Должник не найден: {row.debtor_name or row.debtor_id}")
+                updated_count += 1
+            else:
+                name = (row.debtor_name or "").strip()
+                if len(name) < 2:
+                    raise HTTPException(status_code=400, detail="Для каждой строки укажите имя должника")
+                debtor = session.exec(
+                    select(Debtor).where(func.lower(Debtor.full_name) == name.lower(), Debtor.is_active == True)
+                ).first()
+                if debtor:
+                    updated_count += 1
+                else:
+                    debtor = Debtor(
+                        full_name=name,
+                        balance=0.0,
+                        is_active=True,
+                        created_at=now_utc,
+                        updated_at=now_utc,
+                    )
+                    session.add(debtor)
+                    session.flush()
+                    created_count += 1
+
+            debtor.balance = round(debtor.balance + row.amount, 2)
+            debtor.updated_at = now_utc
+            if row.due_date:
+                debtor.due_date = row.due_date
+            if row.note:
+                debtor.note = row.note.strip()
+            session.add(debtor)
+            session.add(DebtTransaction(
+                debtor_id=debtor.id,
+                amount=round(row.amount, 2),
+                transaction_type=DebtTransactionType.DEBT_INCREASE,
+                note=row.note or "Импорт из бумажной тетради",
+                due_date=row.due_date,
+                created_by_user_id=current_user.id,
+                created_at=now_utc,
+            ))
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+
+    return {"created_debtors": created_count, "updated_debtors": updated_count, "imported_rows": len(data.items)}
 
 @router.get("/debtors/{debtor_id}/history", response_model=List[DebtTransactionResponse])
 def get_debtor_history(

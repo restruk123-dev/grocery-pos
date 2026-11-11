@@ -9,7 +9,7 @@ from ..models import (
     Sale, SaleItem, Expense, Product, Debtor,
     PaymentMethod, ExpenseCategory, User, UserRole
 )
-from ..auth import require_role
+from ..auth import require_role, get_current_user
 
 import re as re_module
 from ..services.translit import get_search_variants
@@ -592,7 +592,11 @@ def _calculate_next_weekday(weekday_idx: int) -> tuple[str, str]:
 
 
 @router.post("/parse-debt-voice", response_model=DebtVoiceParseResponse)
-def parse_debt_voice(request: DebtVoiceParseRequest, session: Session = Depends(get_session)):
+def parse_debt_voice(
+    request: DebtVoiceParseRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
     """Free local NLP: extracts debtor name, amount, note, and return deadline from spoken Uzbek/Russian text."""
     text = request.speech_text.strip()
     if not text:
@@ -635,73 +639,93 @@ def parse_debt_voice(request: DebtVoiceParseRequest, session: Session = Depends(
             due_date = "maoshda"
             due_date_label = "Oylikda / С зарплаты"
 
-    # 2. Parse Amount
-    # Check for multiplier terms: ming / минг / k / тыс
+    # 2. Parse written or spoken amounts (digits and Uzbek/Russian number words).
+    normalized_text = lower_text.replace("’", "'").replace("ʻ", "'").replace("`", "'")
     amount = 0.0
-    
-    # Check regex like '50 ming', '50000', '150 000', '50k'
-    num_match = re_module.search(r'(\d+(?:[\s.,]\d+)?)\s*(ming|минг|тыс|k|к|mln|миллион)?', lower_text)
-    if num_match:
-        val_str = num_match.group(1).replace(" ", "").replace(",", ".")
-        try:
-            val = float(val_str)
-            mult = num_match.group(2)
-            if mult in ["ming", "минг", "тыс", "k", "к"]:
-                if val < 1000:
-                    val *= 1000
-            elif mult in ["mln", "миллион"]:
-                val *= 1000000
-            amount = val
-        except ValueError:
-            pass
+    digit_pattern = re_module.compile(r"(?<!\w)(\d{1,3}(?:[ \u00a0]\d{3})+|\d+(?:[.,]\d+)?)(?:\s*(ming|минг|тыс(?:яч)?|k|к|mln|миллион|млн))?(?!\w)", re_module.I)
+    digit_candidates = []
+    for match in digit_pattern.finditer(normalized_text):
+        raw, multiplier = match.group(1), (match.group(2) or "").lower()
+        value = _parse_ocr_number(raw)
+        if value is None:
+            continue
+        if multiplier in {"ming", "минг", "тыс", "тысяч", "тысяча", "k", "к"} and value < 1000:
+            value *= 1000
+        elif multiplier in {"mln", "миллион", "млн"}:
+            value *= 1_000_000
+        digit_candidates.append(value)
+    if digit_candidates:
+        amount = max(digit_candidates)
 
-    # Word-based Uzbek numbers fallback if 0
-    if amount == 0.0:
-        word_numbers = {
-            "o'n": 10000, "он": 10000, "yigirma": 20000, "йигирма": 20000,
-            "o'ttiz": 30000, "оттиз": 30000, "qirq": 40000, "кирк": 40000,
-            "ellik": 50000, "эллик": 50000, "oltmish": 60000, "олтмиш": 60000,
-            "yetmish": 70000, "етмиш": 70000, "sakson": 80000, "саксон": 80000,
-            "to'qson": 90000, "туксон": 90000, "yuz": 100000, "юз": 100000
-        }
-        for w, val in word_numbers.items():
-            if w in lower_text:
-                amount = float(val)
-                break
+    number_words = {
+        "bir": 1, "один": 1, "одна": 1, "одно": 1, "ikki": 2, "два": 2, "две": 2,
+        "uch": 3, "три": 3, "to'rt": 4, "торт": 4, "четыре": 4, "besh": 5, "пять": 5,
+        "olti": 6, "шесть": 6, "yetti": 7, "семь": 7, "sakkiz": 8, "восемь": 8,
+        "to'qqiz": 9, "токкиз": 9, "девять": 9, "o'n": 10, "ўн": 10, "десять": 10,
+        "yigirma": 20, "йигирма": 20, "двадцать": 20, "o'ttiz": 30, "оттиз": 30, "тридцать": 30,
+        "qirq": 40, "кирк": 40, "сорок": 40, "ellik": 50, "эллик": 50, "пятьдесят": 50,
+        "oltmish": 60, "олтмиш": 60, "шестьдесят": 60, "yetmish": 70, "етмиш": 70, "семьдесят": 70,
+        "sakson": 80, "саксон": 80, "восемьдесят": 80, "to'qson": 90, "туксон": 90, "девяносто": 90,
+        "yuz": 100, "юз": 100, "сто": 100,
+    }
+    amount_words = {"ming", "минг", "тысяча", "тысячи", "тысяч", "million", "миллион", "млн"}
+    if amount == 0:
+        tokens = re_module.findall(r"[а-яёғқҳўА-ЯЁҒҚҲЎa-z']+", normalized_text)
+        total, current, saw_number = 0, 0, False
+        for word in tokens:
+            if word in number_words:
+                current += number_words[word]
+                saw_number = True
+            elif word in {"yuz", "юз", "сто"}:
+                current = max(1, current) * 100
+                saw_number = True
+            elif word in amount_words:
+                multiplier = 1_000_000 if word in {"million", "миллион", "млн"} else 1000
+                total += max(1, current) * multiplier
+                current = 0
+                saw_number = True
+        if saw_number:
+            amount = float(total + current)
 
-    # 3. Match Debtor from DB or extract name
+    # 3. Match a known debtor by transliterated name tokens; otherwise extract a likely name.
     debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
+    stop_words = {
+        "qarz", "qarzga", "nasiya", "oldi", "olgan", "oladi", "beradi", "berar", "bering", "yoz",
+        "yozing", "mijoz", "меня", "долг", "вдолг", "взял", "взяла", "купил", "купила", "дайте", "запиши",
+        "ming", "минг", "тыс", "тысяча", "so'm", "som", "сум", "bugun", "kecha", "ertaga", "завтра",
+        "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba",
+        "nonga", "non", "sutga", "sut", "kartoshka", "shakar", "sigaret", "mahsulot", "товар",
+    } | amount_words | set(number_words)
+    name_tokens = []
+    for word in re_module.findall(r"[а-яёғқҳўА-ЯЁҒҚҲЎa-z']+", normalized_text):
+        if len(word) > 1 and word not in stop_words:
+            name_tokens.append(word)
+
     matched_debtor = None
-    for d in debtors:
-        d_name_parts = d.full_name.lower().split()
-        if any(part in lower_text for part in d_name_parts if len(part) > 2):
-            matched_debtor = d
-            break
+    spoken_tokens = set(name_tokens)
+    best_score = 0.0
+    for debtor in debtors:
+        db_tokens = set(_normalize_ocr_name(debtor.full_name).split())
+        variant_tokens = set()
+        for variant in get_search_variants(debtor.full_name):
+            variant_tokens.update(_normalize_ocr_name(variant).split())
+        overlap = len(spoken_tokens & (db_tokens | variant_tokens))
+        score = overlap / max(1, len(spoken_tokens | db_tokens))
+        if overlap and score > best_score:
+            matched_debtor, best_score = debtor, score
 
-    debtor_id = matched_debtor.id if matched_debtor else None
-    debtor_name = matched_debtor.full_name if matched_debtor else ""
-    is_new = matched_debtor is None
-
-    # If new debtor, extract first capitalized word or first word
+    debtor_id = matched_debtor.id if matched_debtor and best_score >= 0.25 else None
+    debtor_name = matched_debtor.full_name if debtor_id else " ".join(name_tokens[:2]).title()
+    is_new = debtor_id is None
     if not debtor_name:
-        words = text.split()
-        for w in words:
-            clean_w = re_module.sub(r'[^\w]', '', w)
-            if clean_w and not clean_w.isdigit() and len(clean_w) > 2:
-                # exclude stop words
-                if clean_w.lower() not in ["qarz", "oldi", "beradi", "ming", "som", "so'm", "non", "dushanba"]:
-                    debtor_name = clean_w.capitalize()
-                    break
+        debtor_name = "Новый должник" if lang == "ru" else "Yangi mijoz"
 
-    if not debtor_name:
-        debtor_name = "Noma'lum mijoz"
-
-    # 4. Extract note / comment
-    note_candidates = []
-    for w in ["nonga", "sutga", "kartoshka", "sigaret", "shakar", "yog'", "mahsulot"]:
-        if w in lower_text:
-            note_candidates.append(w)
-    note = ", ".join(note_candidates) if note_candidates else "Qarzga olindi"
+    # Preserve common item names as an editable transaction note.
+    note_candidates = [word for word in [
+        "non", "nonga", "нон", "хлеб", "sut", "sutga", "молоко", "kartoshka", "картошка",
+        "shakar", "сахар", "sigaret", "сигареты", "yog'", "масло", "товар",
+    ] if word in normalized_text]
+    note = ", ".join(note_candidates) or ("Голосовая запись" if lang == "ru" else "Ovozli yozuv")
 
     return DebtVoiceParseResponse(
         debtor_id=debtor_id,
@@ -714,120 +738,171 @@ def parse_debt_voice(request: DebtVoiceParseRequest, session: Session = Depends(
     )
 
 
+_OCR_NUMBER_RE = re_module.compile(r"(?<!\w)(?:\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)(?!\w)")
+
+def _parse_ocr_number(raw: str) -> Optional[float]:
+    value = raw.replace("\u00a0", " ").strip().replace(" ", "")
+    if re_module.fullmatch(r"\d{1,3}[.,]\d{3}(?:[.,]\d+)?", value):
+        value = value.replace(".", "").replace(",", "")
+    elif "," in value and re_module.fullmatch(r"\d{1,3}(?:,\d{3})+", value):
+        value = value.replace(",", "")
+    else:
+        value = value.replace(",", ".")
+    try:
+        number = float(value)
+        return number if 0 < number <= 1_000_000_000 else None
+    except ValueError:
+        return None
+
+def _ocr_numbers(line: str) -> list[tuple[str, float]]:
+    without_dates = re_module.sub(r"\b\d{1,4}[./-]\d{1,2}(?:[./-]\d{2,4})?\b", " ", line)
+    found = []
+    for match in _OCR_NUMBER_RE.finditer(without_dates):
+        value = _parse_ocr_number(match.group(0))
+        if value is not None and value < 10_000_000_000:
+            found.append((match.group(0), value))
+    return found
+
+def _normalize_ocr_name(value: str) -> str:
+    return " ".join(re_module.findall(r"[\w']+", value.lower(), flags=re_module.UNICODE))
+
+def _match_debtor(name: str, debtors: list[Debtor]) -> Optional[Debtor]:
+    tokens = set(_normalize_ocr_name(name).split())
+    if not tokens:
+        return None
+    best = None
+    best_score = 0.0
+    for debtor in debtors:
+        debtor_tokens = set(_normalize_ocr_name(debtor.full_name).split())
+        variants = set()
+        for variant in get_search_variants(debtor.full_name):
+            variants.update(_normalize_ocr_name(variant).split())
+        overlap = len(tokens & (debtor_tokens | variants))
+        score = overlap / max(1, len(tokens | debtor_tokens))
+        if overlap and score > best_score:
+            best, best_score = debtor, score
+    return best if best_score >= 0.25 else None
+
 @router.post("/parse-debt-ocr", response_model=DebtOcrParseResponse)
-def parse_debt_ocr(request: DebtOcrParseRequest, session: Session = Depends(get_session)):
-    """Parses text extracted from photo of old handwritten/printed debt notebook."""
+def parse_debt_ocr(
+    request: DebtOcrParseRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Parse OCR rows from a debt notebook; the UI always requires human review."""
     lines = [line.strip() for line in request.raw_text.splitlines() if line.strip()]
     debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
-    debtor_map = {d.full_name.lower(): d for d in debtors}
-
     parsed_items: List[DebtOcrItem] = []
     total_amount = 0.0
-
+    stop_words = {
+        "qarz", "qarzga", "nasiya", "oldi", "olgan", "berdi", "beradi", "oladi", "yozildi", "jami",
+        "sum", "so'm", "som", "сум", "руб", "рублей", "ming", "минг", "тыс", "тысяч", "тысяча",
+        "non", "nonga", "sut", "sutga", "dushanba", "seshanba", "juma", "shanba", "yakshanba",
+    }
     for line in lines:
-        # Match pattern: Name ... Amount ... (Date / Note)
-        # e.g. "Alisher Rahimov 50000 non 12.11" or "Dilshod - 120 000"
-        numbers = re_module.findall(r'\b\d+(?:[\s.,]\d+)?\b', line)
+        lowered = line.lower()
+        if any(word in lowered for word in ("jami", "итого", "total", "остаток")):
+            continue
+        # Dates in the page header must not be mistaken for a debt amount.
+        amount_line = re_module.sub(r"\b\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?\b", " ", line)
+        numbers = _ocr_numbers(amount_line)
         if not numbers:
             continue
-        
-        # Pick largest number as amount
-        candidates = []
-        for n in numbers:
-            val_clean = n.replace(" ", "").replace(",", ".")
-            try:
-                candidates.append(float(val_clean))
-            except ValueError:
-                pass
-        
-        if not candidates:
+        # Amounts are normally the largest non-date figure; ignore phone/barcode-sized IDs.
+        amount_candidates = [(raw, value) for raw, value in numbers if len(re_module.sub(r"\D", "", raw)) <= 7]
+        if not amount_candidates:
             continue
-        amount = max(candidates)
-        # remove numbers from line to get name and note
-        clean_line = re_module.sub(r'\b\d+(?:[\s.,]\d+)?\b', '', line).strip()
-        parts = [p.strip() for p in re_module.split(r'[,;\-\t]', clean_line) if p.strip()]
-        
-        name = parts[0] if parts else "Mijoz"
-        note = " ".join(parts[1:]) if len(parts) > 1 else "Daftardan kiritildi"
-
-        matched_id = None
-        for dname, d in debtor_map.items():
-            if dname in name.lower() or name.lower() in dname:
-                matched_id = d.id
-                name = d.full_name
-                break
-
-        total_amount += amount
+        amount = max(amount_candidates, key=lambda item: item[1])[1]
+        if amount <= 0:
+            continue
+        clean = _OCR_NUMBER_RE.sub(" ", line)
+        clean = re_module.sub(r"\b(?:so['’`]?m|sum|сум|ming|минг|тыс(?:яч)?|qarz|nasiya)\b", " ", clean, flags=re_module.I)
+        tokens = [w.strip(".,:;()[]{}") for w in re_module.findall(r"[\wʻʼ'’-]+", clean, flags=re_module.UNICODE)]
+        name_tokens = [w for w in tokens if len(w) > 1 and _normalize_ocr_name(w) not in stop_words]
+        name = " ".join(name_tokens[:3]).strip()
+        if len(name) < 2:
+            continue
+        matched = _match_debtor(name, debtors)
+        if matched:
+            name = matched.full_name
+        note_tokens = [w for w in name_tokens[3:] if _normalize_ocr_name(w) not in stop_words]
+        note = " ".join(note_tokens) or "Импорт из бумажной тетради"
         parsed_items.append(DebtOcrItem(
             debtor_name=name,
             amount=amount,
             note=note,
             due_date=None,
-            matched_debtor_id=matched_id
+            matched_debtor_id=matched.id if matched else None,
         ))
+        total_amount += amount
 
-    return DebtOcrParseResponse(
-        items=parsed_items,
-        total_amount=round(total_amount, 2),
-        total_rows=len(parsed_items)
-    )
-
+    return DebtOcrParseResponse(items=parsed_items, total_amount=round(total_amount, 2), total_rows=len(parsed_items))
 
 @router.post("/parse-invoice-ocr", response_model=InvoiceOcrParseResponse)
-def parse_invoice_ocr(request: InvoiceOcrParseRequest, session: Session = Depends(get_session)):
-    """Parses lines from scanned paper invoice / faktura."""
+def parse_invoice_ocr(
+    request: InvoiceOcrParseRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Parse invoice lines conservatively; unmatched products remain unassigned for review."""
     lines = [line.strip() for line in request.raw_text.splitlines() if line.strip()]
     products = session.exec(select(Product).where(Product.is_active == True)).all()
-
     items: List[InvoiceOcrItem] = []
     total_amount = 0.0
-
     for line in lines:
-        # Expecting line: Product name ... Quantity ... Purchase price
-        # e.g. "Sut Musaffo 1L 20 dona 11000" or "Tandir non 50 4000"
-        nums = re_module.findall(r'\b\d+(?:\.\d+)?\b', line)
-        if len(nums) < 2:
+        numbers = _ocr_numbers(line)
+        # Do not treat a lone total/header or a barcode as an invoice row.
+        usable = [(raw, value) for raw, value in numbers if len(re_module.sub(r"\D", "", raw)) <= 7]
+        if len(usable) < 2:
             continue
-        
-        try:
-            qty = float(nums[-2])
-            price = float(nums[-1])
-        except ValueError:
+        if len(usable) == 2:
+            qty, price = usable[0][1], usable[1][1]
+        elif len(usable) == 3:
+            first, second, third = (item[1] for item in usable)
+            if abs(first * second - third) <= max(2, third * 0.03):
+                qty, price = first, second
+            elif abs(second * third - first) <= max(2, first * 0.03):
+                qty, price = second, third
+            else:
+                # Ambiguous rows need correction in the editable preview.
+                continue
+        else:
+            # Several numeric fields (codes, dates, quantities, totals) are ambiguous.
+            continue
+        if qty <= 0 or price <= 0 or qty > 100_000:
+            continue
+        clean = _OCR_NUMBER_RE.sub(" ", line)
+        clean = re_module.sub(r"\b(?:dona|dona|kg|sht|quti|litr|l|metr|шт|кг|кор|упак|сум|so['’`]?m)\b", " ", clean, flags=re_module.I)
+        name_part = re_module.sub(r"[,;\-_\t]+", " ", clean).strip()
+        name_part = re_module.sub(r"\s+", " ", name_part)
+        if len(name_part) < 2:
             continue
 
-        name_part = re_module.sub(r'\b\d+(?:\.\d+)?\b', '', line)
-        for unit in ["dona", "kg", "sht", "quti", "l", "metr"]:
-            name_part = re_module.sub(rf'\b{unit}\b', '', name_part, flags=re_module.IGNORECASE)
-        name_part = re_module.sub(r'[,;\-_\t]', ' ', name_part).strip()
-        if not name_part:
-            name_part = f"Mahsulot #{len(items)+1}"
-
-        # Match with catalog
-        matched_pid = None
-        barcode = None
-        for p in products:
-            if p.name.lower() in name_part.lower() or name_part.lower() in p.name.lower():
-                matched_pid = p.id
-                barcode = p.barcode
-                name_part = p.name
-                break
-
+        matched = None
+        query_tokens = set(_normalize_ocr_name(name_part).split())
+        best_score = 0.0
+        for product in products:
+            product_tokens = set(_normalize_ocr_name(product.name).split())
+            variants = set()
+            for variant in get_search_variants(product.name):
+                variants.update(_normalize_ocr_name(variant).split())
+            overlap = len(query_tokens & (product_tokens | variants))
+            score = overlap / max(1, len(query_tokens | product_tokens))
+            if overlap and score > best_score:
+                matched, best_score = product, score
+        if best_score < 0.35:
+            matched = None
         line_total = round(qty * price, 2)
         total_amount += line_total
         items.append(InvoiceOcrItem(
-            product_name=name_part,
+            product_name=matched.name if matched else name_part,
             quantity=qty,
             purchase_price=price,
             total_price=line_total,
-            matched_product_id=matched_pid,
-            barcode=barcode
+            matched_product_id=matched.id if matched else None,
+            barcode=matched.barcode if matched else None,
         ))
-
-    return InvoiceOcrParseResponse(
-        items=items,
-        total_amount=round(total_amount, 2),
-        total_rows=len(items)
-    )
+    return InvoiceOcrParseResponse(items=items, total_amount=round(total_amount, 2), total_rows=len(items))
 
 # ---------- Store AI Assistant (Context-Aware Store Intelligence) ----------
 

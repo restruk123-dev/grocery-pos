@@ -103,6 +103,11 @@ def create_invoice(
     if not data.items:
         raise HTTPException(status_code=400, detail="Накладная должна содержать хотя бы один товар")
 
+    products_by_id = {item.product_id: session.get(Product, item.product_id) for item in data.items}
+    missing_ids = [product_id for product_id, product in products_by_id.items() if not product or not product.is_active]
+    if missing_ids:
+        raise HTTPException(status_code=400, detail=f"Товары не найдены в каталоге: {', '.join(map(str, missing_ids))}")
+
     now_utc = datetime.now(timezone.utc)
     # Generate invoice number if not provided
     inv_number = data.invoice_number
@@ -129,33 +134,29 @@ def create_invoice(
         invoice_date=now_utc,
         created_at=now_utc
     )
-    session.add(invoice)
-    session.commit()
-    session.refresh(invoice)
+    try:
+        session.add(invoice)
+        session.flush()
 
-    # Add items, update inventory stock and purchase price
-    for item in data.items:
-        product = session.get(Product, item.product_id)
-        if not product:
-            continue
-        
-        # Increase product stock!
-        product.stock_quantity = round(product.stock_quantity + item.quantity, 3)
-        # Update purchase price to reflect current supplier cost
-        product.purchase_price = item.purchase_price
-        product.updated_at = now_utc
-        session.add(product)
-
-        inv_item = SupplierInvoiceItem(
-            invoice_id=invoice.id,
-            product_id=product.id,
-            quantity=item.quantity,
-            purchase_price=item.purchase_price,
-            total_price=round(item.quantity * item.purchase_price, 2)
-        )
-        session.add(inv_item)
-
-    session.commit()
+        # Insert the invoice and all stock updates in one transaction.
+        for item in data.items:
+            product = products_by_id[item.product_id]
+            product.stock_quantity = round(product.stock_quantity + item.quantity, 3)
+            product.purchase_price = item.purchase_price
+            product.updated_at = now_utc
+            session.add(product)
+            session.add(SupplierInvoiceItem(
+                invoice_id=invoice.id,
+                product_id=product.id,
+                quantity=item.quantity,
+                purchase_price=item.purchase_price,
+                total_price=round(item.quantity * item.purchase_price, 2),
+            ))
+        session.commit()
+        session.refresh(invoice)
+    except Exception:
+        session.rollback()
+        raise
 
     return {
         "message": f"Накладная {invoice.invoice_number} успешно принята",
