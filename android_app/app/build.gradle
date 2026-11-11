@@ -1,0 +1,16 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'uz.grocerypos.mobile'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'uz.grocerypos.mobile'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+}

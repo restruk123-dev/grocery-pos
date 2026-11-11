@@ -82,7 +82,8 @@ def deploy_via_hf_hub(repo_id: str, token: str, project_dir: Path, private: bool
         "backups/*",
         "*.bat",
         "deploy_hf.py",
-        "DEPLOY_HF_GUIDE.md"
+        "DEPLOY_HF_GUIDE.md",
+        "android_app/**"
     ]
     if not include_db:
         ignore_patterns.extend(["*.db", "*.db-journal", "*.db-wal", "*.db-shm"])

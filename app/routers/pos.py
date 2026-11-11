@@ -24,8 +24,19 @@ router = APIRouter(prefix="/pos", tags=["POS"])
 
 
 class CartItemRequest(BaseModel):
-    product_id: int = Field(..., ge=0, description="Product ID / ID товара")
-    quantity: float = Field(default=1.0, ge=0, description="Quantity / Количество")
+    product_id: Optional[int] = Field(default=None, gt=0, description="Product ID / ID товара")
+    barcode: Optional[str] = Field(default=None, max_length=64)
+    name: Optional[str] = Field(default=None, max_length=255)
+    quantity: float = Field(default=1.0, gt=0, le=10000, description="Quantity / Количество")
+
+class CheckoutRequest(BaseModel):
+    items: List[CartItemRequest] = Field(min_length=1, max_length=500)
+    payment_method: str = Field(default="CASH", pattern="^(CASH|CARD|DEBT|MIXED)$")
+    cash_received: float = Field(default=0.0, ge=0, le=1_000_000_000_000)
+    card_amount: float = Field(default=0.0, ge=0, le=1_000_000_000_000)
+    debt_amount: float = Field(default=0.0, ge=0, le=1_000_000_000_000)
+    debtor_id: Optional[int] = Field(default=None, gt=0)
+    due_date: Optional[str] = Field(default=None, max_length=32)
 
 
 class HeldCart(BaseModel):
@@ -46,63 +57,46 @@ class HoldCartResponse(BaseModel):
 
 @router.post("/checkout", response_model=dict)
 def checkout(
-    data: dict,
+    data: CheckoutRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    items = data.get("items", [])
-    payment_method_str = str(data.get("payment_method", "CASH")).upper()
-    cash_received = float(data.get("cash_received", 0) or 0)
-    card_amount = float(data.get("card_amount", 0) or 0)
-    debt_amount = float(data.get("debt_amount", 0) or 0)
-    debtor_id = data.get("debtor_id")
-    due_date = data.get("due_date")
+    items = [item.model_dump() for item in data.items]
+    payment_method_str = data.payment_method.upper()
+    cash_received = data.cash_received
+    card_amount = data.card_amount
+    debt_amount = data.debt_amount
+    debtor_id = data.debtor_id
+    due_date = data.due_date
 
-    # Validate: items cannot be empty
-    if not items:
-        raise HTTPException(status_code=400, detail="Items cannot be empty / Mahsulotlar bo'sh bo'lmasligi kerak")
-
-    # Map payment method enum safely
-    try:
-        payment_method = PaymentMethod[payment_method_str]
-    except KeyError:
-        payment_method = PaymentMethod.CASH
+    payment_method = PaymentMethod[payment_method_str]
 
     # Calculate total from items and decrement stock
     total = 0.0
     processed_items = []
     for item in items:
         product_id = item.get("product_id")
-        quantity = float(item.get("quantity", 1))
-        if quantity <= 0:
-            raise HTTPException(status_code=422, detail="Quantity must be positive / Miqdor 0 dan katta bo'lishi kerak")
-        
+        quantity = float(item["quantity"])
+
         product = None
         if isinstance(product_id, int):
             product = session.get(Product, product_id)
         if not product and item.get("barcode"):
-            product = session.exec(select(Product).where(Product.barcode == str(item["barcode"]))).first()
-        if not product and item.get("name"):
-            product = Product(
-                name=str(item.get("name")),
-                barcode=str(item.get("barcode") or f"QUICK_{uuid.uuid4().hex[:8].upper()}"),
-                sale_price=float(item.get("price") or item.get("unit_price") or 0),
-                purchase_price=round(float(item.get("price") or item.get("unit_price") or 0) * 0.8, 2),
-                stock_quantity=999.0,
-                unit="dona"
-            )
-            session.add(product)
-            session.commit()
-            session.refresh(product)
+            product = session.exec(select(Product).where(
+                Product.barcode == str(item["barcode"]), Product.is_active == True
+            )).first()
         if not product:
             raise HTTPException(status_code=404, detail=f"Product ID {product_id} topilmadi")
-        
+
+        if quantity > product.stock_quantity:
+            raise HTTPException(status_code=409, detail=f"Insufficient stock for {product.name}")
+
         item_total = round(product.sale_price * quantity, 2)
         total += item_total
         # Decrement inventory stock
-        product.stock_quantity = max(0.0, round(product.stock_quantity - quantity, 3))
+        product.stock_quantity = round(product.stock_quantity - quantity, 3)
         session.add(product)
-        
+
         processed_items.append({
             "product": product,
             "quantity": quantity,
@@ -134,11 +128,12 @@ def checkout(
         change_given = 0.0
         card_amount = 0.0
     elif payment_method == PaymentMethod.MIXED:
-        paid_coverage = cash_received + card_amount + debt_amount
-        if round(paid_coverage, 2) < total:
+        if card_amount + debt_amount > total:
+            raise HTTPException(status_code=400, detail="Card and debt portions cannot exceed the sale total")
+        cash_due = round(total - card_amount - debt_amount, 2)
+        if cash_received < cash_due:
             raise HTTPException(status_code=400, detail="Total payments do not cover total amount / To'lov summasi yetarli emas")
-        if cash_received > (total - card_amount - debt_amount):
-            change_given = round(cash_received - max(0.0, total - card_amount - debt_amount), 2)
+        change_given = round(cash_received - cash_due, 2)
 
     # Handle debtor balance
     debtor_name = ""
@@ -156,7 +151,7 @@ def checkout(
         debtor.updated_at = utc_now()
         session.add(debtor)
 
-    # 1. CREATE AND COMMIT SALE RECORD
+    # Persist sale, items, stock and debt in one database transaction.
     receipt_number = f"REC-{uuid.uuid4().hex[:8].upper()}"
     sale = Sale(
         receipt_number=receipt_number,
@@ -171,8 +166,7 @@ def checkout(
         created_at=utc_now()
     )
     session.add(sale)
-    session.commit()
-    session.refresh(sale)
+    session.flush()
 
     # 2. CREATE SALE ITEMS FOR ANALYTICS AND COGS
     for p_item in processed_items:
@@ -203,13 +197,14 @@ def checkout(
         session.add(debt_tx)
 
     session.commit()
+    session.refresh(sale)
 
     return {
         "id": sale.id,
         "receipt_number": sale.receipt_number,
         "total_amount": sale.total_amount,
         "payment_method": sale.payment_method.value,
-        "amount_paid": cash_received if payment_method == PaymentMethod.CASH else (card_amount if payment_method == PaymentMethod.CARD else total),
+        "amount_paid": round(total - debt_amount, 2),
         "cash_received": cash_received,
         "change_given": change_given,
         "card_amount": card_amount,
@@ -237,15 +232,9 @@ def hold_cart(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    hold = HeldCart(
-        id=str(uuid.uuid4())[:8],
-        cart_items=data.cart_items,
-        created_at=utc_now(),
-        expires_at=utc_now() + timedelta(hours=24)
-    )
-    return HoldCartResponse(
-        hold_id=hold.id,
-        message="Chek muvaffaqiyatli saqlandi / Чек успешно сохранен"
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Server-side held carts are not available. Use the current browser's local saved carts.",
     )
 
 
@@ -255,19 +244,26 @@ def hold_resume(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    return {"cart_items": [], "message": "Hold ochildi / Hold восстановлен"}
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Server-side held carts are not available. This cart cannot be restored from the server.",
+    )
 
 
 @router.post("/scan-image", response_model=dict)
 async def scan_barcode_from_image(
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """
     Decodes 1D / 2D barcode from an uploaded image or camera snapshot using zxing-cpp.
     Matches with product catalog if barcode exists.
     """
-    contents = await file.read()
+    max_image_bytes = 5 * 1024 * 1024
+    contents = await file.read(max_image_bytes + 1)
+    if len(contents) > max_image_bytes:
+        raise HTTPException(status_code=413, detail="Image must be 5 MB or smaller")
     if not contents:
         raise HTTPException(status_code=400, detail="Empty image file / Bo'sh rasm fayli")
 
@@ -277,6 +273,8 @@ async def scan_barcode_from_image(
     if HAS_ZXING:
         try:
             image = Image.open(io.BytesIO(contents))
+            if image.width * image.height > 20_000_000:
+                raise HTTPException(status_code=413, detail="Image dimensions are too large")
             if image.mode not in ("RGB", "L"):
                 image = image.convert("RGB")
 
@@ -291,6 +289,8 @@ async def scan_barcode_from_image(
             if results and len(results) > 0:
                 barcode_text = results[0].text
                 barcode_format = str(results[0].format)
+        except HTTPException:
+            raise
         except Exception:
             pass
 
@@ -309,7 +309,7 @@ async def scan_barcode_from_image(
             "barcode": product.barcode,
             "name": product.name,
             "sale_price": product.sale_price,
-            "purchase_price": product.purchase_price,
+            "purchase_price": product.purchase_price if current_user.role == UserRole.OWNER else None,
             "stock_quantity": product.stock_quantity,
             "unit": product.unit,
             "category_id": product.category_id,

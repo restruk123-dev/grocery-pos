@@ -577,19 +577,29 @@ class InvoiceOcrParseResponse(BaseModel):
     total_rows: int
 
 
-def _calculate_next_weekday(weekday_idx: int) -> tuple[str, str]:
+def _calculate_next_weekday(weekday_idx: int, lang: str = "ru") -> tuple[str, str]:
     """Calculates date string (YYYY-MM-DD) for next occurrence of weekday (0=Mon..6=Sun)."""
     now_uz = datetime.now(timezone(timedelta(hours=5)))
     current_weekday = now_uz.weekday()
     days_ahead = weekday_idx - current_weekday
-    if days_ahead <= 0: # Target day already happened this week or is today
+    if days_ahead <= 0:
         days_ahead += 7
     target_dt = now_uz + timedelta(days=days_ahead)
-    weekday_names_uz = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"]
+    names_ru = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
+    names_uz = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"]
+    names = names_ru if lang.startswith("ru") else names_uz
     date_str = target_dt.strftime("%Y-%m-%d")
-    label = f"{weekday_names_uz[weekday_idx]} ({target_dt.strftime('%d.%m.%Y')})"
+    label = f"{names[weekday_idx]} ({target_dt.strftime('%d.%m.%Y')})"
     return date_str, label
 
+RUSSIAN_NAME_ENDINGS = {
+    "алишера": "Алишер", "баходира": "Баходир", "дилшода": "Дилшод",
+    "нодира": "Нодир", "сардора": "Сардор", "отабека": "Отабек",
+    "жасура": "Жасур", "шерзода": "Шерзод", "рустама": "Рустам",
+    "бобура": "Бобур", "тимура": "Тимур", "ильхома": "Ильхом",
+    "шавката": "Шавкат", "мирзо": "Мирзо", "акмала": "Акмал",
+    "жавохира": "Жавохир", "санжара": "Санжар", "достона": "Достон"
+}
 
 @router.post("/parse-debt-voice", response_model=DebtVoiceParseResponse)
 def parse_debt_voice(
@@ -597,63 +607,94 @@ def parse_debt_voice(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Free local NLP: extracts debtor name, amount, note, and return deadline from spoken Uzbek/Russian text."""
+    """High-accuracy local NLP: extracts debtor name, amount, note, and return deadline from spoken Uzbek/Russian text."""
     text = request.speech_text.strip()
+    lang = (request.language or "ru").lower()
     if not text:
-        return DebtVoiceParseResponse(debtor_name="", amount=0.0)
+        return DebtVoiceParseResponse(
+            debtor_name="Новый должник" if lang.startswith("ru") else "Yangi mijoz",
+            amount=0.0
+        )
+
+    lower_text = text.lower().replace("’", "'").replace("ʻ", "'").replace("`", "'")
 
     # 1. Parse due date (days of week / relative terms)
     due_date = None
     due_date_label = None
-    lower_text = text.lower()
 
     weekdays_map = {
-        0: ["dushanba", "душанба", "понедельник"],
-        1: ["seshanba", "сешанба", "вторник"],
-        2: ["chorshanba", "чоршанба", "среда"],
-        3: ["payshanba", "пайшанба", "четверг"],
-        4: ["juma", "жума", "пятница"],
-        5: ["shanba", "шанба", "суббота"],
-        6: ["yakshanba", "якшанба", "воскресенье"]
+        0: ["понедельник", "пн", "dushanba"],
+        1: ["вторник", "вт", "seshanba"],
+        2: ["сред", "ср", "chorshanba"],
+        3: ["четверг", "чт", "payshanba"],
+        4: ["пятниц", "пт", "juma"],
+        5: ["суббот", "сб", "shanba"],
+        6: ["воскресень", "вс", "yakshanba"]
     }
 
     for w_idx, keywords in weekdays_map.items():
-        if any(kw in lower_text for kw in keywords):
-            due_date, due_date_label = _calculate_next_weekday(w_idx)
+        for kw in keywords:
+            if kw in lower_text:
+                due_date, due_date_label = _calculate_next_weekday(w_idx, lang=lang)
+                break
+        if due_date:
             break
 
+    now_uz = datetime.now(timezone(timedelta(hours=5)))
     if not due_date:
-        now_uz = datetime.now(timezone(timedelta(hours=5)))
         if any(kw in lower_text for kw in ["ertaga", "эртага", "завтра"]):
             dt = now_uz + timedelta(days=1)
             due_date = dt.strftime("%Y-%m-%d")
-            due_date_label = f"Ertaga ({dt.strftime('%d.%m.%Y')})"
-        elif any(kw in lower_text for kw in ["bir hafta", "бир хафта", "через неделю"]):
+            due_date_label = f"Завтра ({dt.strftime('%d.%m.%Y')})" if lang.startswith("ru") else f"Ertaga ({dt.strftime('%d.%m.%Y')})"
+        elif any(kw in lower_text for kw in ["послезавтра", "индинга", "indinga"]):
+            dt = now_uz + timedelta(days=2)
+            due_date = dt.strftime("%Y-%m-%d")
+            due_date_label = f"Послезавтра ({dt.strftime('%d.%m.%Y')})" if lang.startswith("ru") else f"Indinga ({dt.strftime('%d.%m.%Y')})"
+        elif any(kw in lower_text for kw in ["bir hafta", "бир хафта", "через неделю", "неделю", "1 hafta"]):
             dt = now_uz + timedelta(days=7)
             due_date = dt.strftime("%Y-%m-%d")
-            due_date_label = f"1 hafta ({dt.strftime('%d.%m.%Y')})"
-        elif any(kw in lower_text for kw in ["oy oxiri", "ой охири", "конец месяца"]):
-            due_date = "oy oxirida"
-            due_date_label = "Oy oxirida / Конец месяца"
+            due_date_label = f"Через неделю ({dt.strftime('%d.%m.%Y')})" if lang.startswith("ru") else f"1 hafta ({dt.strftime('%d.%m.%Y')})"
+        elif any(kw in lower_text for kw in ["oy oxiri", "ой охири", "конец месяца", "до конца месяца"]):
+            next_month = now_uz.replace(day=28) + timedelta(days=4)
+            end_month = next_month - timedelta(days=next_month.day)
+            due_date = end_month.strftime("%Y-%m-%d")
+            due_date_label = f"Конец месяца ({end_month.strftime('%d.%m.%Y')})" if lang.startswith("ru") else f"Oy oxirida ({end_month.strftime('%d.%m.%Y')})"
         elif any(kw in lower_text for kw in ["maosh", "маош", "oylik", "ойлик", "зарплат"]):
-            due_date = "maoshda"
-            due_date_label = "Oylikda / С зарплаты"
+            due_date = "зарплата"
+            due_date_label = "С зарплаты" if lang.startswith("ru") else "Oylikda / С зарплаты"
 
-    # 2. Parse written or spoken amounts (digits and Uzbek/Russian number words).
-    normalized_text = lower_text.replace("’", "'").replace("ʻ", "'").replace("`", "'")
+    # 2. Parse written or spoken amounts
     amount = 0.0
-    digit_pattern = re_module.compile(r"(?<!\w)(\d{1,3}(?:[ \u00a0]\d{3})+|\d+(?:[.,]\d+)?)(?:\s*(ming|минг|тыс(?:яч)?|k|к|mln|миллион|млн))?(?!\w)", re_module.I)
+    multipliers = {
+        "ming": 1000, "минг": 1000, "тыс": 1000, "тысяч": 1000, "тысяча": 1000, "тысячи": 1000, "k": 1000, "к": 1000,
+        "mln": 1000000, "млн": 1000000, "миллион": 1000000, "million": 1000000, "лям": 1000000, "ляма": 1000000, "лямов": 1000000,
+        "сот": 100, "сотня": 100, "сотни": 100, "сотен": 100, "yuz": 100, "юз": 100
+    }
+
+    digit_pattern = re_module.compile(
+        r"(?<!\w)(\d{1,3}(?:[ \xa0]\d{3})+|\d+(?:[.,]\d+)?)(?:\s*(ming|минг|тыс(?:\w*)?|k|к|mln|млн|миллион(?:\w*)?|million|лям(?:\w*)?|сот(?:\w*)?|yuz|юз))?(?!\w)",
+        re_module.I
+    )
+
     digit_candidates = []
-    for match in digit_pattern.finditer(normalized_text):
-        raw, multiplier = match.group(1), (match.group(2) or "").lower()
-        value = _parse_ocr_number(raw)
-        if value is None:
+    for match in digit_pattern.finditer(lower_text):
+        raw_num = match.group(1).replace(" ", "").replace(" ", "").replace(",", ".")
+        raw_mult = (match.group(2) or "").lower()
+        try:
+            val = float(raw_num)
+        except ValueError:
             continue
-        if multiplier in {"ming", "минг", "тыс", "тысяч", "тысяча", "k", "к"} and value < 1000:
-            value *= 1000
-        elif multiplier in {"mln", "миллион", "млн"}:
-            value *= 1_000_000
-        digit_candidates.append(value)
+        
+        mult_val = 1
+        for m_key, m_fact in multipliers.items():
+            if raw_mult.startswith(m_key):
+                mult_val = m_fact
+                break
+        
+        val = val * mult_val
+        if 0 < val <= 1_000_000_000:
+            digit_candidates.append(val)
+
     if digit_candidates:
         amount = max(digit_candidates)
 
@@ -666,70 +707,108 @@ def parse_debt_voice(
         "qirq": 40, "кирк": 40, "сорок": 40, "ellik": 50, "эллик": 50, "пятьдесят": 50,
         "oltmish": 60, "олтмиш": 60, "шестьдесят": 60, "yetmish": 70, "етмиш": 70, "семьдесят": 70,
         "sakson": 80, "саксон": 80, "восемьдесят": 80, "to'qson": 90, "туксон": 90, "девяносто": 90,
-        "yuz": 100, "юз": 100, "сто": 100,
+        "yuz": 100, "юз": 100, "сто": 100, "двести": 200, "триста": 300, "четыреста": 400,
+        "пятьсот": 500, "шестьсот": 600, "семьсот": 700, "восемьсот": 800, "девятьсот": 900
     }
-    amount_words = {"ming", "минг", "тысяча", "тысячи", "тысяч", "million", "миллион", "млн"}
+    amount_words = {
+        "ming": 1000, "минг": 1000, "тысяча": 1000, "тысячи": 1000, "тысяч": 1000, "тыс": 1000,
+        "million": 1000000, "миллион": 1000000, "млн": 1000000, "лям": 1000000, "ляма": 1000000, "лямов": 1000000
+    }
+
     if amount == 0:
-        tokens = re_module.findall(r"[а-яёғқҳўА-ЯЁҒҚҲЎa-z']+", normalized_text)
-        total, current, saw_number = 0, 0, False
-        for word in tokens:
-            if word in number_words:
-                current += number_words[word]
-                saw_number = True
-            elif word in {"yuz", "юз", "сто"}:
-                current = max(1, current) * 100
-                saw_number = True
-            elif word in amount_words:
-                multiplier = 1_000_000 if word in {"million", "миллион", "млн"} else 1000
-                total += max(1, current) * multiplier
+        tokens = re_module.findall(r"[\w']+", lower_text)
+        total, current, saw_num = 0, 0, False
+        for w in tokens:
+            if w in number_words:
+                current += number_words[w]
+                saw_num = True
+            elif w in amount_words:
+                mult = amount_words[w]
+                total += max(1, current) * mult
                 current = 0
-                saw_number = True
-        if saw_number:
+                saw_num = True
+        if saw_num:
             amount = float(total + current)
 
-    # 3. Match a known debtor by transliterated name tokens; otherwise extract a likely name.
-    debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
-    stop_words = {
-        "qarz", "qarzga", "nasiya", "oldi", "olgan", "oladi", "beradi", "berar", "bering", "yoz",
-        "yozing", "mijoz", "меня", "долг", "вдолг", "взял", "взяла", "купил", "купила", "дайте", "запиши",
-        "ming", "минг", "тыс", "тысяча", "so'm", "som", "сум", "bugun", "kecha", "ertaga", "завтра",
-        "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba",
-        "nonga", "non", "sutga", "sut", "kartoshka", "shakar", "sigaret", "mahsulot", "товар",
-    } | amount_words | set(number_words)
-    name_tokens = []
-    for word in re_module.findall(r"[а-яёғқҳўА-ЯЁҒҚҲЎa-z']+", normalized_text):
-        if len(word) > 1 and word not in stop_words:
-            name_tokens.append(word)
+    # 3. Extract Debtor Name & Match DB
+    prefixes_to_strip = [
+        "запиши на", "запиши для", "запиши за", "запиши", "записать", "запишите",
+        "добавь на", "добавь", "открой долг", "долг на", "долг", "в долг", "вдолг",
+        "qarzga yoz", "qarz yoz", "qarz", "nasiyaga", "nasiya", "oldi", "beradi",
+        "на", "для", "за", "от", "клиент"
+    ]
 
+    cleaned_for_name = lower_text
+    for pfx in sorted(prefixes_to_strip, key=len, reverse=True):
+        if cleaned_for_name.startswith(pfx + " "):
+            cleaned_for_name = cleaned_for_name[len(pfx):].strip()
+            break
+
+    clean_no_digits = digit_pattern.sub(" ", cleaned_for_name)
+    date_noise = [
+        "до пятницы", "до понедельника", "до вторника", "до среды", "до четверга", "до субботы", "до воскресенья",
+        "в пятницу", "в понедельник", "во вторник", "в среду", "в четверг", "в субботу", "в воскресенье",
+        "пятница", "понедельник", "вторник", "среда", "четверг", "суббота", "воскресенье",
+        "пятницы", "понедельника", "вторника", "среды", "четверга", "субботы", "воскресенья",
+        "завтра", "послезавтра", "через неделю", "на неделю", "до конца месяца", "конец месяца", "с зарплаты", "зарплата",
+        "dushanbagacha", "seshanbagacha", "chorshanbagacha", "payshanbagacha", "jumagacha", "shanbagacha", "yakshanbagacha", "ertaga", "indinga", "bir hafta", "oy oxirida", "maoshda"
+    ]
+    for d_kw in sorted(date_noise, key=len, reverse=True):
+        clean_no_digits = re_module.sub(rf"\b{re_module.escape(d_kw)}\b", " ", clean_no_digits)
+
+    filler = ["so'm", "som", "сум", "рублей", "руб", "ming", "минг", "тысяч", "тыс", "k", "к", "до", "в", "на", "с", "бер", "берди", "oldi"]
+    for f_w in filler:
+        clean_no_digits = re_module.sub(rf"\b{re_module.escape(f_w)}\b", " ", clean_no_digits)
+
+    tokens = [w for w in re_module.findall(r"[\w']+", clean_no_digits) if len(w) > 1]
+    
+    extracted_name = ""
+    note_tokens = []
+    if tokens:
+        first_word = tokens[0].lower()
+        if first_word in RUSSIAN_NAME_ENDINGS:
+            extracted_name = RUSSIAN_NAME_ENDINGS[first_word]
+        elif first_word.endswith("ga") or first_word.endswith("ka") or first_word.endswith("qa"):
+            extracted_name = re_module.sub(r"(?:ga|ka|qa)$", "", first_word).capitalize()
+        elif first_word.endswith("а") and len(first_word) > 4 and first_word[:-1] in RUSSIAN_NAME_ENDINGS.values():
+            extracted_name = first_word[:-1].capitalize()
+        else:
+            extracted_name = first_word.capitalize()
+            if len(tokens) > 1 and tokens[1].lower() not in ["хлеб", "кола", "сигареты", "сахар", "масло", "non", "sut", "shakar", "cola"]:
+                extracted_name += " " + tokens[1].capitalize()
+                note_tokens = tokens[2:]
+            else:
+                note_tokens = tokens[1:]
+    else:
+        extracted_name = "Новый должник" if lang.startswith("ru") else "Yangi mijoz"
+
+    # Match against DB debtors
+    debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
     matched_debtor = None
-    spoken_tokens = set(name_tokens)
     best_score = 0.0
-    for debtor in debtors:
-        db_tokens = set(_normalize_ocr_name(debtor.full_name).split())
+    search_tokens = set(_normalize_ocr_name(extracted_name).split())
+
+    for d in debtors:
+        db_tokens = set(_normalize_ocr_name(d.full_name).split())
         variant_tokens = set()
-        for variant in get_search_variants(debtor.full_name):
+        for variant in get_search_variants(d.full_name):
             variant_tokens.update(_normalize_ocr_name(variant).split())
-        overlap = len(spoken_tokens & (db_tokens | variant_tokens))
-        score = overlap / max(1, len(spoken_tokens | db_tokens))
+        overlap = len(search_tokens & (db_tokens | variant_tokens))
+        score = overlap / max(1, len(search_tokens | db_tokens))
         if overlap and score > best_score:
-            matched_debtor, best_score = debtor, score
+            matched_debtor, best_score = d, score
 
     debtor_id = matched_debtor.id if matched_debtor and best_score >= 0.25 else None
-    debtor_name = matched_debtor.full_name if debtor_id else " ".join(name_tokens[:2]).title()
+    final_debtor_name = matched_debtor.full_name if debtor_id else extracted_name
     is_new = debtor_id is None
-    if not debtor_name:
-        debtor_name = "Новый должник" if lang == "ru" else "Yangi mijoz"
 
-    # Preserve common item names as an editable transaction note.
-    note_candidates = [word for word in [
-        "non", "nonga", "нон", "хлеб", "sut", "sutga", "молоко", "kartoshka", "картошка",
-        "shakar", "сахар", "sigaret", "сигареты", "yog'", "масло", "товар",
-    ] if word in normalized_text]
-    note = ", ".join(note_candidates) or ("Голосовая запись" if lang == "ru" else "Ovozli yozuv")
+    note = " ".join(note_tokens).strip()
+    if not note:
+        note = "Голосовая запись" if lang.startswith("ru") else "Ovozli yozuv"
 
     return DebtVoiceParseResponse(
         debtor_id=debtor_id,
-        debtor_name=debtor_name,
+        debtor_name=final_debtor_name,
         amount=amount,
         due_date=due_date,
         due_date_label=due_date_label,

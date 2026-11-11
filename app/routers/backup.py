@@ -5,35 +5,34 @@ import tempfile
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, status
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, SQLModel, create_engine as create_sqlmodel_engine
 
 from ..config import settings
 from ..database import engine, get_session
 from ..auth import decode_access_token
-from ..models import User, UserRole, Product, Debtor, Supplier, SupplierInvoice, DebtTransaction, Expense
+from ..models import (
+    SystemSetting, User, UserRole, Category, Product, Debtor,
+    Supplier, SupplierInvoice, SupplierInvoiceItem, DebtTransaction,
+    Sale, SaleItem, Expense
+)
 
 router = APIRouter(tags=["Backup & Persistence"])
 security = HTTPBearer(auto_error=False)
 
 def get_owner_from_auth_or_query(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    token: Optional[str] = Query(None),
     session: Session = Depends(get_session)
 ) -> User:
-    """Authenticates owner either via Authorization header or ?token query param."""
-    raw_token = None
-    if credentials and credentials.credentials:
-        raw_token = credentials.credentials
-    elif token:
-        raw_token = token
+    """Requires a bearer header; credentials in URLs leak through history and logs."""
+    raw_token = credentials.credentials if credentials else None
 
     if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing authentication token. Provide Bearer token or ?token=...",
+            detail="Missing authentication token. Provide an Authorization: Bearer header.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -68,7 +67,8 @@ def get_owner_from_auth_or_query(
     return user
 
 def create_sqlite_backup_file() -> tuple[str, str, int]:
-    """Creates a consistent atomic snapshot of the SQLite database using the SQLite backup API."""
+    """Creates a consistent atomic snapshot of the database as a portable SQLite database.
+    Works natively on both SQLite and PostgreSQL without crashing or external tools."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_filename = f"grocery_pos_backup_{timestamp}.db"
     temp_dir = tempfile.gettempdir()
@@ -85,18 +85,26 @@ def create_sqlite_backup_file() -> tuple[str, str, int]:
             dest_conn.close()
             source_conn.close()
     else:
-        # Memory or dynamic engine connection
-        raw_conn = engine.raw_connection()
-        try:
-            driver = getattr(raw_conn, "driver_connection", None) or getattr(raw_conn, "connection", raw_conn)
-            dest_conn = sqlite3.connect(backup_filepath)
-            try:
-                with dest_conn:
-                    driver.backup(dest_conn)
-            finally:
-                dest_conn.close()
-        finally:
-            raw_conn.close()
+        # PostgreSQL or dynamic engine: export all tables to a clean, portable SQLite database
+        sqlite_eng = create_sqlmodel_engine(f"sqlite:///{backup_filepath.replace(os.sep, '/')}")
+        SQLModel.metadata.create_all(sqlite_eng)
+        all_models = [
+            SystemSetting, User, Category, Product, Debtor,
+            DebtTransaction, Sale, SaleItem, Supplier,
+            SupplierInvoice, SupplierInvoiceItem, Expense
+        ]
+        with Session(engine) as src_session, Session(sqlite_eng) as dst_session:
+            for model in all_models:
+                try:
+                    rows = src_session.exec(select(model)).all()
+                    for row in rows:
+                        data = row.model_dump()
+                        dst_session.add(model(**data))
+                    dst_session.commit()
+                except Exception:
+                    src_session.rollback()
+                    dst_session.rollback()
+        sqlite_eng.dispose()
 
     file_size = os.path.getsize(backup_filepath)
     return backup_filepath, backup_filename, file_size
@@ -158,7 +166,7 @@ def export_backup(
 ):
     """Triggers an export and returns metadata and download URL."""
     filepath, filename, size = create_sqlite_backup_file()
-    cleanup_file(filepath)  # test creation success, client downloads via GET /api/backup
+    cleanup_file(filepath)
 
     return {
         "status": "ok",
@@ -190,17 +198,25 @@ def dump_to_disk(
             dest_conn.close()
             source_conn.close()
     else:
-        raw_conn = engine.raw_connection()
-        try:
-            driver = getattr(raw_conn, "driver_connection", None) or getattr(raw_conn, "connection", raw_conn)
-            dest_conn = sqlite3.connect(dest_path)
-            try:
-                with dest_conn:
-                    driver.backup(dest_conn)
-            finally:
-                dest_conn.close()
-        finally:
-            raw_conn.close()
+        sqlite_eng = create_sqlmodel_engine(f"sqlite:///{dest_path.replace(os.sep, '/')}")
+        SQLModel.metadata.create_all(sqlite_eng)
+        all_models = [
+            SystemSetting, User, Category, Product, Debtor,
+            DebtTransaction, Sale, SaleItem, Supplier,
+            SupplierInvoice, SupplierInvoiceItem, Expense
+        ]
+        with Session(engine) as src_session, Session(sqlite_eng) as dst_session:
+            for model in all_models:
+                try:
+                    rows = src_session.exec(select(model)).all()
+                    for row in rows:
+                        data = row.model_dump()
+                        dst_session.add(model(**data))
+                    dst_session.commit()
+                except Exception:
+                    src_session.rollback()
+                    dst_session.rollback()
+        sqlite_eng.dispose()
 
     rotate_backups(backups_dir, keep_count=10)
     file_size = os.path.getsize(dest_path)
@@ -224,20 +240,28 @@ def get_backup_info(
     db_path = settings.sqlite_file_path
     size_bytes = os.path.getsize(db_path) if db_path and os.path.exists(db_path) else 0
 
+    mode = "PostgreSQL (Render)" if not db_path else ("Persistent (/data)" if settings.is_persistent_storage else "Local SQLite")
+    
+    def safe_count(model):
+        try:
+            return session.exec(select(func.count(model.id))).one()
+        except Exception:
+            return 0
+
     return {
-        "database_url": settings.DATABASE_URL,
+        "database_url": "postgresql://***" if "postgres" in settings.DATABASE_URL else settings.DATABASE_URL,
         "sqlite_file_path": db_path,
         "is_persistent_storage": settings.is_persistent_storage,
-        "storage_mode": "HF Spaces Persistent (/data)" if settings.is_persistent_storage else "Local / Ephemeral",
+        "storage_mode": mode,
         "size_bytes": size_bytes,
         "size_human": f"{round(size_bytes / 1024, 1)} KB" if size_bytes < 1024 * 1024 else f"{round(size_bytes / (1024 * 1024), 2)} MB",
         "statistics": {
-            "products_count": session.exec(select(func.count(Product.id))).one(),
-            "debtors_count": session.exec(select(func.count(Debtor.id))).one(),
-            "suppliers_count": session.exec(select(func.count(Supplier.id))).one(),
-            "invoices_count": session.exec(select(func.count(SupplierInvoice.id))).one(),
-            "debt_transactions_count": session.exec(select(func.count(DebtTransaction.id))).one(),
-            "expenses_count": session.exec(select(func.count(Expense.id))).one(),
+            "products_count": safe_count(Product),
+            "debtors_count": safe_count(Debtor),
+            "suppliers_count": safe_count(Supplier),
+            "invoices_count": safe_count(SupplierInvoice),
+            "debt_transactions_count": safe_count(DebtTransaction),
+            "expenses_count": safe_count(Expense),
         },
         "backup_download_url": "/api/backup",
         "auto_dump_url": "/api/backup/dump"

@@ -200,7 +200,7 @@ def test_clear_catalog_and_reseed(session):
     headers = {"Authorization": f"Bearer {token}"}
 
     # Clear catalog
-    clr_res = client.post("/api/v1/products/clear-catalog", headers=headers)
+    clr_res = client.post("/api/v1/products/clear-catalog", headers=headers, json={"confirmation": "DELETE ALL STORE DATA", "current_password": "owner123"})
     assert clr_res.status_code == 200
 
     # Products count should be 0
@@ -353,8 +353,11 @@ def test_scan_image_barcode(session):
     qr.save(buf, format='PNG')
     buf.seek(0)
 
+    token = create_access_token({"sub": "cashier_aziza", "role": "cashier"})
+    headers = {"Authorization": f"Bearer {token}"}
     res = client.post(
         '/api/v1/pos/scan-image',
+        headers=headers,
         files={'file': ('test_qr.png', buf.getvalue(), 'image/png')}
     )
     assert res.status_code == 200

@@ -11,3 +11,5 @@ env
 DEPLOY_HF_GUIDE.md
 deploy_hf.py
 backups/
+store_data/
+android_app/

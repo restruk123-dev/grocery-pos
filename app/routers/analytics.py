@@ -61,9 +61,11 @@ def get_period_dates(period: str):
         start_tashkent = datetime.combine(now_tashkent.date(), time.min, tzinfo=TZ_TASHKENT)
         start_date = start_tashkent.astimezone(timezone.utc)
     elif period == "week":
-        start_date = (now_tashkent - timedelta(days=7)).astimezone(timezone.utc)
+        week_start = now_tashkent.date() - timedelta(days=now_tashkent.weekday())
+        start_date = datetime.combine(week_start, time.min, tzinfo=TZ_TASHKENT).astimezone(timezone.utc)
     elif period == "month":
-        start_date = (now_tashkent - timedelta(days=30)).astimezone(timezone.utc)
+        month_start = now_tashkent.date().replace(day=1)
+        start_date = datetime.combine(month_start, time.min, tzinfo=TZ_TASHKENT).astimezone(timezone.utc)
     elif period == "all":
         start_date = datetime(2020, 1, 1, tzinfo=timezone.utc)
     else:

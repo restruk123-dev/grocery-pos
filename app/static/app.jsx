@@ -37,7 +37,7 @@ const TRANSLATIONS = {
     scanInvoiceBtn: "Faktura / Yuk xatini skanerlash",
     invoiceOcrTitle: "Faktura qatorlari predprosmotri",
     importInvoiceBtn: "Omborga qabul qilish",
-        addProductBtn: "+ Tovar qo'shish",
+    addProductBtn: "+ Tovar qo'shish",
     addProductTitle: "Yangi tovar qo'shish (Katalog / POS)",
     productNameLabel: "Mahsulot nomi *",
     barcodeLabel: "Shtrixkod *",
@@ -49,14 +49,11 @@ const TRANSLATIONS = {
     stockQtyLabel: "Ombordagi qoldiq soni",
     isQuickLabel: "Tezkor tovar (Kassada 1-bosish bilan sotish uchun)",
     pwaBannerTitle: "Ilovani to'liq ekranga o'rnatish (Brauzersiz ochish)",
-    pwaBannerDesc: "Brauzer manzil qatorisiz, qulay ilova ko'rinishida ochish uchun: brauzer menyusida (3 nuqta) «Bosh ekranga qo'shish» (Добавить на главный экран) tugmasini bosing.",
+    pwaBannerDesc: "Brauzer manzil qatorisiz, qulay ilova ko'rinishida ochish uchun: brauzer menyusida (3 nuqta) «Bosh ekranga qo'shish» tugmasini bosing.",
     pwaBannerClose: "Tushunarli",
     clearCatalogBtn: "Test tovarlarni tozalash / Toza varaqdan boshlash",
     clearCatalogWarning: "Rostdan ham barcha test tovarlar va cheklarni tozalamoqchimisiz? Kechki savdo uchun toza baza tayyorlanadi.",
     reseedCatalogBtn: "2000 ta demo tovarlarni qaytarish",
-    tabAiAssistant: "AI Yordamchi",
-    aiAssistantTitle: "Do'kon AI-yordamchisi",
-    aiPlaceholder: "Savolingizni yozing (masalan: Bugun qancha savdo bo'ldi? yoki Tamaki do'koni maslahatlari)...",
     ownerRole: "Ega (Xo'jayin)",
     cashierRole: "Kassir",
     tabPos: "📱 Kassa (POS)",
@@ -191,21 +188,80 @@ const TRANSLATIONS = {
     mobileModalTitle: "Smartfon orqali ulash (PWA)",
     mobileModalDesc: "Kassani telefondan ishlatish uchun ushbu QR-kodni smartfoningiz kamerasi bilan skanerlang:",
     mobileModalUrlLabel: "Yoki brauzerda to'g'ridan-to'g'ri oching:",
-    mobileModalPwaHelp: "Ilovani o'rnatish: Telefonda sahifa ochilgach, brauzer menyusidan 'Bosh ekranga qo'shish' (Add to Home Screen) tugmasini bosing.",
-    themeDark: "Qorong'i mavju",
-    themeLight: "Yorug' mavju",
+    mobileModalPwaHelp: "Ilovani o'rnatish: Telefonda sahifa ochilgach, brauzer menyusidan 'Bosh ekranga qo'shish' tugmasini bosing.",
+    themeDark: "Qorong'i mavzu",
+    themeLight: "Yorug' mavzu",
     currency: "so'm",
+    parkCartBtn: "Navbatga qo'yish (F4)",
+    parkedCartsTitle: "Kechiktirilgan cheklar",
+    numpadBtn: "Raqamlar",
+    voiceBarcode: "Shtrixkodni ovoz bilan aytish",
+    cogsDesc: "Sotilgan tovarlar tannarxi",
+    colId: "ID",
+    colQty: "Miqdor",
+    colTotal: "Jami",
+    colActions: "Amallar",
+    unknownBarcodeTitle: "Mahsulot topilmadi",
+    unknownBarcodePrompt: "Ushbu shtrixkod bazada yo'q. Uni yangi tovar sifatida qo'shasizmi?",
+    voiceAssistantListening: "Eshitilmoqda... gapiring",
+    voiceAssistantHint: "Masalan: «non 2 ta qo'sh», «kola 1», «to'lov», «skaner», «qarz yoz»",
+    voiceAssistantSuccess: "Buyruq bajarildi",
+    voiceAssistantNotFound: "Tovar topilmadi",
     // Quick items translations
-    quick_bread: "Tandir nona",
-    quick_tandyr_lepeshka: "Тандыр лепешка",
-    quick_sugar: "Сахар",
-    quick_potatoes: "Картофель",
-    quick_onions: "Лук",
-    quick_eggs: "Яйца",
+    quick_bread: "Tandir non",
+    quick_tandyr_lepeshka: "Tandir non",
+    quick_sugar: "Shakar",
+    quick_potatoes: "Kartoshka",
+    quick_onions: "Piyoz",
+    quick_eggs: "Tuxum",
   },
   ru: {
     appName: "GroceryStore POS",
     appSubtitle: "Автоматизация и Бухгалтерия",
+    switchCashierBtn: "Смена / Кассир",
+    cashierSwitchTitle: "Выберите кассира на смену (в 1 клик)",
+    installAppBtn: "Установить приложение",
+    installedMsg: "Приложение установлено на смартфон!",
+    cameraScannerBtn: "Камера-сканер",
+    torchOn: "Фонарик (Вкл)",
+    torchOff: "Фонарик (Выкл)",
+    barcodeScanned: "Штрихкод считан",
+    scaleWeightDetected: "Определен вес с весов",
+    voiceSearchBtn: "Голос",
+    voiceListening: "Слушаю... говорите",
+    quickItemsTitle: "Быстрые товары (без штрихкода)",
+    toggleAllCatalog: "Все товары",
+    instantCashBtn: "Наличные (Ровно)",
+    instantCardBtn: "Карта (Humo/Uzcard)",
+    instantDebtBtn: "В долг",
+    saleSuccessToast: "Продажа успешно сохранена!",
+    printReceiptOptional: "Распечатать чек",
+    voiceDebtBtn: "Голосовая запись долга",
+    voiceDebtPrompt: "Например: «Алишер 50 тысяч на хлеб, вернет в пятницу»",
+    scanPaperNotebookBtn: "Сфотографировать тетрадь долгов",
+    ocrPreviewTitle: "Предпросмотр долгов из тетради",
+    importAllDebts: "Внести все в тетрадь долгов",
+    dueDateLabel: "Срок возврата",
+    scanInvoiceBtn: "Скан накладной (OCR)",
+    invoiceOcrTitle: "Предпросмотр строк накладной",
+    importInvoiceBtn: "Оприходовать на склад",
+    addProductBtn: "+ Добавить товар",
+    addProductTitle: "Добавление нового товара в базу",
+    productNameLabel: "Наименование товара *",
+    barcodeLabel: "Штрихкод *",
+    scanBarcodeBtn: "Камера сканер",
+    categoryLabel: "Категория",
+    unitLabel: "Единица измерения",
+    purchasePriceLabel: "Цена закупки / Себестоимость (сум)",
+    salePriceLabel: "Цена продажи (сум) *",
+    stockQtyLabel: "Остаток на складе (кол-во)",
+    isQuickLabel: "Быстрый товар на кассе (без штрихкода)",
+    pwaBannerTitle: "Установить на домашний экран (Открыть без браузера)",
+    pwaBannerDesc: "Чтобы приложение открывалось в отдельном изолированном окне без адресной строки: нажмите Меню браузера (3 точки) ➔ «Добавить на главный экран» (или «Установить приложение»).",
+    pwaBannerClose: "Понятно",
+    clearCatalogBtn: "Очистить демо-товары / Начать с чистого листа",
+    clearCatalogWarning: "Вы действительно хотите удалить все демо-товары и чеки? База будет подготовлена к реальной торговле.",
+    reseedCatalogBtn: "Вернуть 2000 демо-товаров",
     ownerRole: "Хозяин",
     cashierRole: "Кассир",
     tabPos: "📱 Касса (POS)",
@@ -282,20 +338,6 @@ const TRANSLATIONS = {
     addDebtModalTitle: "Запись дополнительного долга",
     debtAmountLabel: "Сумма долга (сум) *",
     historyModalTitle: "История операций по долгу",
-        addProductBtn: "+ Добавить товар",
-    addProductTitle: "Добавление нового товара в базу",
-    productNameLabel: "Наименование товара *",
-    barcodeLabel: "Штрихкод *",
-    scanBarcodeBtn: "Камера сканер",
-    categoryLabel: "Категория",
-    unitLabel: "Единица измерения",
-    purchasePriceLabel: "Цена закупки / Себестоимость (сум)",
-    salePriceLabel: "Цена продажи (сум) *",
-    stockQtyLabel: "Остаток на складе (кол-во)",
-    isQuickLabel: "Быстрый товар на кассе (без штрихкода)",
-    pwaBannerTitle: "Установить на домашний экран (Открыть без браузера)",
-    pwaBannerDesc: "Чтобы приложение открывалось в отдельном изолированном окне без адресной строки: нажмите Меню браузера (3 точки) ➔ «Добавить на главный экран» (или «Установить приложение»).",
-    pwaBannerClose: "Понятно",
     catalogTitle: "Каталог товаров",
     lowStockFilter: "⚠️ Мало на складе",
     syncCatalogBtn: "🔄 Синхр. 2000 SKU",
@@ -358,6 +400,21 @@ const TRANSLATIONS = {
     themeDark: "Темная тема",
     themeLight: "Светлая тема",
     currency: "сум",
+    parkCartBtn: "Отложить чек (F4)",
+    parkedCartsTitle: "Отложенные чеки",
+    numpadBtn: "Клавиатура",
+    voiceBarcode: "Сказать штрихкод голосом",
+    cogsDesc: "Себестоимость проданных товаров",
+    colId: "ID",
+    colQty: "Количество",
+    colTotal: "Итого",
+    colActions: "Действия",
+    unknownBarcodeTitle: "Товар не найден",
+    unknownBarcodePrompt: "Этого штрихкода нет в базе. Добавить его в базу прямо сейчас?",
+    voiceAssistantListening: "Слушаю... говорите",
+    voiceAssistantHint: "Например: «добавь хлеб 2 штуки», «кола 1», «чек», «сканер», «запиши долг»",
+    voiceAssistantSuccess: "Команда выполнена",
+    voiceAssistantNotFound: "Товар не найден",
     // Quick items translations
     quick_bread: "Хлеб",
     quick_tandyr_lepeshka: "Тандыр лепешка",
@@ -392,6 +449,54 @@ function cyrToLat(text) {
 
 
 // ------------------- SPEECH SYNTHESIS & VOICE HELPERS -------------------
+
+// ------------------- WEB AUDIO SOUND EFFECTS -------------------
+function playAudioCue(type = 'success') {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    if (type === 'success' || type === 'add') {
+      // Pleasant high double beep
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.1);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (type === 'listen') {
+      // Gentle start listening chirp
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, now); // C5
+      osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.08); // E5
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } else if (type === 'error') {
+      // Low double error beep
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.setValueAtTime(240, now + 0.1);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+      osc.start(now);
+      osc.stop(now + 0.22);
+    }
+    setTimeout(() => { try { ctx.close(); } catch(e){} }, 400);
+  } catch (e) {
+    // Audio context not allowed or failed, ignore
+  }
+}
+
 function speakAloud(text, lang = 'uz') {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   try {
@@ -2089,60 +2194,99 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
 }
 
 // ------------------- VOICE DEBT RECORDING MODAL (HAQQIM.UZ) ----------------
-function VoiceDebtModal({ token, onClose, onSuccess, notify, t, lang }) {
+function VoiceDebtModal({ token, onClose, onSuccess, notify, t, lang: initialLang }) {
+  const [voiceLang, setVoiceLang] = useState(initialLang || 'ru');
   const [speechText, setSpeechText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [parsedData, setParsedData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const recognitionRef = useRef(null);
 
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      notify(lang === 'uz' ? 'Brauzer mikrofon orqali tanishni qo‘llamaydi. Matn maydonidagi klaviatura mikrofonidan foydalaning.' : 'В этом WebView нет распознавания речи. Используйте микрофон на клавиатуре в поле текста.', 'info');
+      notify(voiceLang === 'uz' ? 'Brauzer mikrofon orqali tanishni qo‘llamaydi. Matn maydonidagi klaviatura mikrofonidan foydalaning.' : 'В этом браузере нет поддержки SpeechRecognition. Используйте микрофон на клавиатуре телефона.', 'info');
       return;
     }
     try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = lang === 'uz' ? 'uz-UZ' : 'ru-RU';
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 3;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+      playAudioCue('listen');
+      const rec = new SpeechRecognition();
+      rec.lang = voiceLang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      rec.interimResults = true;
+      rec.continuous = false;
+      rec.maxAlternatives = 3;
       setIsListening(true);
 
-      recognition.onresult = async (event) => {
-        setIsListening(false);
-        const text = Array.from(event.results).map(result => result[0]?.transcript || '').join(' ').trim();
-        if (text) {
-          setSpeechText(text);
-          await parseVoice(text);
+      rec.onresult = (event) => {
+        let interimText = '';
+        let finalText = '';
+        for (let i = 0; i < event.results.length; i++) {
+          const res = event.results[i];
+          if (res.isFinal) {
+            finalText += res[0].transcript;
+          } else {
+            interimText += res[0].transcript;
+          }
+        }
+        const fullText = (finalText || interimText).trim();
+        if (fullText) {
+          setSpeechText(fullText);
+        }
+        if (finalText.trim()) {
+          rec.stop();
+          parseVoice(finalText.trim());
         }
       };
-      recognition.onerror = (event) => {
+
+      rec.onerror = (event) => {
         setIsListening(false);
         if (event.error !== 'no-speech' && event.error !== 'aborted') {
-          notify(lang === 'uz' ? 'Mikrofonni tekshiring yoki matnni klaviatura mikrofonida ayting.' : 'Проверьте микрофон или надиктуйте текст через микрофон клавиатуры.', 'error');
+          playAudioCue('error');
+          notify(voiceLang === 'uz' ? 'Mikrofonni tekshiring yoki matnni klaviatura mikrofonida ayting.' : 'Проверьте микрофон или надиктуйте через микрофон клавиатуры.', 'warn');
         }
       };
-      recognition.onend = () => setIsListening(false);
-      recognition.start();
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
     } catch (e) {
       setIsListening(false);
     }
   };
 
-  const parseVoice = async (text) => {
-    if (!text.trim()) return;
+  useEffect(() => {
+    startListening();
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+    };
+  }, [voiceLang]);
+
+  const parseVoice = async (textToParse) => {
+    const text = textToParse || speechText;
+    if (!text || !text.trim()) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/ai/parse-debt-voice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ speech_text: text, language: lang })
+        body: JSON.stringify({ speech_text: text, language: voiceLang })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || (lang === 'uz' ? 'Matn tahlil qilinmadi' : 'Не удалось разобрать фразу'));
+      if (!res.ok) throw new Error(data.detail || (voiceLang === 'uz' ? 'Matn tahlil qilinmadi' : 'Не удалось разобрать фразу'));
       setParsedData(data);
+      if (data.amount > 0) {
+        playAudioCue('success');
+      }
     } catch (e) {
-      notify(e.message || (lang === 'uz' ? 'Matn tahlilida xatolik' : 'Ошибка разбора фразы'), 'error');
+      notify(e.message || (voiceLang === 'uz' ? 'Matn tahlilida xatolik' : 'Ошибка разбора фразы'), 'error');
     } finally {
       setLoading(false);
     }
@@ -2150,7 +2294,7 @@ function VoiceDebtModal({ token, onClose, onSuccess, notify, t, lang }) {
 
   const handleConfirm = async () => {
     if (!parsedData || !parsedData.debtor_name?.trim() || !(Number(parsedData.amount) > 0)) {
-      notify(lang === 'uz' ? 'Mijoz ismi va summani tekshiring' : 'Проверьте имя должника и сумму', 'error');
+      notify(voiceLang === 'uz' ? 'Mijoz ismi va summani tekshiring' : 'Проверьте имя должника и сумму', 'error');
       return;
     }
     setLoading(true);
@@ -2168,7 +2312,7 @@ function VoiceDebtModal({ token, onClose, onSuccess, notify, t, lang }) {
           })
         });
         const created = await createRes.json();
-        if (!createRes.ok) throw new Error(created.detail || (lang === 'uz' ? 'Qarzni saqlab bo‘lmadi' : 'Не удалось сохранить долг'));
+        if (!createRes.ok) throw new Error(created.detail || (voiceLang === 'uz' ? 'Qarzni saqlab bo‘lmadi' : 'Не удалось сохранить долг'));
         debtorId = created.id;
       } else {
         const addRes = await fetch(`${API_BASE}/debts/debtors/${debtorId}/add-debt`, {
@@ -2181,9 +2325,10 @@ function VoiceDebtModal({ token, onClose, onSuccess, notify, t, lang }) {
           })
         });
         const added = await addRes.json();
-        if (!addRes.ok) throw new Error(added.detail || (lang === 'uz' ? 'Qarzni saqlab bo‘lmadi' : 'Не удалось сохранить долг'));
+        if (!addRes.ok) throw new Error(added.detail || (voiceLang === 'uz' ? 'Qarzni saqlab bo‘lmadi' : 'Не удалось сохранить долг'));
       }
-      notify(lang === 'uz' ? `Qarz saqlandi: ${parsedData.debtor_name} (${formatMoney(parsedData.amount)})` : `Долг сохранен: ${parsedData.debtor_name}`);
+      playAudioCue('success');
+      notify(voiceLang === 'uz' ? `Qarz saqlandi: ${parsedData.debtor_name} (${formatMoney(parsedData.amount)})` : `Долг сохранен: ${parsedData.debtor_name} (${formatMoney(parsedData.amount)})`);
       onSuccess();
       onClose();
     } catch (err) {
@@ -2194,97 +2339,188 @@ function VoiceDebtModal({ token, onClose, onSuccess, notify, t, lang }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-6 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[calc(100dvh-1.5rem)] flex flex-col">
+        {/* Header with Language selector */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎙️</span>
-            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-              {lang === 'uz' ? 'Ovozli qarz yozish (Haqqim.uz)' : 'Голосовая запись долга'}
-            </h3>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
-        </div>
-
-        <div className="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mb-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            {lang === 'uz' ? 'Ism, summani va nima uchun qarz yozilayotganini ayting:' : 'Назовите имя, сумму и причину долга:'}
-          </p>
-          <div className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-4 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
-            {lang === 'uz' ? 'Masalan: «Alisherga ellik ming so‘m qarz yoz, nonga»' : 'Например: «Запиши Алише долг 50 тысяч сум за хлеб»'}
-          </div>
-
-          <button
-            type="button"
-            onClick={startListening}
-            className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl transition mx-auto shadow-lg ${
-              isListening ? 'bg-rose-600 text-white animate-pulse shadow-rose-600/40' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-            }`}
-          >
-            <span>🎙️</span>
-          </button>
-          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 mt-2">
-            {isListening ? (lang === 'uz' ? 'Eshitilmoqda... gapiring' : 'Слушаю... говорите') : (lang === 'uz' ? 'Ovoz bilan kiritish' : 'Надиктовать')}
-          </div>
-        </div>
-
-        <div className="mb-4 space-y-2">
-          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">{lang === 'uz' ? 'Tanishilgan yoki qo‘lda tuzatilgan matn:' : 'Распознанный текст — его можно исправить:'}</label>
-          <textarea rows={2} value={speechText} onChange={(e) => { setSpeechText(e.target.value); setParsedData(null); }} placeholder={lang === 'uz' ? 'Masalan: Alisher 50 ming nonga qarz oldi' : 'Например: Алише записать 50 тысяч долга за хлеб'} className="w-full resize-y bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm" />
-          <button type="button" onClick={() => parseVoice(speechText)} disabled={!speechText.trim() || loading} className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold disabled:opacity-50">{lang === 'uz' ? 'Qarzni tahlil qilish' : 'Разобрать фразу'}</button>
-        </div>
-
-        {speechText && (
-          <div className="mb-4">
-            <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Aytilgan matn:</label>
-            <div className="text-xs font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded-xl text-slate-800 dark:text-slate-200">
-              "{speechText}"
+            <div>
+              <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">
+                {voiceLang === 'uz' ? 'Ovozli qarz yozish (Haqqim.uz)' : 'Голосовая запись в тетрадь долгов'}
+              </h3>
+              <p className="text-[10px] text-slate-500">
+                {voiceLang === 'uz' ? 'Ism, summa, sabab va qaytarish muddati' : 'Имя, сумма, товар и срок возврата'}
+              </p>
             </div>
           </div>
-        )}
-
-        {parsedData && (
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl space-y-2 mb-4">
-            <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 mb-1 flex items-center gap-1.5">
-              <span>✨</span>
-              <span>{lang === 'uz' ? "Aniqlangan ma'lumotlar:" : 'Распознанные данные:'}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl text-xs">
+              <button
+                type="button"
+                onClick={() => setVoiceLang('ru')}
+                className={`px-2 py-0.5 rounded-lg font-bold transition ${voiceLang === 'ru' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+              >
+                RU
+              </button>
+              <button
+                type="button"
+                onClick={() => setVoiceLang('uz')}
+                className={`px-2 py-0.5 rounded-lg font-bold transition ${voiceLang === 'uz' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+              >
+                UZ
+              </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              <div>
-                <label className="block text-slate-500 dark:text-slate-400 mb-1">{lang === 'uz' ? 'Mijoz:' : 'Должник:'}</label>
-                <input value={parsedData.debtor_name || ''} onChange={(e) => setParsedData(prev => ({ ...prev, debtor_name: e.target.value, debtor_id: null, is_new_debtor: true }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 font-bold text-slate-900 dark:text-slate-100" />
-              </div>
-              <div>
-                <label className="block text-slate-500 dark:text-slate-400 mb-1">{lang === 'uz' ? 'Summa (so‘m):' : 'Сумма (сум):'}</label>
-                <input type="number" min="1" step="1" value={parsedData.amount || ''} onChange={(e) => setParsedData(prev => ({ ...prev, amount: Number(e.target.value) }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 font-extrabold font-mono text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <span className="text-slate-500 dark:text-slate-400">{lang === 'uz' ? 'Muddat: ' : 'Срок: '}</span>
-                <span className="font-bold text-amber-600 dark:text-amber-400">{parsedData.due_date_label || parsedData.due_date || (lang === 'uz' ? 'Ko‘rsatilmagan' : 'Не указан')}</span>
-              </div>
-              <div>
-                <label className="block text-slate-500 dark:text-slate-400 mb-1">{lang === 'uz' ? 'Izoh:' : 'Примечание:'}</label>
-                <input value={parsedData.note || ''} onChange={(e) => setParsedData(prev => ({ ...prev, note: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-slate-700 dark:text-slate-300" />
-              </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1">✕</button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          {/* Pulsing Mic Control Card */}
+          <div className="text-center p-3 sm:p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <div className="relative inline-block mb-2">
+              {isListening && (
+                <div className="absolute -inset-3 bg-emerald-500/30 rounded-full animate-ping pointer-events-none"></div>
+              )}
+              <button
+                type="button"
+                onClick={startListening}
+                className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl transition mx-auto shadow-lg touch-target ${
+                  isListening
+                    ? 'bg-gradient-to-tr from-emerald-600 to-teal-400 text-white scale-105 shadow-emerald-500/40 animate-pulse'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+                }`}
+              >
+                🎙️
+              </button>
+            </div>
+            <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
+              {isListening
+                ? (voiceLang === 'uz' ? 'Eshitilmoqda... gapiring' : 'Слушаю... говорите фразу')
+                : (voiceLang === 'uz' ? 'Mikrofonni bosib gapiring' : 'Нажмите на микрофон и говорите')}
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+              {voiceLang === 'uz'
+                ? '«Alisher 50 ming nonga, dushanbagacha» yoki «Baxodir 120 000»'
+                : '«Алишер 50 тысяч на хлеб, до пятницы» или «Запиши на Баходира 120 000»'}
             </div>
           </div>
-        )}
 
-        <div className="flex items-center gap-2">
+          {/* Speech Textarea with manual edit */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {voiceLang === 'uz' ? 'Tanishilgan matn (tekshirish va tahrirlash):' : 'Распознанный текст (можно редактировать):'}
+            </label>
+            <div className="relative">
+              <textarea
+                rows={2}
+                value={speechText}
+                onChange={(e) => { setSpeechText(e.target.value); }}
+                placeholder={voiceLang === 'uz' ? 'Masalan: Alisher 50 ming nonga, juma beradi' : 'Например: Алишер 50 тысяч на хлеб, вернет в пятницу'}
+                className="w-full resize-none bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => parseVoice(speechText)}
+                disabled={!speechText.trim() || loading}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 disabled:opacity-40 transition"
+              >
+                {loading ? '...' : (voiceLang === 'uz' ? '⚡ Matnni tahlil qilish' : '⚡ Разобрать фразу')}
+              </button>
+            </div>
+          </div>
+
+          {/* Parsed Result Card */}
+          {parsedData && (
+            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-2xl space-y-2.5">
+              <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span>✨</span>
+                  <span>{voiceLang === 'uz' ? "Aniqlangan qarz ma'lumotlari:" : 'Распознанные данные:'}</span>
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  parsedData.is_new_debtor
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
+                    : 'bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-200'
+                }`}>
+                  {parsedData.is_new_debtor
+                    ? (voiceLang === 'uz' ? 'Yangi mijoz' : 'Новый клиент')
+                    : (voiceLang === 'uz' ? 'Mavjud mijoz' : 'В базе')}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-0.5">
+                    {voiceLang === 'uz' ? 'Mijoz F.I.Sh. *' : 'Имя должника *'}
+                  </label>
+                  <input
+                    type="text"
+                    value={parsedData.debtor_name || ''}
+                    onChange={(e) => setParsedData(prev => ({ ...prev, debtor_name: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 font-bold text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-0.5">
+                    {voiceLang === 'uz' ? 'Summa (so‘m) *' : 'Сумма (сум) *'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={parsedData.amount || ''}
+                    onChange={(e) => setParsedData(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 font-black font-mono text-emerald-600 dark:text-emerald-400 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-0.5">
+                    {voiceLang === 'uz' ? 'Qaytarish muddati:' : 'Срок возврата:'}
+                  </label>
+                  <input
+                    type="text"
+                    value={parsedData.due_date_label || parsedData.due_date || ''}
+                    onChange={(e) => setParsedData(prev => ({ ...prev, due_date_label: e.target.value, due_date: e.target.value }))}
+                    placeholder={voiceLang === 'uz' ? 'Ko‘rsatilmagan' : 'Не указан'}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-slate-700 dark:text-slate-300 text-xs font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-0.5">
+                    {voiceLang === 'uz' ? 'Izoh:' : 'Примечание:'}
+                  </label>
+                  <input
+                    type="text"
+                    value={parsedData.note || ''}
+                    onChange={(e) => setParsedData(prev => ({ ...prev, note: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-slate-700 dark:text-slate-300 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex items-center gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+            className="flex-1 py-3 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition touch-target"
           >
-            {t.cancelBtn}
+            {t.cancelBtn || 'Bekor qilish'}
           </button>
           <button
             type="button"
-            disabled={!parsedData || loading}
             onClick={handleConfirm}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
+            disabled={!parsedData || !(Number(parsedData.amount) > 0) || loading}
+            className="flex-1 py-3 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 disabled:opacity-40 transition touch-target flex items-center justify-center gap-1.5"
           >
-            {loading ? t.saving : (lang === 'uz' ? 'Tahrirni tasdiqlab qarzni saqlash' : 'Проверить и сохранить долг')}
+            <span>💾</span>
+            <span>{loading ? t.saving : (voiceLang === 'uz' ? 'Qarzni saqlash' : 'Сохранить долг')}</span>
           </button>
         </div>
       </div>
@@ -2725,111 +2961,210 @@ function OcrInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, 
   );
 }
 
-// ------------------- STORE AI ASSISTANT MODAL -----------------------------
-function StoreAiModal({ token, onClose, notify, t, lang, onNavigate }) {
-  const [messages, setMessages] = useState([
-    {
-      sender: 'ai',
-      text: lang === 'uz'
-        ? "Salom! Men sizning do'kon AI-yordamchingizman. Savdolar, qarzlar, ombor qoldiqlari yoki tamaki do'koniga moslashtirish bo'yicha savollaringiz bo'lsa, so'rang!"
-        : "Здравствуйте! Я ваш умный AI-помощник магазина. Отвечу на любые вопросы по выручке, долгам, остаткам или тиражированию кассы под табачный магазин."
-    }
-  ]);
-  const [input, setInput] = useState('');
+// ------------------- VOICE ASSISTANT MODAL (POS & CASHIER) -------------------
+function VoiceAssistantModal({ token, onClose, onAddToCart, onOpenScanner, onOpenCheckout, onClearCart, onOpenDebt, notify, t, lang: initialLang }) {
+  const [voiceLang, setVoiceLang] = useState(initialLang || 'ru');
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [statusMsg, setStatusMsg] = useState(voiceLang === 'uz' ? "Gapiring (masalan: «non 2 ta», «kola», «skaner»)..." : "Говорите (например: «хлеб 2 штуки», «кола», «чек»)...");
   const [loading, setLoading] = useState(false);
+  const recognitionRef = useRef(null);
 
-  const sendQuery = async (queryText) => {
-    const q = queryText || input;
-    if (!q.trim()) return;
-
-    setMessages(prev => [...prev, { sender: 'user', text: q }]);
-    setInput('');
-    setLoading(true);
-
+  const startListening = () => {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      notify(voiceLang === 'uz' ? "Brauzeringizda mikrofon orqali ovozni tanish qo'llab-quvvatlanmaydi" : "Голосовой ввод не поддерживается вашим браузером/WebView", "warn");
+      return;
+    }
     try {
-      const res = await fetch(`${API_BASE}/ai/assistant`, {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+      playAudioCue('listen');
+      const rec = new SpeechRec();
+      rec.lang = voiceLang === 'uz' ? 'uz-UZ' : 'ru-RU';
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.maxAlternatives = 3;
+
+      setIsListening(true);
+      setStatusMsg(voiceLang === 'uz' ? "Eshitilmoqda... gapiring" : "Слушаю... говорите");
+
+      rec.onresult = (ev) => {
+        let interimText = '';
+        let finalText = '';
+        for (let i = 0; i < ev.results.length; i++) {
+          const res = ev.results[i];
+          if (res.isFinal) {
+            finalText += res[0].transcript;
+          } else {
+            interimText += res[0].transcript;
+          }
+        }
+        const currentText = (finalText || interimText).trim();
+        setTranscript(currentText);
+
+        if (finalText.trim()) {
+          rec.stop();
+          dispatchVoiceCommand(finalText.trim());
+        }
+      };
+
+      rec.onerror = (e) => {
+        setIsListening(false);
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+          setStatusMsg(voiceLang === 'uz' ? "Ovoz aniqlanmadi, qaytadan bosing" : "Голос не распознан, нажмите микрофон");
+          playAudioCue('error');
+        }
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (err) {
+      setIsListening(false);
+    }
+  };
+
+  useEffect(() => {
+    startListening();
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+    };
+  }, [voiceLang]);
+
+  const dispatchVoiceCommand = async (phrase) => {
+    if (!phrase) return;
+    setLoading(true);
+    setStatusMsg(voiceLang === 'uz' ? "Buyruq bajarilmoqda..." : "Обработка команды...");
+    try {
+      const res = await fetch(`${API_BASE}/ai/voice-command`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, language: lang })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ speech_text: phrase, language: voiceLang, context: 'pos' })
       });
       const data = await res.json();
-      setMessages(prev => [
-        ...prev,
-        {
-          sender: 'ai',
-          text: data.answer,
-          suggestions: data.quick_suggestions || [],
-          actionType: data.action_type
-        }
-      ]);
-    } catch (err) {
-      setMessages(prev => [...prev, { sender: 'ai', text: 'Kechirasiz, xatolik yuz berdi.' }]);
+      if (!res.ok) throw new Error(data.detail || "Xatolik");
+
+      if (data.action === 'add_to_cart' && data.data && data.data.product) {
+        playAudioCue('add');
+        onAddToCart(data.data.product, data.data.quantity || 1.0);
+        speakAloud(data.voice_text, voiceLang);
+        notify(data.voice_text);
+        onClose();
+      } else if (data.action === 'open_scanner') {
+        playAudioCue('success');
+        speakAloud(data.voice_text, voiceLang);
+        onOpenScanner();
+        onClose();
+      } else if (data.action === 'checkout') {
+        playAudioCue('success');
+        speakAloud(data.voice_text, voiceLang);
+        onOpenCheckout();
+        onClose();
+      } else if (data.action === 'clear_cart') {
+        playAudioCue('success');
+        speakAloud(data.voice_text, voiceLang);
+        onClearCart();
+        onClose();
+      } else if (data.action === 'open_debt' && data.data) {
+        playAudioCue('success');
+        speakAloud(data.voice_text, voiceLang);
+        onOpenDebt(data.data);
+        onClose();
+      } else if (data.action === 'product_not_found') {
+        playAudioCue('error');
+        speakAloud(data.voice_text, voiceLang);
+        setStatusMsg(data.answer);
+      } else {
+        speakAloud(data.voice_text, voiceLang);
+        setStatusMsg(data.answer);
+      }
+    } catch (e) {
+      playAudioCue('error');
+      setStatusMsg(e.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 h-[600px] max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🤖</span>
-            <div>
-              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                {lang === 'uz' ? "Do'kon AI-Yordamchisi" : 'AI-Помощник магазина'}
-              </h3>
-              <p className="text-[10px] text-emerald-600 font-bold">100% Bepul & Avtonom</p>
-            </div>
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 backdrop-blur-md">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 text-slate-800 dark:text-slate-100 shadow-2xl flex flex-col items-center text-center">
+        {/* Header & Lang Selector */}
+        <div className="w-full flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setVoiceLang('ru')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${voiceLang === 'ru' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+            >
+              🇷🇺 RU
+            </button>
+            <button
+              type="button"
+              onClick={() => setVoiceLang('uz')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${voiceLang === 'uz' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400'}`}
+            >
+              🇺🇿 UZ
+            </button>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+          <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg">✕</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1 text-xs">
-          {messages.map((m, i) => (
-            <div key={i} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
-              <div className={`p-3 rounded-2xl max-w-[85%] whitespace-pre-wrap leading-relaxed ${
-                m.sender === 'user'
-                  ? 'bg-emerald-600 text-white rounded-br-none shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-200 dark:border-slate-700/60'
-              }`}>
-                {m.text}
-              </div>
-
-              {m.suggestions && m.suggestions.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {m.suggestions.map((sug, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => sendQuery(sug)}
-                      className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold hover:bg-emerald-100 transition"
-                    >
-                      {sug}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-          {loading && <div className="text-xs text-slate-400 animate-pulse">AI javob yozmoqda...</div>}
-        </div>
-
-        <form onSubmit={(e) => { e.preventDefault(); sendQuery(); }} className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={lang === 'uz' ? 'Savolingizni yozing...' : 'Напишите ваш вопрос...'}
-            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-          />
+        {/* Pulsing Animated Mic Button */}
+        <div className="relative my-3">
+          {isListening && (
+            <div className="absolute -inset-4 bg-emerald-500/30 rounded-full animate-ping pointer-events-none"></div>
+          )}
           <button
-            type="submit"
-            disabled={!input.trim() || loading}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow disabled:opacity-40"
+            type="button"
+            onClick={startListening}
+            className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl shadow-xl transition-all duration-200 ${
+              isListening
+                ? 'bg-gradient-to-tr from-emerald-600 to-teal-400 text-white scale-105 shadow-emerald-500/50'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:scale-105'
+            }`}
           >
-            Yuborish
+            🎙️
           </button>
-        </form>
+        </div>
+
+        {/* Status text */}
+        <div className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-2 mb-1">
+          {isListening ? (voiceLang === 'uz' ? 'Eshitilmoqda... gapiring' : 'Слушаю... говорите') : (voiceLang === 'uz' ? 'Mikrofonni bosing' : 'Нажмите на микрофон')}
+        </div>
+
+        {/* Real-time transcribed text */}
+        <div className="w-full min-h-[56px] max-h-24 overflow-y-auto bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 my-2 text-xs text-slate-700 dark:text-slate-200 font-medium">
+          {transcript || statusMsg}
+        </div>
+
+        {/* Quick Voice Hints */}
+        <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">
+          {voiceLang === 'uz'
+            ? "Aytishingiz mumkin: «non 2 ta qo'sh», «kola 1», «to'lov», «skaner»"
+            : 'Можно сказать: «добавь хлеб 2 штуки», «кола 1», «чек», «сканер»'}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (transcript.trim()) {
+              dispatchVoiceCommand(transcript.trim());
+            } else {
+              onClose();
+            }
+          }}
+          className="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition touch-target"
+        >
+          {transcript.trim() ? (voiceLang === 'uz' ? 'Bajarish' : 'Выполнить') : (voiceLang === 'uz' ? 'Yopish' : 'Закрыть')}
+        </button>
       </div>
     </div>
   );
@@ -2861,6 +3196,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const [scannerActive, setScannerActive] = useState(false);
   const [showAllCatalog, setShowAllCatalog] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceAssistantOpen, setVoiceAssistantOpen] = useState(false);
   const [quickProducts, setQuickProducts] = useState([]);
   const [notFoundBarcode, setNotFoundBarcode] = useState(null);
   const [createProductOpen, setCreateProductOpen] = useState(false);
@@ -2969,6 +3305,9 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       if (e.key === 'F2') {
         e.preventDefault();
         if (barcodeInputRef.current) barcodeInputRef.current.focus();
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        setVoiceAssistantOpen(true);
       } else if (e.key === 'F5') {
         e.preventDefault();
         if (cart.length > 0) handleDirectCheckout('CASH');
@@ -3059,13 +3398,14 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) {
-        playBeep();
-        setNotFoundBarcode(code);
+        playAudioCue('listen');
+        setCreateProductOpen(code);
+        notify(lang === 'uz' ? `Yangi shtrixkod (${code}). Tovarni kiriting` : `Новый штрихкод (${code}). Заполните данные товара`, 'info');
         setBarcodeQuery('');
         return;
       }
       const prod = await res.json();
-      playBeep();
+      playAudioCue('add');
       const qty = prod.detected_weight ? Number(prod.detected_weight) : 1.0;
       addToCart(prod, qty);
       if (prod.detected_weight) {
@@ -3266,6 +3606,17 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                 lang={lang}
                 title="Shtrixkodni ovoz bilan aytish"
               />
+
+              {/* Full Voice POS Assistant Button */}
+              <button
+                type="button"
+                onClick={() => setVoiceAssistantOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1.5 touch-target"
+                title={lang === 'uz' ? "Ovozli boshqaruv va qidiruv (F3)" : "Голосовой помощник и поиск (F3)"}
+              >
+                <span className="text-sm">🎙️</span>
+                <span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
+              </button>
 
               {/* Camera Scanner Button */}
               <button
@@ -3693,6 +4044,29 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         </div>
       )}
 
+      {/* Voice Assistant Modal */}
+      {voiceAssistantOpen && (
+        <VoiceAssistantModal
+          token={token}
+          onClose={() => setVoiceAssistantOpen(false)}
+          onAddToCart={(prod, qty) => {
+            addToCart(prod, qty);
+            playAudioCue('add');
+          }}
+          onOpenScanner={() => setScannerActive(true)}
+          onOpenCheckout={() => {
+            if (cart.length > 0) setCheckoutModalOpen(true);
+          }}
+          onClearCart={clearCart}
+          onOpenDebt={() => {
+            if (cart.length > 0) handleDirectCheckout('DEBT');
+          }}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
+
       {/* Quick Add Product from POS Modal */}
       {createProductOpen && (
         <CreateProductModal
@@ -3827,7 +4201,7 @@ function DebtsScreen({ token, notify, t }) {
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Qarzdor mijozlar:</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.debtorsWithDebt || (lang === 'uz' ? "Qarzdor mijozlar:" : "Клиенты с долгом:")}</div>
             <div className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1">
               {summary ? summary.active_debtors_with_debt : 0}{' '}
               <span className="text-xs font-normal text-slate-400">/ {summary ? summary.debtors_count : 0}</span>
@@ -3851,7 +4225,7 @@ function DebtsScreen({ token, notify, t }) {
               title="Ovozli qarz yozish"
             >
               <span>🎙️</span>
-              <span>Ovozli</span>
+              <span>{t.voiceDebtPrompt || (lang === 'uz' ? "Ovozli" : "Голосом")}</span>
             </button>
             <button
               onClick={() => setOcrDebtOpen(true)}
@@ -3859,7 +4233,7 @@ function DebtsScreen({ token, notify, t }) {
               title="Daftardan rasm olish"
             >
               <span>📸</span>
-              <span>Daftar OCR</span>
+              <span>{t.ocrDebtTitle || (lang === 'uz' ? "Daftar OCR" : "Фото тетради")}</span>
             </button>
           </div>
         </div>
@@ -3952,6 +4326,7 @@ function DebtsScreen({ token, notify, t }) {
       {payModalOpen && selectedDebtor && (
         <PayDebtModal
           token={token}
+          lang={lang}
           debtor={selectedDebtor}
           onClose={() => setPayModalOpen(false)}
           onSuccess={() => {
@@ -3969,6 +4344,7 @@ function DebtsScreen({ token, notify, t }) {
       {addDebtModalOpen && selectedDebtor && (
         <AddDebtModal
           token={token}
+          lang={lang}
           debtor={selectedDebtor}
           onClose={() => setAddDebtModalOpen(false)}
           onSuccess={() => {
@@ -3986,6 +4362,7 @@ function DebtsScreen({ token, notify, t }) {
       {historyModalOpen && selectedDebtor && (
         <DebtorHistoryModal
           token={token}
+          lang={lang}
           debtor={selectedDebtor}
           onClose={() => setHistoryModalOpen(false)}
           t={t}
@@ -4030,6 +4407,7 @@ function DebtsScreen({ token, notify, t }) {
       {createDebtorModalOpen && (
         <CreateDebtorModal
           token={token}
+          lang={lang}
           onClose={() => setCreateDebtorModalOpen(false)}
           onSuccess={() => {
             setCreateDebtorModalOpen(false);
@@ -4046,7 +4424,8 @@ function DebtsScreen({ token, notify, t }) {
 }
 
 // ------------------- PAY DEBT MODAL -------------------
-function PayDebtModal({ token, debtor, onClose, onSuccess, notify, t }) {
+function PayDebtModal({ token, debtor, onClose, onSuccess, notify, t, lang: propLang }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
   const [amount, setAmount] = useState(debtor.balance > 0 ? debtor.balance : 10000);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -4126,7 +4505,8 @@ function PayDebtModal({ token, debtor, onClose, onSuccess, notify, t }) {
 }
 
 // ------------------- ADD DEBT MODAL -------------------
-function AddDebtModal({ token, debtor, onClose, onSuccess, notify, t }) {
+function AddDebtModal({ token, debtor, onClose, onSuccess, notify, t, lang: propLang }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
   const [amount, setAmount] = useState(25000);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -4206,7 +4586,8 @@ function AddDebtModal({ token, debtor, onClose, onSuccess, notify, t }) {
 }
 
 // ------------------- DEBTOR HISTORY MODAL -------------------
-function DebtorHistoryModal({ token, debtor, onClose, t }) {
+function DebtorHistoryModal({ token, debtor, onClose, t, lang: propLang }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -4292,7 +4673,8 @@ function DebtorHistoryModal({ token, debtor, onClose, t }) {
 }
 
 // ------------------- CREATE DEBTOR MODAL -------------------
-function CreateDebtorModal({ token, onClose, onSuccess, notify, t }) {
+function CreateDebtorModal({ token, onClose, onSuccess, notify, t, lang: propLang }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
@@ -4515,7 +4897,55 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
 
       {/* Catalog Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm transition-colors duration-200">
-        <div className="overflow-x-auto">
+        {/* Mobile Product Cards (< 768px) */}
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {products.map((p) => (
+            <div key={p.id} className="p-3 flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-bold text-sm text-slate-900 dark:text-slate-100">{p.name}</div>
+                  <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                    🏷️ {p.barcode} • {p.category_name}
+                  </div>
+                </div>
+                <div>
+                  {p.is_low_stock ? (
+                    <span className="bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">
+                      {t.statusOrderMore}
+                    </span>
+                  ) : (
+                    <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap">
+                      {t.statusInNorm}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <div>
+                  <span className="text-slate-400 text-[10px] block">{t.colStock}</span>
+                  <span className={`font-mono font-bold ${p.is_low_stock ? 'text-rose-500' : 'text-slate-800 dark:text-slate-200'}`}>
+                    {p.stock_quantity} {p.unit}
+                  </span>
+                </div>
+                {isOwner && (
+                  <div className="text-right">
+                    <span className="text-slate-400 text-[10px] block">{t.colPurchasePrice}</span>
+                    <span className="font-mono text-slate-500 dark:text-slate-400">{formatMoney(p.purchase_price)}</span>
+                  </div>
+                )}
+                <div className="text-right">
+                  <span className="text-slate-400 text-[10px] block">{t.colSalePrice}</span>
+                  <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                    {formatMoney(p.sale_price)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table (>= 768px) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
               <tr>
@@ -4684,7 +5114,59 @@ function SuppliersScreen({ token, notify, t }) {
 
       {/* Invoices List */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Mobile Invoice Cards (< 768px) */}
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {invoices.map((inv) => (
+            <div key={inv.id} className="p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                    📦 № {inv.invoice_number}
+                  </div>
+                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
+                    {inv.supplier_name}
+                  </div>
+                </div>
+                <div>
+                  {inv.debt_to_supplier > 0 ? (
+                    <span className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                      {t.statusHasDebt || "Qarz bor"}
+                    </span>
+                  ) : (
+                    <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                      {t.statusFullyPaid || "To'langan"}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-center font-mono text-[11px]">
+                <div>
+                  <span className="text-[10px] text-slate-400 block">{t.totalToPay}</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{formatMoney(inv.total_amount)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block">{t.paidAmountLabel}</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(inv.paid_amount)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block">{t.debtToSupplierLabel}</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{formatMoney(inv.debt_to_supplier)}</span>
+                </div>
+              </div>
+              {inv.debt_to_supplier > 0 && (
+                <button
+                  onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }}
+                  className="w-full mt-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm"
+                >
+                  💵 {t.payInvoiceBtn}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table (>= 768px) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
               <tr>
@@ -4694,7 +5176,7 @@ function SuppliersScreen({ token, notify, t }) {
                 <th className="px-4 py-3 text-right">{t.paidAmountLabel}</th>
                 <th className="px-4 py-3 text-right">{t.debtToSupplierLabel}</th>
                 <th className="px-4 py-3 text-center">{t.colStatus}</th>
-                <th className="px-4 py-3 text-center">Amal</th>
+                <th className="px-4 py-3 text-center">{t.colActions || (lang === 'uz' ? 'Amal' : 'Действие')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
@@ -4751,6 +5233,7 @@ function SuppliersScreen({ token, notify, t }) {
       {createSupplierModalOpen && (
         <CreateSupplierModal
           token={token}
+          lang={lang}
           onClose={() => setCreateSupplierModalOpen(false)}
           onSuccess={() => {
             setCreateSupplierModalOpen(false);
@@ -4782,6 +5265,7 @@ function SuppliersScreen({ token, notify, t }) {
       {createInvoiceModalOpen && (
         <CreateInvoiceModal
           token={token}
+          lang={lang}
           suppliers={suppliers}
           catalogSample={catalogSample}
           onClose={() => setCreateInvoiceModalOpen(false)}
@@ -4798,6 +5282,7 @@ function SuppliersScreen({ token, notify, t }) {
       {payInvoiceModalOpen && selectedInvoice && (
         <PayInvoiceModal
           token={token}
+          lang={lang}
           invoice={selectedInvoice}
           onClose={() => setPayInvoiceModalOpen(false)}
           onSuccess={() => {
@@ -4814,7 +5299,8 @@ function SuppliersScreen({ token, notify, t }) {
 }
 
 // ------------------- CREATE SUPPLIER MODAL -------------------
-function CreateSupplierModal({ token, onClose, onSuccess, notify, t }) {
+function CreateSupplierModal({ token, onClose, onSuccess, notify, t, lang: propLang }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
   const [name, setName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [phone, setPhone] = useState('');
@@ -4910,7 +5396,8 @@ function CreateSupplierModal({ token, onClose, onSuccess, notify, t }) {
 }
 
 // ------------------- CREATE INVOICE MODAL -------------------
-function CreateInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, notify, t }) {
+function CreateInvoiceModal({ token, suppliers, catalogSample, onClose, onSuccess, notify, t, lang: propLang }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
   const [supplierId, setSupplierId] = useState(suppliers.length > 0 ? suppliers[0].id : '');
   const [items, setItems] = useState([
     {
@@ -5004,7 +5491,7 @@ function CreateInvoiceModal({ token, suppliers, catalogSample, onClose, onSucces
             <div className="flex justify-between items-center mb-1">
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">{t.invoiceItemsLabel}</label>
               <button type="button" onClick={addItem} className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
-                + Tovar qo'shish
+                {t.addItemBtn || (lang === 'uz' ? "+ Tovar qo'shish" : "+ Добавить товар")}
               </button>
             </div>
 
@@ -5074,7 +5561,8 @@ function CreateInvoiceModal({ token, suppliers, catalogSample, onClose, onSucces
 }
 
 // ------------------- PAY INVOICE MODAL -------------------
-function PayInvoiceModal({ token, invoice, onClose, onSuccess, notify, t }) {
+function PayInvoiceModal({ token, invoice, onClose, onSuccess, notify, t, lang: propLang }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
   const [amount, setAmount] = useState(invoice.debt_to_supplier);
   const [loading, setLoading] = useState(false);
 
@@ -5202,7 +5690,35 @@ function ExpensesScreen({ token, notify, t }) {
 
       {/* Expenses List */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Mobile Expenses Cards (< 768px) */}
+        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {expenses.map((exp) => (
+            <div key={exp.id} className="p-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                  {expenseCategoryName(exp.category, lang)}
+                </span>
+                <span className="font-mono text-[11px] text-slate-400">
+                  {new Date(exp.expense_date).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                {exp.description}
+                {exp.product_name && (
+                  <span className="block text-[11px] text-rose-500 font-mono mt-0.5">
+                    ⚠️ {lang === 'ru' ? 'Товар' : 'Mahsulot'}: {exp.product_name} ({exp.spoilage_quantity} {lang === 'ru' ? 'шт. списано' : 'dona hisobdan chiqarildi'})
+                  </span>
+                )}
+              </div>
+              <div className="text-right font-mono font-bold text-sm text-rose-600 dark:text-rose-400">
+                -{formatMoney(exp.amount)}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table (>= 768px) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
               <tr>
@@ -5245,6 +5761,7 @@ function ExpensesScreen({ token, notify, t }) {
       {createModalOpen && (
         <CreateExpenseModal
           token={token}
+          lang={lang}
           catalogSample={catalogSample}
           isSpoilage={isSpoilageMode}
           onClose={() => setCreateModalOpen(false)}
@@ -5467,7 +5984,7 @@ function AnalyticsScreen({ token, notify, t }) {
               <div className="text-2xl font-black text-slate-700 dark:text-slate-200 mt-1 font-mono">
                 {formatMoney(data.cogs)}
               </div>
-              <div className="text-[11px] text-slate-400 mt-1">Sotilgan tovarlar tannarxi</div>
+              <div className="text-[11px] text-slate-400 mt-1">{t.cogsDesc || (lang === 'uz' ? "Sotilgan tovarlar tannarxi" : "Себестоимость проданных товаров")}</div>
             </div>
 
             {/* Gross Margin */}
@@ -5546,7 +6063,7 @@ function AnalyticsScreen({ token, notify, t }) {
                       <span className="font-medium text-xs text-slate-800 dark:text-slate-200">{item.name}</span>
                     </div>
                     <div className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                      {item.quantity_sold} dona • {formatMoney(item.revenue)}
+                      {item.quantity_sold} {lang === 'uz' ? 'dona' : 'шт.'} • {formatMoney(item.revenue)}
                     </div>
                   </div>
                 ))}
