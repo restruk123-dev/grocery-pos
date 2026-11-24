@@ -2,34 +2,43 @@ package uz.grocerypos.mobile;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.View;
 import android.view.Window;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.SslErrorHandler;
 import android.net.http.SslError;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class MainActivity extends Activity {
-    private static final String APP_ORIGIN = "https://grocery-pos-app-71i1.onrender.com";
-    private static final String APP_HOST = "grocery-pos-app-71i1.onrender.com";
-    private static final int CAMERA_PERMISSION_REQUEST = 41;
+    private static final String PREFS_NAME = "grocery_pos_prefs";
+    private static final String KEY_SERVER_URL = "server_url";
+    private static final String DEFAULT_ORIGIN = "https://grocery-pos-app-71i1.onrender.com";
+    private static final int MEDIA_PERMISSION_REQUEST = 41;
     private static final int FILE_CHOOSER_REQUEST = 42;
 
     private WebView webView;
@@ -37,9 +46,33 @@ public final class MainActivity extends Activity {
     private LinearLayout offlinePanel;
     private ProgressBar progressBar;
     private boolean mainLoadFailed;
-    private PermissionRequest pendingCameraRequest;
-    private WebChromeClient.FileChooserParams pendingFileChooser;
+    private PermissionRequest pendingMediaRequest;
     private ValueCallbackHolder fileCallback;
+
+    private String getConfiguredOrigin() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String saved = prefs.getString(KEY_SERVER_URL, DEFAULT_ORIGIN);
+        if (saved == null || saved.trim().isEmpty()) return DEFAULT_ORIGIN;
+        saved = saved.trim();
+        while (saved.endsWith("/")) saved = saved.substring(0, saved.length() - 1);
+        return saved;
+    }
+
+    private String getConfiguredHost() {
+        try {
+            Uri uri = Uri.parse(getConfiguredOrigin());
+            return uri.getHost() != null ? uri.getHost() : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private boolean isTrustedHost(Uri uri) {
+        if (uri == null || uri.getHost() == null) return false;
+        String scheme = uri.getScheme() != null ? uri.getScheme().toLowerCase() : "";
+        if (!"https".equals(scheme) && !"http".equals(scheme)) return false;
+        return getConfiguredHost().equalsIgnoreCase(uri.getHost());
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,12 +102,20 @@ public final class MainActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
         CookieManager.getInstance().setAcceptCookie(true);
+
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void openServerSettings() {
+                runOnUiThread(() -> showServerConfigDialog());
+            }
+        }, "AndroidPOS");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -114,11 +155,12 @@ public final class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                boolean trusted = "https".equalsIgnoreCase(uri.getScheme())
-                        && APP_HOST.equalsIgnoreCase(uri.getHost());
+                boolean trusted = isTrustedHost(uri);
                 if (!trusted) {
                     Toast.makeText(MainActivity.this,
-                            "Ссылка заблокирована: разрешён только сайт кассы", Toast.LENGTH_SHORT).show();
+                            localized("Ссылка заблокирована: разрешён только сайт кассы",
+                                    "Havola bloklandi: faqat kassa serveriga ruxsat berilgan"),
+                            Toast.LENGTH_SHORT).show();
                 }
                 return !trusted;
             }
@@ -150,17 +192,62 @@ public final class MainActivity extends Activity {
                 } catch (Exception error) {
                     fileCallback.cancel();
                     fileCallback = null;
-                    Toast.makeText(MainActivity.this, "Не удалось открыть выбор файла", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Fayl tanlab bo'lmadi", Toast.LENGTH_SHORT).show();
                     return false;
                 }
             }
         });
 
         if (savedInstanceState == null) {
-            webView.loadUrl(APP_ORIGIN + "/");
+            webView.loadUrl(getConfiguredOrigin() + "/");
         } else {
             webView.restoreState(savedInstanceState);
         }
+    }
+
+    private void showServerConfigDialog() {
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        input.setText(getConfiguredOrigin());
+        input.setHint("http://192.168.1.50:8000");
+
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dp(20), dp(12), dp(20), dp(8));
+        TextView hint = new TextView(this);
+        hint.setText(localized(
+                "Введите адрес локального сервера магазина (например http://192.168.1.50:8000) или облачный URL:",
+                "Do'kon serveri manzilini kiriting (masalan http://192.168.1.50:8000) yoki bulutli URL:"));
+        hint.setTextSize(13);
+        container.addView(hint);
+        container.addView(input);
+
+        new AlertDialog.Builder(this)
+                .setTitle(localized("Адрес сервера POS", "POS Server manzili"))
+                .setView(container)
+                .setPositiveButton(localized("Сохранить и подключить", "Saqlash va ulanish"), (dialog, which) -> {
+                    String newUrl = input.getText().toString().trim();
+                    if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) {
+                        newUrl = "http://" + newUrl;
+                    }
+                    while (newUrl.endsWith("/")) newUrl = newUrl.substring(0, newUrl.length() - 1);
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                            .edit()
+                            .putString(KEY_SERVER_URL, newUrl)
+                            .apply();
+                    mainLoadFailed = false;
+                    offlinePanel.setVisibility(View.GONE);
+                    webView.loadUrl(newUrl + "/");
+                })
+                .setNeutralButton(localized("Сбросить", "Asl holat"), (dialog, which) -> {
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                            .edit()
+                            .putString(KEY_SERVER_URL, DEFAULT_ORIGIN)
+                            .apply();
+                    webView.loadUrl(DEFAULT_ORIGIN + "/");
+                })
+                .setNegativeButton(localized("Отмена", "Bekor qilish"), null)
+                .show();
     }
 
     private void createOfflinePanel() {
@@ -186,8 +273,8 @@ public final class MainActivity extends Activity {
 
         TextView message = new TextView(this);
         message.setText(localized(
-                "Проверьте интернет. Сервер магазина может запускаться после паузы. Повторите подключение через несколько секунд.",
-                "Internetni tekshiring. Do‘kon serveri tanaffusdan so‘ng ishga tushayotgan bo‘lishi mumkin. Bir necha soniyadan keyin qayta urinib ko‘ring."));
+                "Проверьте интернет или Wi-Fi магазина. Можно также указать адрес локального компьютера (http://192.168.x.x:8000).",
+                "Internet yoki do‘kon Wi-Fi tarmog‘ini tekshiring. Shuningdek mahalliy server manzilini (http://192.168.x.x:8000) kiritishingiz mumkin."));
         message.setTextColor(0xffcbd5e1);
         message.setTextSize(14);
         message.setGravity(android.view.Gravity.CENTER);
@@ -195,10 +282,17 @@ public final class MainActivity extends Activity {
 
         Button retry = new Button(this);
         retry.setText(localized("Повторить подключение", "Qayta ulanish"));
-        retry.setOnClickListener(view -> webView.reload());
+        retry.setOnClickListener(view -> webView.loadUrl(getConfiguredOrigin() + "/"));
         LinearLayout.LayoutParams buttonLayout = new LinearLayout.LayoutParams(-1, -2);
         buttonLayout.topMargin = dp(20);
         offlinePanel.addView(retry, buttonLayout);
+
+        Button settingsBtn = new Button(this);
+        settingsBtn.setText(localized("⚙️ Настроить адрес сервера", "⚙️ Server manzilini sozlash"));
+        settingsBtn.setOnClickListener(view -> showServerConfigDialog());
+        LinearLayout.LayoutParams settingsLayout = new LinearLayout.LayoutParams(-1, -2);
+        settingsLayout.topMargin = dp(10);
+        offlinePanel.addView(settingsBtn, settingsLayout);
 
         offlinePanel.setVisibility(View.GONE);
         root.addView(offlinePanel, new FrameLayout.LayoutParams(-1, -1));
@@ -221,31 +315,53 @@ public final class MainActivity extends Activity {
     }
 
     private void handleWebPermission(PermissionRequest request) {
-        boolean trustedOrigin = request.getOrigin() != null
-                && APP_HOST.equalsIgnoreCase(request.getOrigin().getHost());
-        String[] resources = request.getResources();
-        boolean cameraOnly = resources.length == 1
-                && PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resources[0]);
-        if (!trustedOrigin || !cameraOnly) {
+        if (!isTrustedHost(request.getOrigin())) {
             request.deny();
             return;
         }
-        if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+        String[] resources = request.getResources();
+        List<String> neededAndroidPermissions = new ArrayList<>();
+        boolean allValid = true;
+        for (String res : resources) {
+            if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) {
+                if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    neededAndroidPermissions.add(Manifest.permission.CAMERA);
+                }
+            } else if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)) {
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    neededAndroidPermissions.add(Manifest.permission.RECORD_AUDIO);
+                }
+            } else {
+                allValid = false;
+            }
+        }
+        if (!allValid || resources.length == 0) {
+            request.deny();
+            return;
+        }
+        if (neededAndroidPermissions.isEmpty()) {
             request.grant(resources);
         } else {
-            pendingCameraRequest = request;
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+            pendingMediaRequest = request;
+            requestPermissions(neededAndroidPermissions.toArray(new String[0]), MEDIA_PERMISSION_REQUEST);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode != CAMERA_PERMISSION_REQUEST || pendingCameraRequest == null) return;
-        PermissionRequest request = pendingCameraRequest;
-        pendingCameraRequest = null;
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+        if (requestCode != MEDIA_PERMISSION_REQUEST || pendingMediaRequest == null) return;
+        PermissionRequest request = pendingMediaRequest;
+        pendingMediaRequest = null;
+        boolean allGranted = grantResults.length > 0;
+        for (int res : grantResults) {
+            if (res != PackageManager.PERMISSION_GRANTED) {
+                allGranted = false;
+                break;
+            }
+        }
+        if (allGranted) {
+            request.grant(request.getResources());
         } else {
             request.deny();
         }
@@ -275,7 +391,7 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        if (pendingCameraRequest != null) pendingCameraRequest.deny();
+        if (pendingMediaRequest != null) pendingMediaRequest.deny();
         if (fileCallback != null) fileCallback.cancel();
         if (webView != null) {
             webView.stopLoading();

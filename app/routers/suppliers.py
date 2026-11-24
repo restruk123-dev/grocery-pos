@@ -8,7 +8,8 @@ from sqlmodel import Session, select
 from ..database import get_session
 from ..models import (
     Supplier, SupplierInvoice, SupplierInvoiceItem,
-    Product, InvoiceStatus, User, UserRole
+    Product, InvoiceStatus, User, UserRole,
+    StockMovement, StockMovementType
 )
 from ..auth import get_current_user, require_role
 
@@ -254,6 +255,7 @@ def create_invoice(
                 session.add(product)
                 session.flush()
 
+            prev_stock = product.stock_quantity
             product.stock_quantity = round(product.stock_quantity + item.quantity, 3)
             product.purchase_price = item.purchase_price
             product.updated_at = now_utc
@@ -264,6 +266,18 @@ def create_invoice(
                 quantity=item.quantity,
                 purchase_price=item.purchase_price,
                 total_price=round(item.quantity * item.purchase_price, 2),
+            ))
+            session.add(StockMovement(
+                product_id=product.id,
+                movement_type=StockMovementType.PURCHASE_INVOICE,
+                quantity_delta=item.quantity,
+                previous_stock=prev_stock,
+                new_stock=product.stock_quantity,
+                cost_price=item.purchase_price,
+                reference_id=invoice.invoice_number,
+                note=f"Yuk xati: {invoice.invoice_number}",
+                created_by_user_id=current_user.id if current_user else None,
+                created_at=now_utc,
             ))
         session.commit()
         session.refresh(invoice)

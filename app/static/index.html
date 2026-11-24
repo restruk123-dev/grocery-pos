@@ -29,28 +29,8 @@
     } catch (e) {}
   </script>
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    if (window.tailwind) {
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                50: '#ecfdf5',
-                100: '#d1fae5',
-                500: '#10b981',
-                600: '#059669',
-                700: '#047857'
-              }
-            }
-          }
-        }
-      };
-    }
-  </script>
+  <!-- Compiled Tailwind CSS (100% Offline) -->
+  <link rel="stylesheet" href="/static/app.css">
 
   <!-- React 18 Standalone UMD -->
   <script src="/static/vendor/react.production.min.js"></script>
@@ -59,8 +39,8 @@
   <!-- HTML5 QR & Barcode Camera Scanner (Local Vendor) -->
   <script src="/static/vendor/html5-qrcode.min.js"></script>
 
-  <!-- Free Client-Side Tesseract OCR for Paper Debt Notebooks & Invoices -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Local Tesseract OCR for Paper Debt Notebooks & Invoices -->
+  <script src="/static/vendor/tesseract.min.js"></script>
 
   <style>
     :root {

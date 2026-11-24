@@ -1,5 +1,6 @@
 import os
 from typing import Generator
+from sqlalchemy import event
 from sqlmodel import SQLModel, create_engine, Session
 from .config import settings
 
@@ -25,6 +26,21 @@ engine = create_engine(
     echo=False,
     connect_args=connect_args
 )
+
+if db_url.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragmas(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.execute("PRAGMA busy_timeout=5000")
+            if db_url != "sqlite:///:memory:":
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA synchronous=NORMAL")
+        except Exception:
+            pass
+        finally:
+            cursor.close()
 
 def init_db() -> None:
     try:
@@ -59,6 +75,20 @@ def init_db() -> None:
                 conn.commit()
         except Exception:
             pass
+
+    # Safe shift_id & store_id column migrations
+    for tbl, col in [("sale", "shift_id"), ("sale", "store_id"), ("cashshift", "store_id")]:
+        try:
+            with engine.connect() as conn:
+                conn.exec_driver_sql(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS {col} INTEGER")
+                conn.commit()
+        except Exception:
+            try:
+                with engine.connect() as conn:
+                    conn.exec_driver_sql(f"ALTER TABLE {tbl} ADD COLUMN {col} INTEGER")
+                    conn.commit()
+            except Exception:
+                pass
 
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:

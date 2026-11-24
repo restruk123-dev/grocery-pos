@@ -34,12 +34,46 @@ class InvoiceStatus(str, enum.Enum):
     PARTIAL = "PARTIAL"
     PAID = "PAID"
 
+class StockMovementType(str, enum.Enum):
+    SALE = "SALE"
+    PURCHASE_INVOICE = "PURCHASE_INVOICE"
+    RETURN = "RETURN"
+    SPOILAGE = "SPOILAGE"
+    REVISION_ADJUSTMENT = "REVISION_ADJUSTMENT"
+    MANUAL_CORRECTION = "MANUAL_CORRECTION"
+    INITIAL_SETUP = "INITIAL_SETUP"
+
+class InventoryActStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    IN_PROGRESS = "IN_PROGRESS"
+    APPLIED = "APPLIED"
+    CANCELLED = "CANCELLED"
+
+class ShiftStatus(str, enum.Enum):
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+
+class CashActionType(str, enum.Enum):
+    CASH_IN = "CASH_IN"     # Kirim (masalan: qaytim uchun pul qo'shish)
+    CASH_OUT = "CASH_OUT"   # Chiqim (inkassatsiya, xo'jayin olib ketgan pul)
+
+
 # ----------------- Database Models -----------------
 
 class SystemSetting(SQLModel, table=True):
     key: str = Field(primary_key=True)
     value: str = Field(default="")
     updated_at: datetime = Field(default_factory=utc_now)
+
+class StoreOutlet(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(index=True)
+    store_type: str = Field(default="grocery")  # "grocery", "tobacco", "general"
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    receipt_footer: Optional[str] = "Xaridingiz uchun rahmat! / Спасибо за покупку!"
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=utc_now)
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -104,6 +138,8 @@ class Sale(SQLModel, table=True):
     debt_amount: float = Field(default=0.0)
     debtor_id: Optional[int] = Field(default=None, foreign_key="debtor.id", nullable=True)
     cashier_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    shift_id: Optional[int] = Field(default=None, foreign_key="cashshift.id", nullable=True)
+    store_id: Optional[int] = Field(default=None, foreign_key="storeoutlet.id", nullable=True)
     created_at: datetime = Field(default_factory=utc_now, index=True)
 
 class SaleItem(SQLModel, table=True):
@@ -154,3 +190,101 @@ class Expense(SQLModel, table=True):
     expense_date: datetime = Field(default_factory=utc_now, index=True)
     created_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=utc_now)
+
+class StockMovement(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    product_id: int = Field(foreign_key="product.id", index=True)
+    movement_type: StockMovementType = Field(index=True)
+    quantity_delta: float
+    previous_stock: float
+    new_stock: float
+    cost_price: Optional[float] = None
+    unit_price: Optional[float] = None
+    reference_id: Optional[str] = Field(default=None, index=True)
+    note: Optional[str] = None
+    created_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    created_at: datetime = Field(default_factory=utc_now, index=True)
+
+class InventoryAct(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    act_number: str = Field(unique=True, index=True)
+    name: str
+    description: Optional[str] = None
+    status: InventoryActStatus = Field(default=InventoryActStatus.IN_PROGRESS, index=True)
+    total_products: int = Field(default=0)
+    surpluses: int = Field(default=0)
+    deficits: int = Field(default=0)
+    created_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    applied_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=utc_now, index=True)
+
+class InventoryActItem(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    act_id: int = Field(foreign_key="inventoryact.id", index=True)
+    product_id: int = Field(foreign_key="product.id", index=True)
+    product_name: str
+    barcode: str
+    unit: str = Field(default="dona")
+    expected_quantity: float
+    actual_quantity: float
+    difference: float = Field(default=0.0)
+    purchase_price: float = Field(default=0.0)
+    note: Optional[str] = None
+    scanned_at: datetime = Field(default_factory=utc_now)
+
+class CashShift(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    shift_number: str = Field(unique=True, index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    store_id: Optional[int] = Field(default=None, foreign_key="storeoutlet.id", nullable=True)
+    status: ShiftStatus = Field(default=ShiftStatus.OPEN, index=True)
+    opened_at: datetime = Field(default_factory=utc_now)
+    closed_at: Optional[datetime] = None
+    initial_cash: float = Field(default=0.0)
+    cash_sales: float = Field(default=0.0)
+    card_sales: float = Field(default=0.0)
+    debt_sales: float = Field(default=0.0)
+    total_sales: float = Field(default=0.0)
+    sales_count: int = Field(default=0)
+    refunds_count: int = Field(default=0)
+    refunds_amount: float = Field(default=0.0)
+    cash_in: float = Field(default=0.0)
+    cash_out: float = Field(default=0.0)
+    expected_cash: float = Field(default=0.0)
+    actual_cash: Optional[float] = None
+    difference: Optional[float] = None
+    note: Optional[str] = None
+
+class CashShiftAction(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    shift_id: int = Field(foreign_key="cashshift.id", index=True)
+    action_type: CashActionType
+    amount: float
+    reason: str
+    user_id: int = Field(foreign_key="user.id")
+    created_at: datetime = Field(default_factory=utc_now)
+
+class SaleRefund(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    refund_number: str = Field(unique=True, index=True)
+    sale_id: int = Field(foreign_key="sale.id", index=True)
+    receipt_number: str = Field(index=True)
+    total_refund_amount: float
+    cash_refunded: float = Field(default=0.0)
+    card_refunded: float = Field(default=0.0)
+    debt_reduced: float = Field(default=0.0)
+    reason: str
+    shift_id: Optional[int] = Field(default=None, foreign_key="cashshift.id", nullable=True)
+    processed_by_user_id: int = Field(foreign_key="user.id")
+    created_at: datetime = Field(default_factory=utc_now, index=True)
+
+class SaleRefundItem(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    refund_id: int = Field(foreign_key="salerefund.id", index=True)
+    product_id: int = Field(foreign_key="product.id", index=True)
+    product_name: str
+    quantity: float
+    unit_price: float
+    total_price: float
+
+

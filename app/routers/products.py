@@ -95,8 +95,9 @@ def list_products(
     if low_stock_only:
         query = query.where(Product.stock_quantity <= Product.min_stock_alert)
 
-    # Get total count efficiently
-    total = len(session.exec(query).all())
+    # Get total count efficiently without loading full records into memory
+    count_query = select(func.count()).select_from(query.subquery())
+    total = session.exec(count_query).one()
 
     # Order and paginate
     items = session.exec(query.order_by(Product.name).offset(skip).limit(limit)).all()

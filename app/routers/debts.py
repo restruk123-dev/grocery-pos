@@ -91,7 +91,8 @@ def list_debtors(
     if only_with_debt:
         query = query.where(Debtor.balance > 0)
 
-    total = len(session.exec(query).all())
+    count_query = select(func.count()).select_from(query.subquery())
+    total = session.exec(count_query).one()
     debtors = session.exec(query.order_by(Debtor.balance.desc(), Debtor.full_name).offset(skip).limit(limit)).all()
 
     return {

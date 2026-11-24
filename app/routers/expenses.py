@@ -5,7 +5,10 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from ..database import get_session
-from ..models import Expense, ExpenseCategory, Product, User, UserRole
+from ..models import (
+    Expense, ExpenseCategory, Product, User, UserRole,
+    StockMovement, StockMovementType
+)
 from ..auth import get_current_user, require_role
 
 router = APIRouter(prefix="/expenses", tags=["Operational Expenses & Spoilage"])
@@ -44,21 +47,26 @@ def list_expenses(
         query = query.where(Expense.category == category)
 
     expenses = session.exec(query.order_by(Expense.expense_date.desc())).all()
+    
+    # Batch load products and users to prevent N+1 query overhead
+    prod_ids = {exp.product_id for exp in expenses if exp.product_id}
+    user_ids = {exp.created_by_user_id for exp in expenses if exp.created_by_user_id}
+    products_map = {p.id: p.name for p in session.exec(select(Product).where(Product.id.in_(prod_ids))).all()} if prod_ids else {}
+    users_map = {u.id: u.full_name for u in session.exec(select(User).where(User.id.in_(user_ids))).all()} if user_ids else {}
+
     results = []
     for exp in expenses:
-        prod = session.get(Product, exp.product_id) if exp.product_id else None
-        creator = session.get(User, exp.created_by_user_id) if exp.created_by_user_id else None
         results.append(ExpenseResponse(
             id=exp.id,
             category=exp.category,
             amount=exp.amount,
             description=exp.description,
             product_id=exp.product_id,
-            product_name=prod.name if prod else None,
+            product_name=products_map.get(exp.product_id),
             spoilage_quantity=exp.spoilage_quantity,
             expense_date=exp.expense_date,
             created_at=exp.created_at,
-            created_by_name=creator.full_name if creator else "Система"
+            created_by_name=users_map.get(exp.created_by_user_id, "Система")
         ))
     return results
 
@@ -84,6 +92,7 @@ def create_expense(
             raise HTTPException(status_code=404, detail="Товар для списания не найден")
 
         # Deduct spoiled stock from inventory
+        prev_stock = product.stock_quantity
         product.stock_quantity = round(product.stock_quantity - data.spoilage_quantity, 3)
         product.updated_at = now_utc
         session.add(product)
@@ -107,6 +116,21 @@ def create_expense(
         created_at=now_utc
     )
     session.add(expense)
+    session.flush()
+
+    if data.category == ExpenseCategory.SPOILAGE and data.product_id:
+        session.add(StockMovement(
+            product_id=data.product_id,
+            movement_type=StockMovementType.SPOILAGE,
+            quantity_delta=-data.spoilage_quantity,
+            previous_stock=prev_stock,
+            new_stock=product.stock_quantity,
+            cost_price=product.purchase_price,
+            reference_id=f"EXP-{expense.id}",
+            note=f"Hisobdan chiqarish / Списание: {data.description}",
+            created_by_user_id=current_user.id,
+            created_at=now_utc
+        ))
     session.commit()
     session.refresh(expense)
 

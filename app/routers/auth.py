@@ -33,6 +33,10 @@ def _record_failed_login(client_key: str) -> None:
     with _login_attempts_lock:
         _login_attempts.setdefault(client_key, deque()).append(time.monotonic())
 
+def reset_login_rate_limits() -> None:
+    with _login_attempts_lock:
+        _login_attempts.clear()
+
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1, max_length=128)
     password: str = Field(min_length=1, max_length=1024)

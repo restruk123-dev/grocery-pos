@@ -432,3 +432,216 @@ def test_supplier_reconciliation_and_autocreate_product(session):
     assert rec_data["summary"]["total_paid"] == 50000
     assert rec_data["summary"]["current_debt"] == 130000
     assert len(rec_data["invoices"]) >= 1
+
+
+def test_inventory_act_and_stock_movements(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Create an inventory act
+    res_act = client.post(
+        "/api/v1/inventory/act",
+        json={"name": "Oylik inventarizatsiya - Mart", "description": "Do'kon to'liq qayta sanash"},
+        headers=headers
+    )
+    assert res_act.status_code == 200
+    act_data = res_act.json()
+    act_id = act_data["id"]
+    assert act_data["total_products"] >= 1
+    assert act_data["status"] == "IN_PROGRESS"
+
+    # Find a product
+    prod = session.exec(select(Product).where(Product.is_active == True)).first()
+    assert prod is not None
+    original_stock = prod.stock_quantity
+
+    # 2. Scan item with surplus count (+5)
+    new_counted = original_stock + 5.0
+    res_scan = client.post(
+        f"/api/v1/inventory/act/{act_id}/scan",
+        json={"product_id": prod.id, "actual_quantity": new_counted, "note": "Ortiqcha 5 ta topildi"},
+        headers=headers
+    )
+    assert res_scan.status_code == 200
+    scan_data = res_scan.json()
+    assert scan_data["diff"] == 5.0
+    assert scan_data["is_surplus"] is True
+
+    # 3. Apply the act
+    res_apply = client.post(f"/api/v1/inventory/act/{act_id}/apply", headers=headers)
+    assert res_apply.status_code == 200
+    assert res_apply.json()["adjusted_products_count"] >= 1
+
+    # 4. Verify product stock is updated
+    session.refresh(prod)
+    assert prod.stock_quantity == new_counted
+
+    # 5. Verify StockMovement was recorded
+    res_mov = client.get(f"/api/v1/inventory/movements?product_id={prod.id}", headers=headers)
+    assert res_mov.status_code == 200
+    mov_data = res_mov.json()
+    assert mov_data["total"] >= 1
+    latest_mov = mov_data["items"][0]
+    assert latest_mov["movement_type"] == "REVISION_ADJUSTMENT"
+    assert latest_mov["quantity_delta"] == 5.0
+    assert latest_mov["new_stock"] == new_counted
+
+
+def test_cash_shifts_and_refunds_and_scale_barcodes(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Open a cash shift with 100 000 so'm initial drawer cash
+    res_open = client.post(
+        "/api/v1/pos/shift/open",
+        json={"initial_cash": 100000.0, "note": "Ertalabki smena (Dada)"},
+        headers=headers
+    )
+    assert res_open.status_code == 200
+    shift_data = res_open.json()
+    assert shift_data["initial_cash"] == 100000.0
+    assert shift_data["success"] is True
+
+    # 2. Check current shift status
+    res_cur = client.get("/api/v1/pos/shift/current", headers=headers)
+    assert res_cur.status_code == 200
+    assert res_cur.json()["is_open"] is True
+    assert res_cur.json()["shift"]["expected_cash"] == 100000.0
+
+    # 3. Cash In action: add 50 000 so'm for change
+    res_cin = client.post(
+        "/api/v1/pos/shift/cash-action",
+        json={"action_type": "CASH_IN", "amount": 50000.0, "reason": "Mayda pul qo'shildi"},
+        headers=headers
+    )
+    assert res_cin.status_code == 200
+    assert res_cin.json()["expected_cash"] == 150000.0
+
+    # 4. Scale barcode checkout: product code 2100123 with weight 1.500 kg (1500 grams) -> barcode 2100123015004
+    scale_prod = session.exec(select(Product).where(Product.barcode == "2100123")).first()
+    assert scale_prod is not None
+    orig_scale_stock = scale_prod.stock_quantity
+
+    res_sale = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [{"barcode": "2100123015004", "quantity": 1.0}],
+            "payment_method": "CASH",
+            "cash_received": 50000.0
+        },
+        headers=headers
+    )
+    assert res_sale.status_code == 200
+    sale_data = res_sale.json()
+    receipt_num = sale_data["receipt_number"]
+    assert sale_data["items"][0]["quantity"] == 1.5
+    assert sale_data["total_amount"] == round(scale_prod.sale_price * 1.5, 2)
+
+    # Verify inventory decremented by 1.5 kg
+    session.refresh(scale_prod)
+    assert scale_prod.stock_quantity == round(orig_scale_stock - 1.5, 3)
+
+    # 5. Look up receipt details
+    res_rcpt = client.get(f"/api/v1/pos/receipt/{receipt_num}", headers=headers)
+    assert res_rcpt.status_code == 200
+    rcpt_data = res_rcpt.json()
+    assert rcpt_data["receipt_number"] == receipt_num
+    assert rcpt_data["items"][0]["refundable_quantity"] == 1.5
+
+    # 6. Refund partial item: return 0.5 kg
+    res_ref = client.post(
+        "/api/v1/pos/refund",
+        json={
+            "receipt_number": receipt_num,
+            "items": [{"product_id": scale_prod.id, "quantity": 0.5}],
+            "reason": "Mijozga ko'plik qildi"
+        },
+        headers=headers
+    )
+    assert res_ref.status_code == 200
+    ref_data = res_ref.json()
+    assert ref_data["success"] is True
+    assert ref_data["cash_refunded"] == round(scale_prod.sale_price * 0.5, 2)
+
+    # Verify inventory was restored by 0.5 kg
+    session.refresh(scale_prod)
+    assert scale_prod.stock_quantity == round(orig_scale_stock - 1.0, 3)
+
+    # 7. Close shift with actual cash count
+    res_close = client.post(
+        "/api/v1/pos/shift/close",
+        json={"actual_cash": 160000.0, "note": "Kechki smena yakuni"},
+        headers=headers
+    )
+    assert res_close.status_code == 200
+    close_data = res_close.json()
+    assert close_data["status"] == "CLOSED"
+    assert "difference" in close_data
+    assert close_data["refunds_count"] >= 1
+
+
+def test_enhanced_voice_debt_parser_and_multi_store(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Voice debt with phone number & relative deadline (3 kundan keyin)
+    res1 = client.post(
+        "/api/v1/ai/parse-debt-voice",
+        json={"speech_text": "Valisher aka +998 90 123 45 67 30 ming qarz oldi 3 kundan keyin", "language": "uz"},
+        headers=headers
+    )
+    assert res1.status_code == 200
+    d1 = res1.json()
+    assert d1["transaction_type"] == "DEBT_INCREASE"
+    assert d1["phone"] == "+998901234567"
+    assert d1["amount"] == 30000.0
+    assert d1["due_date"] is not None
+
+    # 2. Voice payment intent detection ("to'ladi")
+    res2 = client.post(
+        "/api/v1/ai/parse-debt-voice",
+        json={"speech_text": "Alisher aka 50 ming qarz to'ladi", "language": "uz"},
+        headers=headers
+    )
+    assert res2.status_code == 200
+    d2 = res2.json()
+    assert d2["transaction_type"] == "DEBT_PAYMENT"
+    assert d2["amount"] == 50000.0
+
+    # 3. Item price estimation from catalog ("2 ta non" -> Test Non 4000 * 2 = 8000)
+    res3 = client.post(
+        "/api/v1/ai/parse-debt-voice",
+        json={"speech_text": "Sardor 2 ta non qarzga oldi", "language": "uz"},
+        headers=headers
+    )
+    assert res3.status_code == 200
+    d3 = res3.json()
+    assert d3["amount"] == 8000.0
+
+    # 4. Multi-store / Tobacco outlet readiness
+    res_st = client.post(
+        "/api/v1/pos/stores",
+        json={"name": "Tobacco House #1", "store_type": "tobacco", "address": "Chilonzor 5"},
+        headers=headers
+    )
+    assert res_st.status_code == 200
+    assert res_st.json()["store_type"] == "tobacco"
+
+    res_list = client.get("/api/v1/pos/stores", headers=headers)
+    assert res_list.status_code == 200
+    assert len(res_list.json()) >= 1
+
+
+def test_offline_assets_served(session):
+    res_html = client.get("/")
+    assert res_html.status_code == 200
+    assert "cdn.tailwindcss.com" not in res_html.text
+    assert "/static/app.css" in res_html.text
+    assert "/static/vendor/tesseract.min.js" in res_html.text
+
+    res_css = client.get("/static/app.css")
+    assert res_css.status_code == 200
+    assert len(res_css.content) > 5000
+
+
+

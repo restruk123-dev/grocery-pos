@@ -540,10 +540,13 @@ class DebtVoiceParseResponse(BaseModel):
     debtor_id: Optional[int] = None
     debtor_name: str
     amount: float
+    transaction_type: str = "DEBT_INCREASE"  # "DEBT_INCREASE" or "DEBT_PAYMENT"
+    phone: Optional[str] = None
     due_date: Optional[str] = None
     due_date_label: Optional[str] = None
     note: Optional[str] = None
     is_new_debtor: bool = True
+    confidence: float = 0.9
 
 class DebtOcrParseRequest(BaseModel):
     raw_text: str
@@ -607,9 +610,9 @@ def parse_debt_voice(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """High-accuracy local NLP: extracts debtor name, amount, note, and return deadline from spoken Uzbek/Russian text."""
+    """High-accuracy local NLP (haqqim.uz style): extracts debtor name, phone, intent (increase vs payment), amount, note, and deadline from spoken Uzbek/Russian text."""
     text = request.speech_text.strip()
-    lang = (request.language or "ru").lower()
+    lang = (request.language or "uz").lower()
     if not text:
         return DebtVoiceParseResponse(
             debtor_name="Новый должник" if lang.startswith("ru") else "Yangi mijoz",
@@ -618,9 +621,37 @@ def parse_debt_voice(
 
     lower_text = text.lower().replace("’", "'").replace("ʻ", "'").replace("`", "'")
 
-    # 1. Parse due date (days of week / relative terms)
+    # 0. Extract phone number BEFORE parsing digits as amounts!
+    extracted_phone = None
+    phone_pattern = re_module.compile(r"(?:\+?998[\s\-]?)?(?:\(?\d{2}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})")
+    phone_match = phone_pattern.search(lower_text)
+    if phone_match:
+        digits_only = re_module.sub(r"\D", "", phone_match.group(0))
+        if len(digits_only) == 9:
+            extracted_phone = f"+998{digits_only}"
+        elif len(digits_only) == 12 and digits_only.startswith("998"):
+            extracted_phone = f"+{digits_only}"
+        if extracted_phone:
+            lower_text = (lower_text[:phone_match.start()] + " " + lower_text[phone_match.end():]).strip()
+
+    # 0.5 Detect intent: DEBT_PAYMENT vs DEBT_INCREASE
+    payment_keywords = [
+        "to'ladi", "toladi", "to'lov", "tolov", "qaytardi", "qaytarib berdi",
+        "uzdi", "tashladi", "berib ketdi", "pul berdi", "qarzni berdi", "qarzini berdi",
+        "вернул", "вернула", "отдал", "отдала", "оплатил", "оплатила",
+        "погасил", "погасила", "закрыл", "закрыла", "внес", "внесла", "принес", "принесла", "оплата долга"
+    ]
+    debt_increase_keywords = [
+        "qarz oldi", "qarzga", "nasiya", "nasiyaga", "qarz yoz", "в долг", "вдолг", "долг взял", "долг взяла"
+    ]
+    transaction_type = "DEBT_INCREASE"
+    if any(pk in lower_text for pk in payment_keywords) and not any(dk in lower_text for dk in debt_increase_keywords):
+        transaction_type = "DEBT_PAYMENT"
+
+    # 1. Parse due date (days of week / relative terms / N days)
     due_date = None
     due_date_label = None
+    now_uz = datetime.now(timezone(timedelta(hours=5)))
 
     weekdays_map = {
         0: ["понедельник", "пн", "dushanba"],
@@ -640,7 +671,20 @@ def parse_debt_voice(
         if due_date:
             break
 
-    now_uz = datetime.now(timezone(timedelta(hours=5)))
+    # Relative N days/weeks: "3 kundan keyin", "5 kunga", "через 4 дня", "на 10 дней"
+    if not due_date:
+        rel_days_match = re_module.search(
+            r"\b(\d{1,2})\s*(?:kundan keyin|kun ichida|kunga|kun|дня|дней|день)\b",
+            lower_text
+        )
+        if rel_days_match:
+            days_val = int(rel_days_match.group(1))
+            if 1 <= days_val <= 90:
+                dt = now_uz + timedelta(days=days_val)
+                due_date = dt.strftime("%Y-%m-%d")
+                due_date_label = f"Через {days_val} дн. ({dt.strftime('%d.%m.%Y')})" if lang.startswith("ru") else f"{days_val} kundan keyin ({dt.strftime('%d.%m.%Y')})"
+                lower_text = (lower_text[:rel_days_match.start()] + " " + lower_text[rel_days_match.end():]).strip()
+
     if not due_date:
         if any(kw in lower_text for kw in ["ertaga", "эртага", "завтра"]):
             dt = now_uz + timedelta(days=1)
@@ -663,13 +707,22 @@ def parse_debt_voice(
             due_date = "зарплата"
             due_date_label = "С зарплаты" if lang.startswith("ru") else "Oylikda / С зарплаты"
 
-    # 2. Parse written or spoken amounts
+    # 2. Parse written or spoken amounts (ignore item counts like "2 ta" / "3 sht")
     amount = 0.0
     multipliers = {
         "ming": 1000, "минг": 1000, "тыс": 1000, "тысяч": 1000, "тысяча": 1000, "тысячи": 1000, "k": 1000, "к": 1000,
         "mln": 1000000, "млн": 1000000, "миллион": 1000000, "million": 1000000, "лям": 1000000, "ляма": 1000000, "лямов": 1000000,
         "сот": 100, "сотня": 100, "сотни": 100, "сотен": 100, "yuz": 100, "юз": 100
     }
+
+    # First check item quantity pattern (e.g. "2 ta non", "3 dona", "1.5 kg")
+    item_qty = None
+    qty_match = re_module.search(r"\b(\d+(?:[.,]\d+)?)\s*(ta|dona|sht|шт|kg|кг|l|л|quti|пачк\w*|буханк\w*)\b", lower_text, re_module.I)
+    if qty_match:
+        try:
+            item_qty = float(qty_match.group(1).replace(",", "."))
+        except ValueError:
+            pass
 
     digit_pattern = re_module.compile(
         r"(?<!\w)(\d{1,3}(?:[ \xa0]\d{3})+|\d+(?:[.,]\d+)?)(?:\s*(ming|минг|тыс(?:\w*)?|k|к|mln|млн|миллион(?:\w*)?|million|лям(?:\w*)?|сот(?:\w*)?|yuz|юз))?(?!\w)",
@@ -680,17 +733,21 @@ def parse_debt_voice(
     for match in digit_pattern.finditer(lower_text):
         raw_num = match.group(1).replace(" ", "").replace(" ", "").replace(",", ".")
         raw_mult = (match.group(2) or "").lower()
+        # Skip if this exact number is followed by a quantity unit without a money multiplier
+        after_text = lower_text[match.end():match.end()+12].lstrip()
+        if not raw_mult and re_module.match(r"^(?:ta|dona|sht|шт|kg|кг|l|л|quti)\b", after_text):
+            continue
         try:
             val = float(raw_num)
         except ValueError:
             continue
-        
+
         mult_val = 1
         for m_key, m_fact in multipliers.items():
             if raw_mult.startswith(m_key):
                 mult_val = m_fact
                 break
-        
+
         val = val * mult_val
         if 0 < val <= 1_000_000_000:
             digit_candidates.append(val)
@@ -727,7 +784,7 @@ def parse_debt_voice(
                 total += max(1, current) * mult
                 current = 0
                 saw_num = True
-        if saw_num:
+        if saw_num and (total >= 500 or current >= 500):
             amount = float(total + current)
 
     # 3. Extract Debtor Name & Match DB
@@ -751,17 +808,23 @@ def parse_debt_voice(
         "пятница", "понедельник", "вторник", "среда", "четверг", "суббота", "воскресенье",
         "пятницы", "понедельника", "вторника", "среды", "четверга", "субботы", "воскресенья",
         "завтра", "послезавтра", "через неделю", "на неделю", "до конца месяца", "конец месяца", "с зарплаты", "зарплата",
-        "dushanbagacha", "seshanbagacha", "chorshanbagacha", "payshanbagacha", "jumagacha", "shanbagacha", "yakshanbagacha", "ertaga", "indinga", "bir hafta", "oy oxirida", "maoshda"
+        "dushanbagacha", "seshanbagacha", "chorshanbagacha", "payshanbagacha", "jumagacha", "shanbagacha", "yakshanbagacha",
+        "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba",
+        "ertaga", "indinga", "bir hafta", "oy oxirida", "maoshda"
     ]
     for d_kw in sorted(date_noise, key=len, reverse=True):
         clean_no_digits = re_module.sub(rf"\b{re_module.escape(d_kw)}\b", " ", clean_no_digits)
 
-    filler = ["so'm", "som", "сум", "рублей", "руб", "ming", "минг", "тысяч", "тыс", "k", "к", "до", "в", "на", "с", "бер", "берди", "oldi"]
+    filler = [
+        "so'm", "som", "сум", "рублей", "руб", "ming", "минг", "тысяч", "тыс", "k", "к",
+        "до", "в", "на", "с", "бер", "берди", "oldi", "ta", "dona", "to'ladi", "toladi",
+        "qaytardi", "uzdi", "вернул", "отдал", "оплатил", "погасил"
+    ]
     for f_w in filler:
         clean_no_digits = re_module.sub(rf"\b{re_module.escape(f_w)}\b", " ", clean_no_digits)
 
     tokens = [w for w in re_module.findall(r"[\w']+", clean_no_digits) if len(w) > 1]
-    
+
     extracted_name = ""
     note_tokens = []
     known_items = {
@@ -773,11 +836,12 @@ def parse_debt_voice(
         "piyoz", "piyozga", "sabzi", "sabziga", "tuxum", "tuxumga", "sigaret", "sigaretga",
         "kola", "kolaga", "cola", "suv", "suvga", "buxanka", "makaron", "guruch", "pivo"
     }
-    honorifics = {"aka", "opa", "uka", "tog'a", "toga", "amaki", "amak", "xola", "kelin", "pochcha", "usta"}
+    honorifics = {"aka", "opa", "uka", "tog'a", "toga", "amaki", "amak", "xola", "kelin", "pochcha", "usta", "ака", "опа", "ука"}
     verbs_to_drop = {
         "вернет", "вернёт", "вернуть", "отдаст", "отдать", "принесет", "принесёт", "занесет", "занесёт",
         "взял", "взяла", "брал", "брала", "на", "за", "в", "до",
-        "qaytaradi", "beradi", "beraman", "oldi", "olgan", "oladi", "yoz", "yozib", "to'laydi", "tolaydi", "olib"
+        "qaytaradi", "beradi", "beraman", "oldi", "olgan", "oladi", "yoz", "yozib", "to'laydi", "tolaydi", "olib",
+        "kuni", "ga", "gacha"
     }
 
     if tokens:
@@ -814,7 +878,7 @@ def parse_debt_voice(
     else:
         extracted_name = "Новый должник" if lang.startswith("ru") else "Yangi mijoz"
 
-    # Match against DB debtors
+    # Match against DB debtors (with fuzzy score fallback)
     debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
     matched_debtor = None
     best_score = 0.0
@@ -827,25 +891,54 @@ def parse_debt_voice(
             variant_tokens.update(_normalize_ocr_name(variant).split())
         overlap = len(search_tokens & (db_tokens | variant_tokens))
         score = overlap / max(1, len(search_tokens | db_tokens))
-        if overlap and score > best_score:
+        if not overlap and extracted_name:
+            # Fuzzy fallback on primary token
+            for variant in get_search_variants(d.full_name):
+                f_score = fuzzy_match_score(extracted_name.lower(), variant.lower())
+                if f_score > 0.72 and f_score > score:
+                    score = f_score
+        if score > best_score:
             matched_debtor, best_score = d, score
 
     debtor_id = matched_debtor.id if matched_debtor and best_score >= 0.25 else None
     final_debtor_name = matched_debtor.full_name if debtor_id else extracted_name
     is_new = debtor_id is None
 
+    # If no explicit money amount was spoken, try estimating from catalog item * qty
+    if amount == 0.0 and note_tokens:
+        qty = item_qty or 1.0
+        for nt in note_tokens:
+            for variant in get_search_variants(nt):
+                prod = session.exec(
+                    select(Product).where(Product.is_active == True, Product.name.ilike(f"%{variant}%"))
+                ).first()
+                if prod:
+                    amount = round(prod.sale_price * qty, 2)
+                    break
+            if amount > 0:
+                break
+
     note = " ".join(note_tokens).strip()
+    if item_qty and note:
+        note = f"{int(item_qty) if item_qty.is_integer() else item_qty}x {note}"
     if not note:
-        note = "Голосовая запись" if lang.startswith("ru") else "Ovozli yozuv"
+        note = "Оплата долга (голос)" if (transaction_type == "DEBT_PAYMENT" and lang.startswith("ru")) else (
+            "Qarz to'lovi (ovozli)" if transaction_type == "DEBT_PAYMENT" else (
+                "Голосовая запись" if lang.startswith("ru") else "Ovozli yozuv"
+            )
+        )
 
     return DebtVoiceParseResponse(
         debtor_id=debtor_id,
         debtor_name=final_debtor_name,
         amount=amount,
+        transaction_type=transaction_type,
+        phone=extracted_phone,
         due_date=due_date,
         due_date_label=due_date_label,
         note=note,
-        is_new_debtor=is_new
+        is_new_debtor=is_new,
+        confidence=round(max(0.5, best_score if debtor_id else 0.85), 2)
     )
 
 

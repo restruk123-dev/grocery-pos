@@ -1,9 +1,12 @@
-const CACHE_NAME = 'grocery-pos-v4';
+const CACHE_NAME = 'grocery-pos-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
+  '/static/app.css',
   '/static/vendor/react.production.min.js',
   '/static/vendor/react-dom.production.min.js',
+  '/static/vendor/html5-qrcode.min.js',
+  '/static/vendor/tesseract.min.js',
   '/static/app.js'
 ];
 
