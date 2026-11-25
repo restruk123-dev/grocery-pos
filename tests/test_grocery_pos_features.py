@@ -644,4 +644,100 @@ def test_offline_assets_served(session):
     assert len(res_css.content) > 5000
 
 
+def test_expiry_discount_receipts_and_telegram_status(session):
+    from datetime import date, timedelta
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Product with expiry date within 3 days
+    soon_date = (date.today() + timedelta(days=3)).isoformat()
+    res_p = client.post(
+        "/api/v1/products",
+        json={
+            "barcode": "4780005551112",
+            "name": "Kefir 500ml",
+            "purchase_price": 6000,
+            "sale_price": 8000,
+            "stock_quantity": 20,
+            "expiry_date": soon_date,
+        },
+        headers=headers,
+    )
+    assert res_p.status_code == 200
+    created_p = res_p.json()
+    assert created_p["expiry_date"] == soon_date
+    assert created_p["is_expiring_soon"] is True
+    assert created_p["name"] == "Kefir 500ml"
+
+    # Filter expiring_soon_only
+    res_exp = client.get("/api/v1/products?expiring_soon_only=true", headers=headers)
+    assert res_exp.status_code == 200
+    assert any(it["barcode"] == "4780005551112" for it in res_exp.json()["items"])
+
+    # 2. Checkout with discount_amount
+    res_chk = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [{"product_id": created_p["id"], "quantity": 2}],
+            "payment_method": "CASH",
+            "discount_amount": 1000,
+            "cash_received": 15000,
+        },
+        headers=headers,
+    )
+    assert res_chk.status_code == 200
+    chk = res_chk.json()
+    assert chk["gross_total"] == 16000.0
+    assert chk["discount_amount"] == 1000.0
+    assert chk["total_amount"] == 15000.0
+
+    # 3. Recent receipts listing endpoint
+    res_rcpts = client.get("/api/v1/pos/receipts?limit=10", headers=headers)
+    assert res_rcpts.status_code == 200
+    rcpts = res_rcpts.json()
+    assert any(r["receipt_number"] == chk["receipt_number"] and r["discount_amount"] == 1000.0 for r in rcpts)
+
+    # 4. Telegram status endpoint (safe masked response)
+    res_tg = client.get("/api/v1/telegram/status", headers=headers)
+    assert res_tg.status_code == 200
+    assert "configured" in res_tg.json()
+
+
+def test_ensure_categories_and_purge_demo_data(session):
+    from app.seed import seed_database, ensure_default_categories
+    cats = ensure_default_categories(session)
+    assert len(cats) == 10
+
+    stats = seed_database(session, target_sku_count=30)
+
+    # Real product added by owner should survive demo purge
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+    real_res = client.post(
+        "/api/v1/products",
+        json={
+            "barcode": "4780007778889",
+            "name": "Real Milk 1L",
+            "purchase_price": 8000,
+            "sale_price": 11000,
+            "stock_quantity": 12,
+        },
+        headers=headers,
+    )
+    assert real_res.status_code == 200
+
+    purge_res = client.post("/api/v1/products/purge-demo", headers=headers)
+    assert purge_res.status_code == 200
+    removed = purge_res.json()["removed"]
+    assert removed["products"] == stats["products"] == 28
+    assert removed["suppliers"] >= 3
+    assert removed["debtors"] >= 5
+
+    remaining = session.exec(select(Product)).all()
+    barcodes = {p.barcode for p in remaining}
+    assert "4780007778889" in barcodes
+    assert not any(b.startswith("460700000") for b in barcodes)
+
+
+
 

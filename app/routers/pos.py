@@ -35,6 +35,7 @@ class CartItemRequest(BaseModel):
 class CheckoutRequest(BaseModel):
     items: List[CartItemRequest] = Field(min_length=1, max_length=500)
     payment_method: str = Field(default="CASH", pattern="^(CASH|CARD|DEBT|MIXED)$")
+    discount_amount: float = Field(default=0.0, ge=0.0, le=1_000_000_000)
     cash_received: float = Field(default=0.0, ge=0, le=1_000_000_000_000)
     card_amount: float = Field(default=0.0, ge=0, le=1_000_000_000_000)
     debt_amount: float = Field(default=0.0, ge=0, le=1_000_000_000_000)
@@ -153,7 +154,9 @@ def checkout(
             "previous_stock": previous_stock,
         })
 
-    total = round(total, 2)
+    gross_total = round(total, 2)
+    discount_amount = round(min(float(data.discount_amount or 0.0), gross_total), 2)
+    total = round(max(0.0, gross_total - discount_amount), 2)
 
     # Validate payment method amounts
     change_given = 0.0
@@ -209,6 +212,7 @@ def checkout(
     sale = Sale(
         receipt_number=receipt_number,
         total_amount=total,
+        discount_amount=discount_amount,
         payment_method=payment_method,
         cash_received=cash_received,
         change_given=change_given,
@@ -282,6 +286,8 @@ def checkout(
     return {
         "id": sale.id,
         "receipt_number": sale.receipt_number,
+        "gross_total": gross_total,
+        "discount_amount": discount_amount,
         "total_amount": sale.total_amount,
         "payment_method": sale.payment_method.value,
         "amount_paid": round(total - debt_amount, 2),
@@ -519,6 +525,65 @@ def list_shift_history(
 
 # ── Receipt & Refund Storno ───────────────────────────────────────────────
 
+@router.get("/receipts", response_model=List[dict])
+def list_recent_receipts(
+    search: Optional[str] = Query(None, max_length=64),
+    limit: int = Query(30, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """List recent sales receipts for fast reprint and refund lookup without memorizing IDs."""
+    query = select(Sale)
+    if search and search.strip():
+        q = f"%{search.strip()}%"
+        query = query.where(Sale.receipt_number.ilike(q))
+    sales = session.exec(query.order_by(Sale.created_at.desc()).limit(limit)).all()
+    if not sales:
+        return []
+
+    sale_ids = [s.id for s in sales if s.id is not None]
+    items = session.exec(select(SaleItem).where(SaleItem.sale_id.in_(sale_ids))).all() if sale_ids else []
+    refunds = session.exec(select(SaleRefund).where(SaleRefund.sale_id.in_(sale_ids))).all() if sale_ids else []
+    users = {u.id: u.full_name for u in session.exec(select(User)).all()}
+    debtors = {d.id: d.full_name for d in session.exec(select(Debtor)).all()}
+
+    items_by_sale = {}
+    for it in items:
+        items_by_sale.setdefault(it.sale_id, []).append(it)
+    refunded_sale_ids = {r.sale_id for r in refunds}
+
+    out = []
+    for s in sales:
+        s_items = items_by_sale.get(s.id, [])
+        out.append({
+            "id": s.id,
+            "receipt_number": s.receipt_number,
+            "total_amount": s.total_amount,
+            "discount_amount": getattr(s, "discount_amount", 0.0) or 0.0,
+            "payment_method": s.payment_method.value,
+            "cash_received": s.cash_received,
+            "change_given": s.change_given,
+            "card_amount": s.card_amount,
+            "debt_amount": s.debt_amount,
+            "cashier_name": users.get(s.cashier_id, "Kassir"),
+            "debtor_name": debtors.get(s.debtor_id) if s.debtor_id else None,
+            "has_refund": s.id in refunded_sale_ids,
+            "created_at": s.created_at.isoformat(),
+            "items_count": len(s_items),
+            "items": [
+                {
+                    "product_id": it.product_id,
+                    "product_name": it.product_name,
+                    "quantity": it.quantity,
+                    "unit_price": it.unit_price,
+                    "total_price": it.total_price,
+                }
+                for it in s_items
+            ],
+        })
+    return out
+
+
 @router.get("/receipt/{receipt_number}", response_model=dict)
 def get_receipt_details(
     receipt_number: str,
@@ -545,9 +610,14 @@ def get_receipt_details(
     for ri in refund_items:
         already_refunded_qty[ri.product_id] = already_refunded_qty.get(ri.product_id, 0.0) + ri.quantity
 
+    discount_amt = float(getattr(sale, "discount_amount", 0.0) or 0.0)
+    gross_amt = round(sale.total_amount + discount_amt, 2)
+
     return {
         "id": sale.id,
         "receipt_number": sale.receipt_number,
+        "gross_total": gross_amt,
+        "discount_amount": discount_amt,
         "total_amount": sale.total_amount,
         "payment_method": sale.payment_method.value,
         "cash_received": sale.cash_received,

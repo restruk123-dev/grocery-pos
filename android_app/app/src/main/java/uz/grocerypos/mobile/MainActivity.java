@@ -155,6 +155,27 @@ public final class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
+                String scheme = uri.getScheme() != null ? uri.getScheme().toLowerCase() : "";
+                String host = uri.getHost() != null ? uri.getHost().toLowerCase() : "";
+                boolean isExternalAction = "tel".equals(scheme)
+                        || "sms".equals(scheme)
+                        || "smsto".equals(scheme)
+                        || "mailto".equals(scheme)
+                        || "tg".equals(scheme)
+                        || "whatsapp".equals(scheme)
+                        || (("https".equals(scheme) || "http".equals(scheme))
+                            && ("t.me".equals(host) || "wa.me".equals(host) || "api.whatsapp.com".equals(host)));
+                if (isExternalAction) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this,
+                                localized("Нет приложения для открытия ссылки",
+                                        "Havolani ochish uchun ilova topilmadi"),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                }
                 boolean trusted = isTrustedHost(uri);
                 if (!trusted) {
                     Toast.makeText(MainActivity.this,

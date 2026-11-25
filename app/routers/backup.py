@@ -16,8 +16,17 @@ from ..auth import decode_access_token
 from ..models import (
     SystemSetting, User, UserRole, Category, Product, Debtor,
     Supplier, SupplierInvoice, SupplierInvoiceItem, DebtTransaction,
-    Sale, SaleItem, Expense
+    Sale, SaleItem, Expense, StockMovement, InventoryAct, InventoryActItem,
+    CashShift, CashShiftAction, SaleRefund, SaleRefundItem, StoreOutlet
 )
+
+ALL_BACKUP_MODELS = [
+    SystemSetting, StoreOutlet, User, Category, Product, Debtor,
+    CashShift, CashShiftAction, Sale, SaleItem, DebtTransaction,
+    SaleRefund, SaleRefundItem, Supplier, SupplierInvoice,
+    SupplierInvoiceItem, Expense, InventoryAct, InventoryActItem,
+    StockMovement,
+]
 
 router = APIRouter(tags=["Backup & Persistence"])
 security = HTTPBearer(auto_error=False)
@@ -88,13 +97,8 @@ def create_sqlite_backup_file() -> tuple[str, str, int]:
         # PostgreSQL or dynamic engine: export all tables to a clean, portable SQLite database
         sqlite_eng = create_sqlmodel_engine(f"sqlite:///{backup_filepath.replace(os.sep, '/')}")
         SQLModel.metadata.create_all(sqlite_eng)
-        all_models = [
-            SystemSetting, User, Category, Product, Debtor,
-            DebtTransaction, Sale, SaleItem, Supplier,
-            SupplierInvoice, SupplierInvoiceItem, Expense
-        ]
         with Session(engine) as src_session, Session(sqlite_eng) as dst_session:
-            for model in all_models:
+            for model in ALL_BACKUP_MODELS:
                 try:
                     rows = src_session.exec(select(model)).all()
                     for row in rows:
@@ -200,13 +204,8 @@ def dump_to_disk(
     else:
         sqlite_eng = create_sqlmodel_engine(f"sqlite:///{dest_path.replace(os.sep, '/')}")
         SQLModel.metadata.create_all(sqlite_eng)
-        all_models = [
-            SystemSetting, User, Category, Product, Debtor,
-            DebtTransaction, Sale, SaleItem, Supplier,
-            SupplierInvoice, SupplierInvoiceItem, Expense
-        ]
         with Session(engine) as src_session, Session(sqlite_eng) as dst_session:
-            for model in all_models:
+            for model in ALL_BACKUP_MODELS:
                 try:
                     rows = src_session.exec(select(model)).all()
                     for row in rows:

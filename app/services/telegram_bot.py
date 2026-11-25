@@ -10,16 +10,17 @@ TELEGRAM_API_BASE = "https://api.telegram.org/bot"
 # ── Settings (read from env or project config) ──────────────────────────
 
 def _get_bot_token() -> Optional[str]:
-    """Read bot token from environment variable."""
-    return os.getenv("TELEGRAM_BOT_TOKEN")
+    """Read bot token dynamically from environment or persisted settings."""
+    val = os.getenv("TELEGRAM_BOT_TOKEN")
+    return val.strip() if val and val.strip() else None
 
 def _get_owner_chat_id() -> Optional[int]:
-    """Read owner chat ID from environment variable."""
+    """Read owner chat ID dynamically from environment variable."""
     val = os.getenv("TELEGRAM_OWNER_CHAT_ID")
-    return int(val) if val else None
-
-BOT_TOKEN = _get_bot_token()
-OWNER_CHAT_ID = _get_owner_chat_id()
+    try:
+        return int(val) if val and str(val).strip() else None
+    except ValueError:
+        return None
 
 # ── HTTP client (shared across calls) ───────────────────────────────────
 
@@ -30,8 +31,11 @@ _http = httpx.AsyncClient(timeout=30.0)
 
 async def _call_telegram(method: str, **kwargs) -> dict:
     """Make a request to the Telegram Bot API."""
-    url = f"{TELEGRAM_API_BASE}{BOT_TOKEN}/{method}"
-    resp = await _http.get(url, params=kwargs) if method in ("getMe", "getUpdates") else _http.post(url, params=kwargs)
+    token = _get_bot_token()
+    if not token:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN not configured")
+    url = f"{TELEGRAM_API_BASE}{token}/{method}"
+    resp = await (_http.get(url, params=kwargs) if method in ("getMe", "getUpdates") else _http.post(url, params=kwargs))
     resp.raise_for_status()
     data = resp.json()
     if not data.get("ok"):
@@ -55,142 +59,161 @@ async def send_photo(chat_id: int, photo: bytes, caption: str = "", parse_mode: 
 
 async def send_document(chat_id: int, document: bytes, filename: str, caption: str = "") -> dict:
     """Send a document (report file) to a chat."""
-    await _call_telegram("sendDocument", chat_id=chat_id, document=(filename, document), caption=caption)
+    token = _get_bot_token()
+    if not token:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN not configured")
+    url = f"{TELEGRAM_API_BASE}{token}/sendDocument"
+    resp = await _http.post(
+        url,
+        data={"chat_id": str(chat_id), "caption": caption},
+        files={"document": (filename, document, "text/plain")},
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if not data.get("ok"):
+        raise RuntimeError(f"Telegram API error: {data}")
     return {"ok": True}
 
 
 # ── Report generation ───────────────────────────────────────────────────
 
-async def generate_z_report(
-    session_local,
+def build_z_report_bytes(
+    session,
     include_cash: bool = True,
     include_non_cash: bool = True,
     include_profit: bool = True,
     include_debts: bool = True,
 ) -> bytes:
-    """
-    Generate the evening Z-report as a plain-text document.
-    Returns the report bytes (for sending via Telegram document).
-    """
-    from sqlmodel import select, func
-    from ..models import (
-        Product, Sale, SaleItem, Debtor, DebtTransaction,
-        PaymentMethod, Expense, ExpenseCategory
-    )
-    from ..database import get_session
+    """Generate the evening Z-report synchronously from an open SQLModel session."""
+    from datetime import timedelta
+    from sqlmodel import select
+    from ..models import Product, Sale, Debtor, Expense
 
-    async with session_local() as session:
-        # Sales today
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        sales = session.exec(
-            select(Sale).where(Sale.created_at >= today_start)
-        ).all()
+    tz_tashkent = timezone(timedelta(hours=5))
+    today_local = datetime.now(tz_tashkent).date()
+    today_start = datetime.combine(today_local, datetime.min.time(), tzinfo=tz_tashkent).astimezone(timezone.utc)
 
-        total_revenue = sum(s.total_amount for s in sales)
+    sales = session.exec(select(Sale).where(Sale.created_at >= today_start)).all()
+    total_revenue = sum(s.total_amount for s in sales)
+    cash_total = sum(s.total_amount for s in sales if s.payment_method.value == "CASH")
+    non_cash_total = sum(s.total_amount for s in sales if s.payment_method.value == "CARD")
+    debt_total = sum(s.total_amount for s in sales if s.payment_method.value == "DEBT")
 
-        # Payment breakdown
-        cash_total = sum(s.total_amount for s in sales if s.payment_method.value == "CASH")
-        non_cash_total = sum(s.total_amount for s in sales if s.payment_method.value == "CARD")
-        debt_total = sum(s.total_amount for s in sales if s.payment_method.value == "DEBT")
+    expenses = session.exec(select(Expense).where(Expense.expense_date >= today_start)).all()
+    total_expenses = sum(e.amount for e in expenses)
 
-        # Expenses today
-        expenses = session.exec(
-            select(Expense).where(Expense.expense_date >= today_start)
-        ).all()
-        total_expenses = sum(e.amount for e in expenses)
+    expenses_by_category: Dict[str, float] = {}
+    for e in expenses:
+        cat = e.category.value if e.category else "other"
+        expenses_by_category[cat] = expenses_by_category.get(cat, 0) + e.amount
 
-        # Categorized expenses
-        expenses_by_category: Dict[str, float] = {}
-        for e in expenses:
-            cat = e.category.value if e.category else "other"
-            expenses_by_category[cat] = expenses_by_category.get(cat, 0) + e.amount
+    debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
+    total_outstanding_debt = sum(d.balance for d in debtors if d.balance > 0)
 
-        # Debt summary
-        debtors = session.exec(select(Debtor).where(Debtor.is_active == True)).all()
-        total_outstanding_debt = sum(d.balance for d in debtors if d.balance > 0)
+    low_stock_items = session.exec(
+        select(Product).where(Product.is_active == True, Product.stock_quantity <= Product.min_stock_alert)
+    ).all()
+    low_stock_names = [p.name for p in low_stock_items]
 
-        # Low stock alert
-        low_stock_items = session.exec(
-            select(Product).where(Product.is_active == True, Product.stock_quantity <= Product.min_stock_alert)
-        ).all()
-        low_stock_names = [p.name for p in low_stock_items]
+    lines: List[str] = [
+        "=" * 40,
+        "EVENING Z-REPORT / KUNLIK Z-HISOBOT",
+        f"Date: {datetime.now(tz_tashkent).strftime('%Y-%m-%d %H:%M')}",
+        "=" * 40,
+        "",
+        "--- SALES / SAVDO ---",
+        f"Checks / Cheklar: {len(sales)}",
+        f"Total Revenue: {total_revenue:,.0f} UZS",
+    ]
+    if include_cash:
+        lines.append(f"  Cash (Naqd):      {cash_total:,.0f} UZS")
+    if include_non_cash:
+        lines.append(f"  Card (Karta):     {non_cash_total:,.0f} UZS")
+    if include_debts:
+        lines.append(f"  Debt (Qarz):      {debt_total:,.0f} UZS")
+    lines.extend(["", "--- EXPENSES / XARAJATLAR ---", f"Total Expenses: {total_expenses:,.0f} UZS"])
+    for cat, amount in expenses_by_category.items():
+        lines.append(f"  {cat}: {amount:,.0f} UZS")
+    if include_profit:
+        lines.extend(["", "--- BALANCE ---", f"Cash/Net Balance: {round(total_revenue - total_expenses, 2):,.0f} UZS"])
+    if include_debts:
+        lines.extend(["", "--- DEBTS / QARZLAR ---", f"Total Customer Debt: {total_outstanding_debt:,.0f} UZS"])
+    lines.extend(["", "--- LOW STOCK / KAM QOLDIQ ---"])
+    if low_stock_names:
+        for name in low_stock_names[:30]:
+            lines.append(f"  ! {name}")
+    else:
+        lines.append("  All items in stock.")
+    lines.append("=" * 40)
+    return "\n".join(lines).encode("utf-8")
 
-        # Build report text
-        lines: List[str] = []
-        lines.append("=" * 40)
-        lines.append("EVENING Z-REPORT")
-        lines.append(f"Date: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}")
-        lines.append("=" * 40)
-        lines.append("")
-        lines.append("--- SALES ---")
-        lines.append(f"Total Revenue: {total_revenue} UZS")
-        if include_cash:
-            lines.append(f"  Cash:        {cash_total} UZS")
-        if include_non_cash:
-            lines.append(f"  Non-cash:    {non_cash_total} UZS")
-        if include_debts:
-            lines.append(f"  Debt:        {debt_total} UZS")
-        lines.append("")
-        lines.append("--- EXPENSES ---")
-        lines.append(f"Total Expenses: {total_expenses} UZS")
-        if expenses_by_category:
-            for cat, amount in expenses_by_category.items():
-                lines.append(f"  {cat}: {amount} UZS")
-        lines.append("")
-        lines.append("--- PROFIT ---")
-        net_profit = round(total_revenue - total_expenses, 2)
-        lines.append(f"Net Profit:    {net_profit} UZS")
-        lines.append("")
-        lines.append("--- DEBTS OUTSTANDING ---")
-        lines.append(f"Outstanding client debt: {total_outstanding_debt} UZS")
-        lines.append("")
-        lines.append("--- LOW STOCK ALERT ---")
-        if low_stock_names:
-            lines.append("Items below minimum stock:")
-            for name in low_stock_names:
-                lines.append(f"  ⚠️ {name}")
-        else:
-            lines.append("  No low stock items.")
-        lines.append("")
-        lines.append("--- SUMMARY ---")
-        lines.append(f"Total SKU count: (from catalog)")
-        lines.append("=" * 40)
 
-        report_text = "\n".join(lines)
-        return report_text.encode("utf-8")
+async def generate_z_report(
+    session_or_factory,
+    include_cash: bool = True,
+    include_non_cash: bool = True,
+    include_profit: bool = True,
+    include_debts: bool = True,
+) -> bytes:
+    """Wrapper returning Z-report bytes from either a SQLModel Session or generator factory."""
+    if hasattr(session_or_factory, "exec"):
+        return build_z_report_bytes(
+            session_or_factory,
+            include_cash=include_cash,
+            include_non_cash=include_non_cash,
+            include_profit=include_profit,
+            include_debts=include_debts,
+        )
+    gen = session_or_factory()
+    sess = next(gen)
+    try:
+        return build_z_report_bytes(
+            sess,
+            include_cash=include_cash,
+            include_non_cash=include_non_cash,
+            include_profit=include_profit,
+            include_debts=include_debts,
+        )
+    finally:
+        try:
+            gen.close()
+        except Exception:
+            pass
 
 
 async def alert_low_stock(product_names: List[str]) -> None:
     """Send a low stock alert to the owner."""
-    if not OWNER_CHAT_ID:
+    chat_id = _get_owner_chat_id()
+    if not chat_id:
         return
-    text = "🚨 <b>Low Stock Alert</b>\n"
-    for name in product_names:
-        text += f"⚠️ <b>{name}</b> — oshliq qolgan miqdor < 10 ta\n"
-    await send_message(OWNER_CHAT_ID, text)
+    text = "🚨 <b>Kam qoldiq ogohlantirishi</b>\n"
+    for name in product_names[:25]:
+        text += f"⚠️ <b>{name}</b>\n"
+    await send_message(chat_id, text)
 
 
 async def alert_large_debt(amount: float, debtor_name: str) -> None:
     """Send an alert about a large debt operation."""
-    if not OWNER_CHAT_ID:
+    chat_id = _get_owner_chat_id()
+    if not chat_id:
         return
     text = (
-        f"🚨 <b>Large Debt Alert</b>\n"
+        f"🚨 <b>Katta qarz operatsiyasi</b>\n"
         f"Mijoz: <b>{debtor_name}</b>\n"
-        f"Qarz hajmi: <b>{amount} UZS</b>\n"
-        f"Chek yoki operatsiya registro etilgan."
+        f"Summa: <b>{amount:,.0f} so'm</b>"
     )
-    await send_message(OWNER_CHAT_ID, text)
+    await send_message(chat_id, text)
 
 
 # ── One-time test send ──────────────────────────────────────────────────
 
 async def test_send(message: str = "🧪 Test xabari: GroceryStore POS bot ishga tushdi / Bot started successfully.") -> dict:
     """Send a one-time test message to the owner chat."""
-    if not OWNER_CHAT_ID:
+    chat_id = _get_owner_chat_id()
+    if not chat_id:
         raise RuntimeError("TELEGRAM_OWNER_CHAT_ID not set")
-    await send_message(OWNER_CHAT_ID, message)
-    return {"ok": True, "chat_id": OWNER_CHAT_ID, "message": message}
+    await send_message(chat_id, message)
+    return {"ok": True, "chat_id": chat_id, "message": message}
 
 
 # ── Cleanup ─────────────────────────────────────────────────────────────

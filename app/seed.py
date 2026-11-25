@@ -5,7 +5,9 @@ from .config import settings
 from .auth import hash_password
 from .models import (
     User, UserRole, Category, Product, Debtor, Supplier, SystemSetting,
-    DebtTransaction, DebtTransactionType, Expense, ExpenseCategory
+    DebtTransaction, DebtTransactionType, Expense, ExpenseCategory,
+    Sale, SaleItem, SaleRefundItem, SupplierInvoice, SupplierInvoiceItem,
+    InventoryActItem, StockMovement
 )
 
 CATEGORIES_DATA = [
@@ -200,13 +202,10 @@ def seed_accounts(session: Session) -> int:
 
     return created
 
-def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
-    """Populate demo catalog data; initial users require explicit strong credentials."""
-    stats = {"users": seed_accounts(session), "categories": 0, "products": 0, "debtors": 0, "suppliers": 0}
-    now_utc = datetime.now(timezone.utc)
 
-    # 2. Always ensure default Categories exist
-    category_map = {}
+def ensure_default_categories(session: Session) -> dict[str, int]:
+    """Ensure baseline grocery categories exist without adding any demo products or transactions."""
+    category_map: dict[str, int] = {}
     for cat_data in CATEGORIES_DATA:
         cat = session.exec(select(Category).where(Category.name == cat_data["name"])).first()
         if not cat:
@@ -214,8 +213,85 @@ def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
             session.add(cat)
             session.commit()
             session.refresh(cat)
-            stats["categories"] += 1
         category_map[cat.name] = cat.id
+    return category_map
+
+
+def purge_seeded_demo_data(session: Session) -> dict[str, int]:
+    """Safely remove untouched seeded demo products, suppliers, debtors and expenses."""
+    removed = {"products": 0, "suppliers": 0, "debtors": 0, "expenses": 0}
+
+    used_product_ids = set(session.exec(select(SaleItem.product_id)).all())
+    used_product_ids.update(session.exec(select(SaleRefundItem.product_id)).all())
+    used_product_ids.update(session.exec(select(SupplierInvoiceItem.product_id)).all())
+    used_product_ids.update(session.exec(select(InventoryActItem.product_id)).all())
+    used_product_ids.update(session.exec(select(StockMovement.product_id)).all())
+    used_product_ids.update(
+        pid for pid in session.exec(select(Expense.product_id).where(Expense.product_id != None)).all() if pid is not None
+    )
+
+    demo_products = session.exec(
+        select(Product).where(Product.barcode.startswith("460700000"), Product.name.contains("#"))
+    ).all()
+    for p in demo_products:
+        if len(p.barcode or "") == 13 and p.id not in used_product_ids:
+            session.delete(p)
+            removed["products"] += 1
+
+    demo_supplier_names = {
+        "MCHJ 'Musaffo Sut Alyansi'",
+        "AJ 'Toshkent Non Kombinati'",
+        "XK 'OptBaqoliya va Shirinliklar'",
+    }
+    used_supplier_ids = set(session.exec(select(SupplierInvoice.supplier_id)).all())
+    for sup in session.exec(select(Supplier).where(Supplier.name.in_(list(demo_supplier_names)))).all():
+        if sup.id not in used_supplier_ids:
+            session.delete(sup)
+            removed["suppliers"] += 1
+
+    demo_debtor_names = {
+        "Alisher Rahimov",
+        "Mariya Ivanovna (muallima)",
+        "Damir usta (avtoservis)",
+        "Nargiza opa",
+        "Sergey quruvchi",
+    }
+    used_debtor_sale_ids = {
+        did for did in session.exec(select(Sale.debtor_id).where(Sale.debtor_id != None)).all() if did is not None
+    }
+    for deb in session.exec(select(Debtor).where(Debtor.full_name.in_(list(demo_debtor_names)))).all():
+        if deb.id in used_debtor_sale_ids:
+            continue
+        txs = session.exec(select(DebtTransaction).where(DebtTransaction.debtor_id == deb.id)).all()
+        if any(tx.sale_id is not None or (tx.note and "Boshlang'ich qarz" not in tx.note) for tx in txs):
+            continue
+        for tx in txs:
+            session.delete(tx)
+        session.delete(deb)
+        removed["debtors"] += 1
+
+    demo_expense_descs = {
+        "Do'kon binosi oylik ijara to'lovi (so'm)",
+        "Elektr energiyasi va muzlatgichlar uchun to'lov (so'm)",
+        "Hisobdan chiqarish: zararlangan banan va pomidorlar (so'm)",
+    }
+    for exp in session.exec(select(Expense).where(Expense.description.in_(list(demo_expense_descs)))).all():
+        session.delete(exp)
+        removed["expenses"] += 1
+
+    session.commit()
+    return removed
+
+
+def seed_database(session: Session, target_sku_count: int = 2000) -> dict:
+    """Populate demo catalog data; initial users require explicit strong credentials."""
+    stats = {"users": seed_accounts(session), "categories": 0, "products": 0, "debtors": 0, "suppliers": 0}
+    now_utc = datetime.now(timezone.utc)
+
+    # 2. Always ensure default Categories exist
+    existing_cat_count = len(session.exec(select(Category.id)).all())
+    category_map = ensure_default_categories(session)
+    stats["categories"] = max(0, len(category_map) - existing_cat_count)
 
     # If owner cleared catalog for clean store start, DO NOT seed fake suppliers, debts, products or expenses!
     cleared_setting = session.get(SystemSetting, 'catalog_cleared')

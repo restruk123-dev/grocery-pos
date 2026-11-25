@@ -53,7 +53,6 @@ const TRANSLATIONS = {
     pwaBannerClose: "Tushunarli",
     clearCatalogBtn: "Test tovarlarni tozalash / Toza varaqdan boshlash",
     clearCatalogWarning: "Rostdan ham barcha test tovarlar va cheklarni tozalamoqchimisiz? Kechki savdo uchun toza baza tayyorlanadi.",
-    reseedCatalogBtn: "2000 ta demo tovarlarni qaytarish",
     ownerRole: "Ega (Xo'jayin)",
     cashierRole: "Kassir",
     tabPos: "📱 Kassa (POS)",
@@ -72,7 +71,6 @@ const TRANSLATIONS = {
     passwordLabel: "Maxfiy parol",
     loginBtn: "Kassaga kirish",
     loggingIn: "Kirilmoqda...",
-    quickDemo: "Tezkor demo-kirish:",
     ownerBtn: "👑 Ega (owner)",
     cashierBtn: "👩‍💼 Kassir (cashier)",
     searchProductPlaceholder: "🔍 Shtrixkod yoki mahsulot nomi bo'yicha qidirish...",
@@ -132,7 +130,6 @@ const TRANSLATIONS = {
     historyModalTitle: "Qarz operatsiyalari tarixi",
     catalogTitle: "Mahsulotlar katalogi",
     lowStockFilter: "⚠️ Oz qolganlar",
-    syncCatalogBtn: "🔄 Sinxronlash (2000 SKU)",
     colBarcode: "Shtrixkod",
     colName: "Nomi",
     colCategory: "Kategoriya",
@@ -259,9 +256,8 @@ const TRANSLATIONS = {
     pwaBannerTitle: "Установить на домашний экран (Открыть без браузера)",
     pwaBannerDesc: "Чтобы приложение открывалось в отдельном изолированном окне без адресной строки: нажмите Меню браузера (3 точки) ➔ «Добавить на главный экран» (или «Установить приложение»).",
     pwaBannerClose: "Понятно",
-    clearCatalogBtn: "Очистить демо-товары / Начать с чистого листа",
-    clearCatalogWarning: "Вы действительно хотите удалить все демо-товары и чеки? База будет подготовлена к реальной торговле.",
-    reseedCatalogBtn: "Вернуть 2000 демо-товаров",
+    clearCatalogBtn: "Очистить базу / Начать с чистого листа",
+    clearCatalogWarning: "Вы действительно хотите удалить все товары и чеки? База будет очищена для старта с нуля.",
     ownerRole: "Хозяин",
     cashierRole: "Кассир",
     tabPos: "📱 Касса (POS)",
@@ -280,7 +276,6 @@ const TRANSLATIONS = {
     passwordLabel: "Пароль",
     loginBtn: "Войти в терминал",
     loggingIn: "Вход в систему...",
-    quickDemo: "Быстрый демо-вход:",
     ownerBtn: "👑 Хозяин (owner)",
     cashierBtn: "👩‍💼 Кассир (cashier)",
     searchProductPlaceholder: "🔍 Поиск по штрихкоду или названию товара...",
@@ -340,7 +335,6 @@ const TRANSLATIONS = {
     historyModalTitle: "История операций по долгу",
     catalogTitle: "Каталог товаров",
     lowStockFilter: "⚠️ Мало на складе",
-    syncCatalogBtn: "🔄 Синхр. 2000 SKU",
     colBarcode: "Штрихкод",
     colName: "Наименование",
     colCategory: "Категория",
@@ -454,6 +448,7 @@ function cyrToLat(text) {
 function playAudioCue(type = 'success') {
   if (typeof window === 'undefined') return;
   try {
+    if (localStorage.getItem('pos_sound') === 'false') return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
@@ -655,6 +650,8 @@ function SettingsModal({
   onLangChange,
   theme,
   onToggleTheme,
+  soundEnabled,
+  onToggleSound,
   onOpenPasswordModal,
   onOpenPhoneModal,
   onLogout,
@@ -663,13 +660,48 @@ function SettingsModal({
   t
 }) {
   const [downloading, setDownloading] = useState(false);
-  const [reseedLoading, setReseedLoading] = useState(false);
+  const [purgeLoading, setPurgeLoading] = useState(false);
   const [clearLoading, setClearLoading] = useState(false);
+  const [showDangerZone, setShowDangerZone] = useState(false);
+  const [clearConfirmText, setClearConfirmText] = useState('');
+  const [clearPassword, setClearPassword] = useState('');
+  const [stores, setStores] = useState([]);
+  const [activeStoreId, setActiveStoreId] = useState(() => localStorage.getItem('pos_store_id') || '');
+  const [newStoreName, setNewStoreName] = useState('');
+  const [newStoreType, setNewStoreType] = useState('grocery');
+
+  useEffect(() => {
+    fetch(`${API_BASE}/pos/stores`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(list => setStores(safeArray(list)))
+      .catch(() => {});
+  }, []);
+
+  const createStoreOutlet = async () => {
+    if (!newStoreName.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE}/pos/stores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: newStoreName.trim(), store_type: newStoreType })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Xatolik');
+      setStores(prev => [...prev, data]);
+      setActiveStoreId(String(data.id));
+      localStorage.setItem('pos_store_id', String(data.id));
+      localStorage.setItem('pos_store_name', data.name);
+      setNewStoreName('');
+      notify(lang === 'uz' ? `Filial qo'shildi: ${data.name}` : `Точка добавлена: ${data.name}`);
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
 
   const downloadBackup = async () => {
     setDownloading(true);
     try {
-      const res = await fetch(`${API_BASE}/backup/dump`, {
+      const res = await fetch(`${API_BASE}/backup/download`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error(lang === "uz" ? "Zaxira nusxa yaratib bo'lmadi" : "Не удалось создать бэкап");
@@ -677,56 +709,69 @@ function SettingsModal({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `grocery_pos_backup_${new Date().toISOString().slice(0, 10)}.sql`;
+      a.download = `grocery_pos_backup_${new Date().toISOString().slice(0, 10)}.db`;
       document.body.appendChild(a);
       a.click();
       a.remove();
+      window.URL.revokeObjectURL(url);
       notify(lang === "uz" ? "Zaxira nusxa yuklab olindi!" : "Резервная копия скачана!");
     } catch (e) {
-      notify(lang === "uz" ? "Yuklab olishda xatolik" : "Ошибка скачивания бэкапа", "error");
+      notify(e.message || (lang === "uz" ? "Yuklab olishda xatolik" : "Ошибка скачивания бэкапа"), "error");
     } finally {
       setDownloading(false);
     }
   };
 
-  const reseedCatalog = async () => {
-    if (!confirm(lang === "uz" ? "2000 ta demo tovarlarni qayta tiklamoqchimisiz?" : "Восстановить 2000 демо-товаров?")) return;
-    setReseedLoading(true);
+  const purgeDemoOnly = async () => {
+    setPurgeLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/products/reseed-catalog?target_count=2000`, {
+      const res = await fetch(`${API_BASE}/products/purge-demo`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      notify(data.message || (lang === "uz" ? "Katalog yangilandi!" : "Каталог обновлен!"));
+      if (!res.ok) throw new Error(data.detail || "Xatolik");
+      const r = data.removed || {};
+      notify(lang === "uz"
+        ? `Demo tozalandi: ${r.products || 0} tovar, ${r.debtors || 0} qarz, ${r.suppliers || 0} ta'minotchi`
+        : `Демо очищено: ${r.products || 0} товаров, ${r.debtors || 0} долгов, ${r.suppliers || 0} поставщ.`);
     } catch (e) {
-      notify(lang === "uz" ? "Sinxronlashda xatolik" : "Ошибка синхронизации", "error");
+      notify(e.message || (lang === "uz" ? "Tozalashda xatolik" : "Ошибка очистки"), "error");
     } finally {
-      setReseedLoading(false);
+      setPurgeLoading(false);
     }
   };
 
-  const clearCatalog = async () => {
-    if (!confirm(lang === "uz" ? "Barcha test tovarlar va cheklar tozalanadi. Tasdiqlaysizmi?" : "Очистить все тестовые чеки и товары?")) return;
+  const clearCatalog = async (e) => {
+    e.preventDefault();
+    if (clearConfirmText.trim() !== "DELETE ALL STORE DATA" || !clearPassword) {
+      notify(lang === "uz" ? "Tasdiq matni va parolni kiriting" : "Введите фразу подтверждения и пароль", "error");
+      return;
+    }
     setClearLoading(true);
     try {
       const res = await fetch(`${API_BASE}/products/clear-catalog`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ confirmation: clearConfirmText.trim(), current_password: clearPassword })
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Xatolik");
       notify(data.message || (lang === "uz" ? "Baza tozalandi!" : "База очищена!"));
+      setShowDangerZone(false);
+      setClearConfirmText('');
+      setClearPassword('');
     } catch (e) {
-      notify(lang === "uz" ? "Tozalashda xatolik" : "Ошибка очистки", "error");
+      notify(e.message || (lang === "uz" ? "Tozalashda xatolik" : "Ошибка очистки"), "error");
     } finally {
       setClearLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl text-slate-800 dark:text-slate-100 modal-mobile-safe">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-2xl">⚙️</span>
             <div>
@@ -734,200 +779,152 @@ function SettingsModal({
                 {lang === "uz" ? "Tizim sozlamalari" : "Настройки системы"}
               </h3>
               <p className="text-xs text-slate-400">
-                {user?.full_name || user?.username} ({user?.role || "Kassir"})
+                {user?.full_name || user?.username} ({user?.role === 'owner' ? t.ownerRole : t.cashierRole})
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1">✕</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs">
-          {/* Language selection */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <label className="font-bold text-slate-700 dark:text-slate-300 block mb-2">
-              🌐 {lang === "uz" ? "Tilni tanlash / Язык интерфейса" : "Язык интерфейса / Til"}
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => onLangChange("uz")}
-                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  lang === "uz"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                }`}
-              >
-                <span>🇺🇿</span>
-                <span>O'zbekcha</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onLangChange("ru")}
-                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  lang === "ru"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                }`}
-              >
-                <span>🇷🇺</span>
-                <span>Русский</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Theme selection */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <label className="font-bold text-slate-700 dark:text-slate-300 block mb-2">
-              🌓 {lang === "uz" ? "Tungi / Kunduzgi mavzu" : "Тема оформления"}
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => onToggleTheme("light")}
-                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  theme === "light"
-                    ? "bg-amber-500 text-white shadow-sm"
-                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                }`}
-              >
-                <span>☀️</span>
-                <span>{lang === "uz" ? "Yorug'" : "Светлая"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleTheme("dark")}
-                className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                  theme === "dark"
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                }`}
-              >
-                <span>🌙</span>
-                <span>{lang === "uz" ? "Qorong'i" : "Темная"}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Account Security */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  🔑 {lang === "uz" ? "Parolni almashtirish" : "Сменить пароль"}
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  {lang === "uz" ? "Kassir yoki do'kon egasi paroli" : "Безопасность учетной записи"}
-                </div>
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 text-xs">
+          {/* Language & Theme + Sound */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-2">🌐 {lang === "uz" ? "Til" : "Язык"}</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button type="button" onClick={() => onLangChange("uz")} className={`py-2 rounded-xl font-bold transition ${lang === "uz" ? "bg-emerald-600 text-white shadow-sm" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`}>🇺🇿 O'zbek</button>
+                <button type="button" onClick={() => onLangChange("ru")} className={`py-2 rounded-xl font-bold transition ${lang === "ru" ? "bg-emerald-600 text-white shadow-sm" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`}>🇷🇺 Русский</button>
               </div>
-              <button
-                type="button"
-                onClick={() => { onClose(); onOpenPasswordModal(); }}
-                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl text-xs font-bold transition text-slate-800 dark:text-slate-200"
-              >
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-2">🌓 {lang === "uz" ? "Mavzu va Ovoz" : "Тема и Звук"}</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button type="button" onClick={() => onToggleTheme("light")} className={`py-2 rounded-xl font-bold transition ${theme === "light" ? "bg-amber-500 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`}>☀️</button>
+                <button type="button" onClick={() => onToggleTheme("dark")} className={`py-2 rounded-xl font-bold transition ${theme === "dark" ? "bg-indigo-600 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`}>🌙</button>
+                <button type="button" onClick={onToggleSound} className={`py-2 rounded-xl font-bold transition ${soundEnabled ? "bg-emerald-600 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400"}`} title={lang === "uz" ? "Tovush signallari" : "Звуковые сигналы"}>{soundEnabled ? '🔊' : '🔇'}</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Store / Branch selector */}
+          {user?.role === 'owner' && (
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="font-bold text-slate-800 dark:text-slate-200">🏪 {lang === "uz" ? "Do'konlar / Filiallar" : "Точки / Филиалы"}</div>
+              {stores.length > 0 && (
+                <select
+                  value={activeStoreId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setActiveStoreId(id);
+                    const st = stores.find(s => String(s.id) === id);
+                    localStorage.setItem('pos_store_id', id);
+                    localStorage.setItem('pos_store_name', st ? st.name : '');
+                  }}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-bold"
+                >
+                  <option value="">{lang === "uz" ? "Asosiy do'kon" : "Основной магазин"}</option>
+                  {stores.map(s => <option key={s.id} value={s.id}>{s.name} ({s.store_type})</option>)}
+                </select>
+              )}
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  placeholder={lang === "uz" ? "Yangi filial (masalan: Tamaki #1)" : "Новый филиал (напр: Табак #1)"}
+                  value={newStoreName}
+                  onChange={(e) => setNewStoreName(e.target.value)}
+                  className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs"
+                />
+                <select value={newStoreType} onChange={(e) => setNewStoreType(e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs">
+                  <option value="grocery">Oziq-ovqat</option>
+                  <option value="tobacco">Tamaki</option>
+                  <option value="general">Boshqa</option>
+                </select>
+                <button type="button" onClick={createStoreOutlet} className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold">+</button>
+              </div>
+            </div>
+          )}
+
+          {/* Account Security & QR Share */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="font-bold text-slate-800 dark:text-slate-200">🔑 {lang === "uz" ? "Parolni almashtirish" : "Сменить пароль"}</div>
+                <div className="text-[11px] text-slate-400">{lang === "uz" ? "Kamida 12 belgili parol" : "Пароль от 12 символов"}</div>
+              </div>
+              <button type="button" onClick={() => { onClose(); onOpenPasswordModal(); }} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 rounded-xl font-bold">
                 {lang === "uz" ? "O'zgartirish" : "Сменить"}
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
               <div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  📱 {lang === "uz" ? "Telefon raqami" : "Номер телефона"}
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  {user?.phone || (lang === "uz" ? "Kiritilmagan" : "Не указан")}
-                </div>
+                <div className="font-bold text-slate-800 dark:text-slate-200">📲 {lang === "uz" ? "Boshqa telefonda ochish (QR)" : "Открыть на другом телефоне"}</div>
+                <div className="text-[11px] text-slate-400">{lang === "uz" ? "Kassa havolasi va QR-kod" : "QR-код и ссылка для телефона"}</div>
               </div>
-              <button
-                type="button"
-                onClick={() => { onClose(); onOpenPhoneModal(); }}
-                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-xl text-xs font-bold transition text-slate-800 dark:text-slate-200"
-              >
-                {lang === "uz" ? "Bog'lash" : "Привязать"}
+              <button type="button" onClick={() => { onClose(); onOpenPhoneModal(); }} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 rounded-xl font-bold">
+                QR
               </button>
             </div>
           </div>
 
           {/* Android App Server URL Config (only shown in Android APK) */}
           {typeof window !== 'undefined' && window.AndroidPOS && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2">
               <div>
-                <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                  🌐 {lang === "uz" ? "POS Server manzili (Wi-Fi / Bulut)" : "Адрес сервера POS"}
-                </div>
-                <div className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                  {lang === "uz" ? "Mahalliy kompyuter yoki bulutli serverni ulash" : "Подключить локальный ПК или облако"}
-                </div>
+                <div className="font-bold text-emerald-900 dark:text-emerald-200">🌐 {lang === "uz" ? "POS Server manzili" : "Адрес сервера POS"}</div>
+                <div className="text-[11px] text-emerald-700 dark:text-emerald-400">{lang === "uz" ? "Bulut yoki lokal Wi-Fi serverni almashtirish" : "Сменить URL сервера"}</div>
               </div>
-              <button
-                type="button"
-                onClick={() => window.AndroidPOS.openServerSettings()}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm"
-              >
+              <button type="button" onClick={() => window.AndroidPOS.openServerSettings()} className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold">
                 {lang === "uz" ? "Sozlash" : "Настроить"}
               </button>
             </div>
           )}
 
-          {/* Database Backup & Cloud Sync (Owner Only — Foolproof Safety!) */}
+          {/* Database Backup (Owner Only) */}
           {user?.role === 'owner' && (
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                ☁️ {lang === "uz" ? "Baza va Zaxira (Backup)" : "База данных и Синхронизация"}
-              </div>
-              <div className="text-[11px] text-slate-400">
-                {lang === "uz"
-                  ? "Istalgan vaqtda do'kon bazasining zaxira nusxasini yuklab olishingiz mumkin."
-                  : "Выгрузка полной резервной копии базы данных магазина."}
-              </div>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <button
-                  type="button"
-                  disabled={downloading}
-                  onClick={downloadBackup}
-                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                >
+              <div className="font-bold text-slate-800 dark:text-slate-200">☁️ {lang === "uz" ? "Baza zaxirasi (Backup)" : "Резервная копия базы"}</div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={downloading} onClick={downloadBackup} className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-1.5 disabled:opacity-50">
                   <span>💾</span>
-                  <span>{downloading ? (lang === "uz" ? "Yuklanmoqda..." : "Выгрузка...") : (lang === "uz" ? "Zaxira nusxa yuklash" : "Скачать бэкап")}</span>
+                  <span>{downloading ? (lang === "uz" ? "Yuklanmoqda..." : "Выгрузка...") : (lang === "uz" ? "Zaxira yuklash (.db)" : "Скачать бэкап (.db)")}</span>
                 </button>
-                <button
-                  type="button"
-                  disabled={reseedLoading}
-                  onClick={reseedCatalog}
-                  className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <span>🔄</span>
-                  <span>{reseedLoading ? "..." : (lang === "uz" ? "2000 ta demo tovar" : "2000 демо-товаров")}</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={clearLoading}
-                  onClick={clearCatalog}
-                  className="px-3 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <span>🗑️</span>
-                  <span>{clearLoading ? "..." : (lang === "uz" ? "Baza tozalash" : "Очистить базу")}</span>
+                <button type="button" onClick={() => setShowDangerZone(!showDangerZone)} className="px-3 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold">
+                  ⚠️ {lang === "uz" ? "Xizmat amallari" : "Обслуживание"}
                 </button>
               </div>
+
+              {showDangerZone && (
+                <div className="mt-2 p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold">{lang === "uz" ? "Faqat demo ma'lumotlarni tozalash:" : "Удалить только демо-данные:"}</span>
+                    <button type="button" disabled={purgeLoading} onClick={purgeDemoOnly} className="px-2.5 py-1.5 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 rounded-lg font-bold">
+                      {purgeLoading ? "..." : (lang === "uz" ? "🧹 Tozalash" : "🧹 Очистить")}
+                    </button>
+                  </div>
+                  <form onSubmit={clearCatalog} className="space-y-1.5 pt-2 border-t border-rose-200 dark:border-rose-800">
+                    <div className="text-[11px] font-bold text-rose-700 dark:text-rose-300">🗑️ {lang === "uz" ? "Barcha savdo va tovarlarni o'chirish:" : "Полная очистка базы:"}</div>
+                    <input type="text" placeholder="DELETE ALL STORE DATA" value={clearConfirmText} onChange={(e) => setClearConfirmText(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-rose-300 rounded-lg px-2.5 py-1.5 text-xs font-mono" />
+                    <div className="flex gap-1.5">
+                      <input type="password" placeholder={lang === "uz" ? "Joriy parolingiz" : "Ваш пароль"} value={clearPassword} onChange={(e) => setClearPassword(e.target.value)} className="flex-1 bg-white dark:bg-slate-900 border border-rose-300 rounded-lg px-2.5 py-1.5 text-xs" />
+                      <button type="submit" disabled={clearLoading} className="px-3 py-1.5 bg-rose-600 text-white rounded-lg font-bold disabled:opacity-50">{clearLoading ? "..." : (lang === "uz" ? "Tozalash" : "Очистить")}</button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer with Logout */}
-        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onLogout}
-            className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
-          >
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 flex items-center justify-between shrink-0">
+          <button type="button" onClick={onLogout} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5">
             <span>🚪</span>
-            <span>{lang === "uz" ? "Tizimdan chiqish" : "Выйти из системы"}</span>
+            <span>{lang === "uz" ? "Chiqish" : "Выйти"}</span>
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition"
-          >
-            {t.closeModal || "Yopish"}
+          <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition">
+            {t.closeModal || (lang === "uz" ? "Yopish" : "Закрыть")}
           </button>
         </div>
       </div>
@@ -946,8 +943,16 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
   const [purchasePrice, setPurchasePrice] = useState(String(product.purchase_price ?? ""));
   const [salePrice, setSalePrice] = useState(String(product.sale_price || ""));
   const [stockQuantity, setStockQuantity] = useState(String(product.stock_quantity ?? "0"));
+  const [expiryDate, setExpiryDate] = useState(product.expiry_date || "");
   const [isQuick, setIsQuick] = useState(Boolean(product.is_quick));
   const [loading, setLoading] = useState(false);
+
+  const pNum = Number(purchasePrice) || 0;
+  const sNum = Number(salePrice) || 0;
+  const marginPct = pNum > 0 && sNum > 0 ? Math.round(((sNum - pNum) / pNum) * 100) : 0;
+  const applyMarkup = (pct) => {
+    if (pNum > 0) setSalePrice(String(Math.round((pNum * (1 + pct / 100)) / 100) * 100));
+  };
 
   useEffect(() => {
     if (!categories || categories.length === 0) {
@@ -980,6 +985,7 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
         purchase_price: purchasePrice !== "" ? Number(purchasePrice) : undefined,
         sale_price: Number(salePrice),
         stock_quantity: Number(stockQuantity) || 0,
+        expiry_date: expiryDate.trim() || null,
         is_quick: Boolean(isQuick)
       };
       const res = await fetch(`${API_BASE}/products/${product.id}`, {
@@ -1000,129 +1006,92 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">✏️</span>
-            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-              {lang === "uz" ? "Tovarni tahrirlash" : "Редактировать товар"}
-            </h3>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
+      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl text-slate-800 dark:text-slate-100 modal-mobile-safe">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+          <h3 className="font-bold text-base flex items-center gap-2"><span>✏️</span><span>{lang === "uz" ? "Tovarni tahrirlash" : "Редактировать товар"}</span></h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg p-1">✕</button>
         </div>
 
-        <form onSubmit={submit} className="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1 text-xs">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              {lang === "uz" ? "Mahsulot nomi *" : "Наименование товара *"}
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium"
-            />
+            <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === "uz" ? "Mahsulot nomi *" : "Наименование товара *"}</label>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-medium" />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {lang === "uz" ? "Shtrixkod" : "Штрихкод"}
-              </label>
-              <input
-                type="text"
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono"
-              />
+              <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === "uz" ? "Shtrixkod" : "Штрихкод"}</label>
+              <input type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {lang === "uz" ? "Kategoriya" : "Категория"}
-              </label>
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium"
-              >
-                {safeArray(categories).map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+              <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === "uz" ? "Kategoriya" : "Категория"}</label>
+              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-medium">
+                {safeArray(categories).map(c => <option key={c.id} value={c.id}>{c.name.split('/')[0].trim()}</option>)}
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {lang === "uz" ? "Kirim narxi (so'm)" : "Закупочная цена (сум)"}
-              </label>
-              <input
-                type="number"
-                value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono"
-              />
+              <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === "uz" ? "Kirim narx" : "Закуп"}</label>
+              <input type="number" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {lang === "uz" ? "Sotish narxi (so'm) *" : "Цена продажи (сум) *"}
-              </label>
-              <input
-                type="number"
-                required
-                value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-emerald-500 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-600"
-              />
+              <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === "uz" ? "Sotish narx *" : "Продажа *"}</label>
+              <input type="number" required value={salePrice} onChange={(e) => setSalePrice(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-emerald-500 rounded-xl px-2.5 py-2 font-mono font-bold text-emerald-600" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {lang === "uz" ? "Qoldiq" : "Остаток"}
-              </label>
-              <input
-                type="number"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold"
-              />
+              <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === "uz" ? "Qoldiq" : "Остаток"}</label>
+              <input type="number" step="any" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-bold" />
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isQuick}
-                onChange={(e) => setIsQuick(e.target.checked)}
-                className="rounded text-emerald-600 focus:ring-emerald-500"
-              />
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                ⚡ {lang === "uz" ? "Tezkor tovarlar panelida ko'rsatish" : "Показывать в панели быстрых товаров"}
+          {pNum > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1.5 rounded-xl">
+              <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                💰 {lang === "uz" ? "Foyda:" : "Маржа:"} {formatMoney(sNum - pNum)} ({marginPct}%)
               </span>
-            </label>
+              <div className="flex gap-1">
+                {[15, 20, 25, 30].map(pct => (
+                  <button key={pct} type="button" onClick={() => applyMarkup(pct)} className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 font-bold text-[11px]">+{pct}%</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2 items-end">
+            <div>
+              <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === "uz" ? "Yaroqlilik muddati:" : "Срок годности:"}</label>
+              <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5" />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === "uz" ? "Birlik" : "Ед. изм."}</label>
+              <select value={unit} onChange={(e) => setUnit(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5">
+                <option value="dona">dona</option>
+                <option value="kg">kg</option>
+                <option value="l">l</option>
+                <option value="quti">quti</option>
+                <option value="metr">metr</option>
+              </select>
+            </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-xs font-bold transition text-slate-600 dark:text-slate-300"
-            >
-              {t.cancelBtn || "Bekor qilish"}
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
-            >
-              {loading ? (lang === "uz" ? "Saqlanmoqda..." : "Сохранение...") : (lang === "uz" ? "Saqlash" : "Сохранить")}
-            </button>
-          </div>
-        </form>
-      </div>
+          <label className="flex items-center gap-2 cursor-pointer pt-1">
+            <input type="checkbox" checked={isQuick} onChange={(e) => setIsQuick(e.target.checked)} className="rounded text-emerald-600" />
+            <span className="font-semibold text-slate-700 dark:text-slate-300">⚡ {lang === "uz" ? "Tezkor tovarlar panelida ko'rsatish" : "Показывать в быстрых товарах"}</span>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 shrink-0">
+          <button type="button" onClick={onClose} className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300">
+            {t.cancelBtn || "Bekor qilish"}
+          </button>
+          <button type="submit" disabled={loading} className="flex-1 sm:flex-none px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50">
+            {loading ? "..." : (lang === "uz" ? "Saqlash" : "Сохранить")}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -1315,7 +1284,7 @@ function DayDetailsModal({ token, dateStr, onClose, notify, lang: propLang, t })
                         {sale.time ? sale.time.slice(0, 5) : ""} • {sale.cashier_name || "Kassir"}
                       </div>
                       <div className="text-[11px] text-slate-600 dark:text-slate-300 font-mono">
-                        {sale.items_summary}
+                        {sale.items_summary || safeArray(sale.items).map(i => `${i.product_name} ×${i.quantity}`).join(', ')}
                       </div>
                     </div>
                   ))}
@@ -1351,31 +1320,30 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('pos');
   const [notification, setNotification] = useState(null);
-  
-  // Theme state: 'dark' (default) or 'light'
   const [theme, setTheme] = useState(() => localStorage.getItem('pos_theme') || 'dark');
-  
-  // Language state: 'uz' (default) or 'ru'
   const [lang, setLang] = useState(() => localStorage.getItem('pos_lang') || 'uz');
-  
-  // Mobile Network QR Modal state
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('pos_sound') !== 'false');
+
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
-  
-  // Telegram modals
-  const [testSendOpen, setTestSendOpen] = useState(false);
-  const [zReportOpen, setZReportOpen] = useState(false);
+  const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [currentShift, setCurrentShift] = useState(null);
   const [cashierSwitchOpen, setCashierSwitchOpen] = useState(false);
   const [passwordChangeOpen, setPasswordChangeOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
-  const [pwaBannerDismissed, setPwaBannerDismissed] = useState(() => {
-    try {
-      return localStorage.getItem('pwa_banner_dismissed') === 'true';
-    } catch (e) {
-      return false;
-    }
-  });
+
+  const loadShiftBadge = () => {
+    if (!token) return;
+    fetch(`${API_BASE}/pos/shift/current`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCurrentShift(d); })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadShiftBadge();
+  }, [token]);
 
   useEffect(() => {
     const handlePrompt = (e) => {
@@ -1393,34 +1361,13 @@ function App() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setCanInstall(false);
-      notify(lang === 'uz' ? "Ilova smartfonga o'rnatildi!" : "Приложение успешно установлено!");
+      notify(lang === 'uz' ? "Ilova smartfonga o'rnatildi!" : "Приложение установлено!");
     }
     setDeferredPrompt(null);
   };
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.uz;
-  
-  // Multilingual quick items (popular & weight items for 1-click add to cart)
-  const quickItems = {
-    uz: {
-      bread: { name: "Tandir nona", barcode: "20000101001", price: 5000, unit: "dona" },
-      tandyr_lepeshka: { name: "Тандыр лепешка", barcode: "20000101002", price: 3000, unit: "dona" },
-      sugar: { name: "Сахар", barcode: "20000101003", price: 8000, unit: "kg" },
-      potatoes: { name: "Картофель", barcode: "20000101004", price: 4000, unit: "kg" },
-      onions: { name: "Лук", barcode: "20000101005", price: 3500, unit: "kg" },
-      eggs: { name: "Яйца", barcode: "20000101006", price: 12000, unit: "dona" },
-    },
-    oz: {
-      bread: { name: "Bread", barcode: "20000101001", price: 5000, unit: "dona" },
-      tandyr_lepeshka: { name: "Tandyr Lavash", barcode: "20000101002", price: 3000, unit: "dona" },
-      sugar: { name: "Sugar", barcode: "20000101003", price: 8000, unit: "kg" },
-      potatoes: { name: "Potatoes", barcode: "20000101004", price: 4000, unit: "kg" },
-      onions: { name: "Onions", barcode: "20000101005", price: 3500, unit: "kg" },
-      eggs: { name: "Eggs", barcode: "20000101006", price: 12000, unit: "dona" },
-    },
-  };
 
-  // Apply theme to document element
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'light') {
@@ -1433,22 +1380,22 @@ function App() {
     localStorage.setItem('pos_theme', theme);
   }, [theme]);
 
-  // Apply language persistence
   useEffect(() => {
     localStorage.setItem('pos_lang', lang);
+    if (typeof window !== 'undefined') window.pos_lang = lang;
   }, [lang]);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
+  useEffect(() => {
+    localStorage.setItem('pos_sound', soundEnabled ? 'true' : 'false');
+  }, [soundEnabled]);
 
-  const toggleLang = () => {
-    setLang((prev) => (prev === 'uz' ? 'ru' : 'uz'));
-  };
+  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  const toggleLang = () => setLang((prev) => (prev === 'uz' ? 'ru' : 'uz'));
+  const toggleSound = () => setSoundEnabled((prev) => !prev);
 
   const notify = (message, type = 'success') => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 4000);
+    setTimeout(() => setNotification(null), 3500);
   };
 
   const handleLogin = (newToken, newUser) => {
@@ -1462,6 +1409,7 @@ function App() {
   const handleLogout = () => {
     setToken(null);
     setUser(null);
+    setCurrentShift(null);
     localStorage.removeItem('pos_token');
     localStorage.removeItem('pos_user');
   };
@@ -1481,31 +1429,42 @@ function App() {
   }
 
   const isOwner = user.role === 'owner';
+  const navTabs = [
+    { id: 'pos', icon: '🛒', label: lang === 'uz' ? 'Kassa' : 'Касса' },
+    { id: 'debts', icon: '📓', label: lang === 'uz' ? 'Qarzlar' : 'Долги' },
+    { id: 'catalog', icon: '📦', label: lang === 'uz' ? 'Tovarlar' : 'Склад' },
+    ...(isOwner ? [
+      { id: 'suppliers', icon: '🚚', label: lang === 'uz' ? 'Kirim' : 'Приход' },
+      { id: 'analytics', icon: '📊', label: lang === 'uz' ? 'Hisobot' : 'Отчет' },
+    ] : []),
+  ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
+    <div className="app-viewport bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
       {/* Toast Notification */}
       {notification && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border text-sm font-semibold transition-all duration-300 ${
+          className={`fixed top-12 right-3 left-3 sm:left-auto sm:max-w-sm z-50 px-3.5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2 border text-xs font-semibold ${
             notification.type === 'error'
-              ? 'bg-rose-100 border-rose-300 text-rose-800 dark:bg-rose-950/90 dark:border-rose-600 dark:text-rose-200'
-              : 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/90 dark:border-emerald-600 dark:text-emerald-200'
+              ? 'bg-rose-100 border-rose-300 text-rose-800 dark:bg-rose-950/95 dark:border-rose-600 dark:text-rose-200'
+              : 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/95 dark:border-emerald-600 dark:text-emerald-200'
           }`}
         >
           <span>{notification.type === 'error' ? '⚠️' : '✅'}</span>
-          <span>{notification.message}</span>
+          <span className="truncate">{notification.message}</span>
         </div>
       )}
 
-      {/* Network / Mobile QR Modal */}
-      {networkModalOpen && (
-        <NetworkQrModal onClose={() => setNetworkModalOpen(false)} t={t} />
+      {networkModalOpen && <NetworkQrModal onClose={() => setNetworkModalOpen(false)} t={t} />}
+      {shiftModalOpen && (
+        <CashShiftModal
+          token={token}
+          onClose={() => setShiftModalOpen(false)}
+          notify={notify}
+          lang={lang}
+          onShiftChange={loadShiftBadge}
+        />
       )}
-
-      {/* Telegram Modals */}
-      {testSendOpen && <TestSendModal onClose={() => setTestSendOpen(false)} t={t} />}
-      {/* Cashier Shift Switcher Modal */}
       {cashierSwitchOpen && (
         <CashierSwitchModal
           token={token}
@@ -1531,8 +1490,6 @@ function App() {
           onChanged={handleLogout}
         />
       )}
-
-      {zReportOpen && <CashShiftModal token={token} notify={notify} lang={lang} onClose={() => setZReportOpen(false)} />}
       {settingsModalOpen && (
         <SettingsModal
           token={token}
@@ -1541,6 +1498,8 @@ function App() {
           onLangChange={(newLang) => setLang(newLang)}
           theme={theme}
           onToggleTheme={(newTheme) => setTheme(newTheme)}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
           onOpenPasswordModal={() => setPasswordChangeOpen(true)}
           onOpenPhoneModal={() => setNetworkModalOpen(true)}
           onLogout={handleLogout}
@@ -1550,158 +1509,132 @@ function App() {
         />
       )}
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-        {/* Top Control Bar */}
-        <div className="app-header-top max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 py-2">
-          {/* Logo & Active Cashier Switcher */}
-          <div className="app-header-identity flex items-center gap-2">
-            <span className="text-2xl">🛒</span>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400">
-                {t.appName}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCashierSwitchOpen(true)}
-                className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1 hover:bg-emerald-200 transition"
-                title={lang === 'uz' ? "Smenani almashtirish (1-bosish)" : "Быстрая смена кассира"}
-              >
-                <span>👤 {user ? user.full_name.split(' ')[0] : 'Kassir'}</span>
-                <span className="text-[10px]">🔄</span>
-              </button>
-            </div>
+      {/* Compact Single-Line Header (Fits Smartphone Top Bar Cleanly) */}
+      <header className="shrink-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-2.5 py-1.5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-lg shrink-0">🛒</span>
+            <button
+              type="button"
+              onClick={() => setCashierSwitchOpen(true)}
+              className="text-[11px] font-bold px-2 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1 truncate max-w-[125px] sm:max-w-none"
+              title={lang === 'uz' ? "Smenani almashtirish" : "Смена кассира"}
+            >
+              <span className="truncate">👤 {user ? user.full_name.split(' ')[0] : 'Kassir'}</span>
+              <span className="text-[10px]">🔄</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShiftModalOpen(true)}
+              className={`text-[11px] font-bold px-2 py-1 rounded-xl border flex items-center gap-1 shrink-0 ${
+                currentShift?.is_open
+                  ? 'bg-emerald-500/10 border-emerald-400/50 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-400/50 text-rose-700 dark:text-rose-300'
+              }`}
+              title={lang === 'uz' ? "Kassa smenasi va Z-hisobot" : "Кассовая смена"}
+            >
+              <span>{currentShift?.is_open ? '🟢' : '🔴'}</span>
+              <span className="font-mono">{currentShift?.is_open ? formatMoney(currentShift.shift?.expected_cash || 0) : (lang === 'uz' ? 'Smena' : 'Смена')}</span>
+            </button>
           </div>
 
-          {/* Unified Header Settings Action */}
-          <div className="app-header-actions flex items-center gap-1.5">
-            {canInstall && (
+          {/* Desktop inline tabs (hidden on phones - mobile uses Thumb Bottom Bar) */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {navTabs.map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {canInstall && !(typeof window !== 'undefined' && window.AndroidPOS) && (
               <button
                 type="button"
                 onClick={handleInstallApp}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow flex items-center gap-1 transition"
-                title={lang === "uz" ? "Ilovani o'rnatish" : "Установить"}
+                className="px-2 py-1 rounded-xl text-xs font-bold bg-emerald-600 text-white"
+                title={t.installAppBtn}
               >
-                <span>📲</span>
-                <span className="hidden sm:inline">{lang === "uz" ? "O'rnatish" : "Установить"}</span>
+                📲
               </button>
             )}
-
+            <button
+              type="button"
+              onClick={toggleSound}
+              className="w-8 h-8 rounded-xl text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center"
+              title={lang === 'uz' ? "Tovush signallari" : "Звук"}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
             <button
               type="button"
               onClick={() => setSettingsModalOpen(true)}
-              className="px-3 py-1.5 rounded-2xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm flex items-center gap-1.5 touch-target"
+              className="px-2.5 h-8 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-1"
               title={lang === "uz" ? "Sozlamalar" : "Настройки"}
             >
-              <span className="text-sm">⚙️</span>
-              <span className="font-bold">{lang === "uz" ? "Sozlamalar" : "Настройки"}</span>
+              <span>⚙️</span>
+              <span className="hidden sm:inline">{lang === "uz" ? "Sozlash" : "Настройки"}</span>
             </button>
           </div>
-        </div>
-
-        {/* Dedicated Horizontal Scrolling Tab Bar */}
-        <div className="border-t border-slate-200/80 dark:border-slate-800/80 px-2 py-1 bg-slate-50/80 dark:bg-slate-900/80">
-          <nav className="app-tab-nav max-w-7xl mx-auto flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar py-0.5">
-            <button
-              onClick={() => setActiveTab('pos')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
-                activeTab === 'pos'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
-              }`}
-            >
-              {t.tabPos}
-            </button>
-            <button
-              onClick={() => setActiveTab('debts')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
-                activeTab === 'debts'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
-              }`}
-            >
-              {t.tabDebts}
-            </button>
-            <button
-              onClick={() => setActiveTab('catalog')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
-                activeTab === 'catalog'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
-              }`}
-            >
-              {t.tabCatalog}
-            </button>
-            {isOwner && (
-              <>
-                <button
-                  onClick={() => setActiveTab('suppliers')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
-                    activeTab === 'suppliers'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  {t.tabSuppliers}
-                </button>
-                <button
-                  onClick={() => setActiveTab('expenses')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
-                    activeTab === 'expenses'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  {t.tabExpenses}
-                </button>
-                <button
-                  onClick={() => setActiveTab('analytics')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap touch-target ${
-                    activeTab === 'analytics'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  {t.tabAnalytics}
-                </button>
-              </>
-            )}
-          </nav>
         </div>
       </header>
 
-      {/* Main Content Body */}
-      {/* PWA Standalone Notice Banner */}
-      {!pwaBannerDismissed && (
-        <div className="bg-gradient-to-r from-emerald-700 to-teal-800 text-white px-3 py-2 text-xs flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-2 max-w-4xl">
-            <span className="text-base">📲</span>
-            <div>
-              <span className="font-bold mr-1">{t.pwaBannerTitle || "Ilovani to'liq ekranga o'rnatish:"}</span>
-              <span className="opacity-95">{t.pwaBannerDesc || "Brauzer manzil qatorisiz ishlash uchun brauzer menyusida (3 nuqta) «Bosh ekranga qo'shish» tugmasini bosing."}</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setPwaBannerDismissed(true);
-              try { localStorage.setItem('pwa_banner_dismissed', 'true'); } catch (e) {}
-            }}
-            className="ml-2 bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-lg text-[11px] whitespace-nowrap transition"
-          >
-            ✕ {t.pwaBannerClose || "Tushunarli"}
-          </button>
-        </div>
-      )}
-
-      <main className="app-main-content flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4">
-        {activeTab === 'pos' && <PosScreen token={token} notify={notify} isOwner={isOwner} t={t} lang={lang} setLang={setLang} toggleLang={toggleLang} />}
+      {/* Main Content Area: Viewport-Locked Flex Shell */}
+      <main className="app-main-content flex-1 min-h-0 flex flex-col overflow-hidden max-w-7xl w-full mx-auto p-1.5 sm:p-3">
+        {activeTab === 'pos' && (
+          <PosScreen
+            token={token}
+            notify={notify}
+            isOwner={isOwner}
+            t={t}
+            lang={lang}
+            setLang={setLang}
+            toggleLang={toggleLang}
+            currentShift={currentShift}
+            onShiftChange={loadShiftBadge}
+            onOpenShift={() => setShiftModalOpen(true)}
+          />
+        )}
         {activeTab === 'debts' && <DebtsScreen token={token} notify={notify} t={t} lang={lang} />}
         {activeTab === 'catalog' && <CatalogScreen token={token} notify={notify} isOwner={isOwner} t={t} lang={lang} />}
-        {activeTab === 'suppliers' && isOwner && <SuppliersScreen token={token} notify={notify} t={t} lang={lang} />}
-        {activeTab === 'expenses' && isOwner && <ExpensesScreen token={token} notify={notify} t={t} />}
-        {activeTab === 'analytics' && isOwner && <AnalyticsScreen token={token} notify={notify} t={t} />}
+        {activeTab === 'suppliers' && isOwner && <OperationsHubScreen token={token} notify={notify} t={t} lang={lang} />}
+        {activeTab === 'expenses' && isOwner && <OperationsHubScreen token={token} notify={notify} t={t} lang={lang} initialSection="expenses" />}
+        {activeTab === 'analytics' && isOwner && <AnalyticsScreen token={token} notify={notify} t={t} lang={lang} />}
       </main>
+
+      {/* Mobile Bottom Thumb Navigation Bar (1 Row, Zero Wrapping) */}
+      <nav className="lg:hidden shrink-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 px-1 py-1">
+        <div className="flex items-stretch justify-around gap-0.5">
+          {navTabs.map(tab => {
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 min-w-0 py-1 px-0.5 rounded-xl flex flex-col items-center justify-center gap-0.5 transition ${
+                  active
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span className="text-base leading-none">{tab.icon}</span>
+                <span className="text-[10px] font-bold leading-tight truncate max-w-full">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
@@ -1885,99 +1818,7 @@ function NetworkQrModal({ onClose, t }) {
   );
 }
 
-// ------------------- TELEGRAM MODALS -------------------
-
-function TestSendModal({ onClose, t }) {
-  const [customMessage, setCustomMessage] = useState('');
-  
-  const handleSend = async (e) => {
-    e.preventDefault();
-    try {
-      const message = customMessage || '🧪 Test xabari: GroceryStore POS / Test from GroceryStore POS';
-      await fetch('/api/v1/telegram/test-send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message })
-      });
-      notify('Test xabari yuborildi!');
-      setTestSendOpen(false);
-      onClose();
-    } catch (err) {
-      notify(err.message, 'error');
-    }
-  };
-  
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={handleSend} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-3">🧪 Test xabari</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Xabaringizni kiriting / Enter your message
-        </p>
-        <div>
-          <textarea
-            value={customMessage}
-            onChange={(e) => setCustomMessage(e.target.value)}
-            placeholder="Xabar matni..."
-            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 resize-none py-3"
-            rows={3}
-            required
-          />
-        </div>
-        <div className="mt-4 flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-xs font-semibold">
-            Bekor qilish / Cancel
-          </button>
-          <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold shadow">
-            Yuborish / Send
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function ZReportModal({ onClose, t }) {
-  const [loading, setLoading] = useState(false);
-  
-  const handleSend = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await fetch('/api/v1/telegram/z-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      notify('Z-gesi yuborildi!');
-      setZReportOpen(false);
-      onClose();
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={handleSend} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-3">📊 Z-gesi</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Kutilgina yaxlit Z-gesini yuborish
-        </p>
-        <div className="mt-3">
-          <button type="submit" disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl shadow-lg shadow-emerald-600/30 transition">
-            {loading ? 'Yuborilmoqda...' : 'Yuborish'}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
+// ------------------- TELEGRAM TEST / ZREPORT CLEANED OUT (integrated into Analytics -> Telegram) -------------------
 
 
 function PasswordChangeModal({ token, onClose, onChanged, notify, lang }) {
@@ -2660,7 +2501,7 @@ function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
 }
 
 // ------------------- CREATE / EDIT PRODUCT MODAL -------------------
-function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, notify, t, lang }) {
+function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = false, onClose, onSuccess, notify, t, lang }) {
   const [barcode, setBarcode] = useState(initialBarcode);
   const [noBarcode, setNoBarcode] = useState(false);
 
@@ -2677,16 +2518,29 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
     }
   };
   const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryId, setCategoryId] = useState(() => {
+    try { return localStorage.getItem('pos_last_category') || ''; } catch (e) { return ''; }
+  });
   const [categories, setCategories] = useState([]);
-  const [unit, setUnit] = useState('dona');
+  const [unit, setUnit] = useState(() => {
+    try { return localStorage.getItem('pos_last_unit') || 'dona'; } catch (e) { return 'dona'; }
+  });
   const [purchasePrice, setPurchasePrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
-  const [stockQuantity, setStockQuantity] = useState('10');
+  const [stockQuantity, setStockQuantity] = useState('1');
+  const [expiryDate, setExpiryDate] = useState('');
   const [isQuick, setIsQuick] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraActive, setCameraActive] = useState(Boolean(autoScanOnMount && !initialBarcode));
   const [voiceActive, setVoiceActive] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [addedCount, setAddedCount] = useState(0);
+
+  const pNum = Number(purchasePrice) || 0;
+  const sNum = Number(salePrice) || 0;
+  const marginPct = pNum > 0 && sNum > 0 ? Math.round(((sNum - pNum) / pNum) * 100) : 0;
+  const applyMarkup = (pct) => {
+    if (pNum > 0) setSalePrice(String(Math.round((pNum * (1 + pct / 100)) / 100) * 100));
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -2703,8 +2557,13 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
       const data = await res.json();
       const list = Array.isArray(data) ? data : (data?.categories || data?.items || []);
       setCategories(list);
-      if (list.length > 0 && !categoryId) {
-        setCategoryId(list[0].id.toString());
+      if (list.length > 0) {
+        const savedCat = (() => { try { return localStorage.getItem('pos_last_category'); } catch (e) { return ''; } })();
+        if (savedCat && list.some(c => String(c.id) === String(savedCat))) {
+          setCategoryId(String(savedCat));
+        } else if (!categoryId) {
+          setCategoryId(list[0].id.toString());
+        }
       }
     } catch (e) {
       console.error('Error fetching categories:', e);
@@ -2736,15 +2595,18 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
     }
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const saveProduct = async (scanNext = false) => {
     if (!barcode.trim() || !name.trim() || !salePrice) {
       notify(lang === 'uz' ? "Shtrixkod, nom va sotish narxini to'ldiring" : "Заполните штрихкод, название и цену", 'error');
       return;
     }
     setLoading(true);
     try {
-      const pPrice = Number(purchasePrice) || Math.round(Number(salePrice) * 0.75);
+      try {
+        if (categoryId) localStorage.setItem('pos_last_category', String(categoryId));
+        if (unit) localStorage.setItem('pos_last_unit', unit);
+      } catch (errStore) {}
+      const pPrice = Number(purchasePrice) || 0;
       const res = await fetch(`${API_BASE}/products`, {
         method: 'POST',
         headers: {
@@ -2759,14 +2621,29 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
           purchase_price: pPrice,
           sale_price: Number(salePrice),
           stock_quantity: Number(stockQuantity) || 0,
+          expiry_date: expiryDate.trim() || null,
           is_quick: Boolean(isQuick)
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Mahsulot yaratishda xatolik');
-      notify(lang === 'uz' ? `Tovar qo'shildi: ${name}` : `Товар добавлен: ${name}`);
-      onSuccess(data);
-      onClose();
+      playAudioCue('success');
+      notify(lang === 'uz' ? `Qo'shildi: ${name}` : `Добавлено: ${name}`);
+      onSuccess(data, { keepOpen: scanNext });
+      if (scanNext) {
+        setAddedCount(prev => prev + 1);
+        setBarcode('');
+        setNoBarcode(false);
+        setName('');
+        setPurchasePrice('');
+        setSalePrice('');
+        setStockQuantity('1');
+        setExpiryDate('');
+        setIsQuick(false);
+        setCameraActive(true);
+      } else {
+        onClose();
+      }
     } catch (err) {
       notify(err.message, 'error');
     } finally {
@@ -2774,20 +2651,25 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
     }
   };
 
+  const submit = (e) => {
+    e.preventDefault();
+    saveProduct(false);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
+      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl text-slate-800 dark:text-slate-100 modal-mobile-safe">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">➕</span>
+            <span className="text-xl">➕</span>
             <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
               {t.addProductTitle || "Yangi tovar qo'shish"}
             </h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg p-1">✕</button>
         </div>
 
-        <form onSubmit={submit} className="flex-1 overflow-y-auto space-y-3 pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1">
           {/* Barcode with Camera Scan button */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -2822,7 +2704,6 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm"
               >
                 <span>📷</span>
-                <span className="hidden sm:inline">{lang === 'uz' ? "Kamera" : "Скан"}</span>
               </button>
             </div>
           </div>
@@ -2847,7 +2728,6 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
                   voiceActive ? 'bg-rose-600 text-white animate-pulse' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm'
                 }`}
-                title="Ovoz bilan aytish"
               >
                 <span>🎙️</span>
               </button>
@@ -2857,114 +2737,90 @@ function CreateProductModal({ token, initialBarcode = '', onClose, onSuccess, no
           {/* Category & Unit */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {t.categoryLabel || "Kategoriya"}
-              </label>
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium"
-              >
-                {(Array.isArray(categories) ? categories : (categories?.categories || [])).length === 0 ? (
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.categoryLabel || "Kategoriya"}</label>
+              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-medium">
+                {safeArray(categories).length === 0 ? (
                   <option value="">{lang === 'uz' ? "Kategoriya yo'q" : "Без категории"}</option>
                 ) : (
-                  (Array.isArray(categories) ? categories : (categories?.categories || [])).map((c) => (
+                  safeArray(categories).map((c) => (
                     <option key={c.id} value={c.id}>{c.name ? c.name.split('/')[0].trim() : c.name}</option>
                   ))
                 )}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {t.unitLabel || "Birlik"}
-              </label>
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium"
-              >
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.unitLabel || "Birlik"}</label>
+              <select value={unit} onChange={(e) => setUnit(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-medium">
                 <option value="dona">dona (шт)</option>
                 <option value="kg">kg (кг)</option>
                 <option value="l">l (литр)</option>
-                <option value="quti">quti (пачка/коробка)</option>
+                <option value="quti">quti (пачка)</option>
                 <option value="metr">metr (метр)</option>
               </select>
             </div>
           </div>
 
-          {/* Prices */}
+          {/* Prices + Quick Markup */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {t.purchasePriceLabel || "Kirim narxi (so'm)"}
-              </label>
-              <input
-                type="number"
-                placeholder="4000"
-                value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100"
-              />
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.purchasePriceLabel || "Kirim narxi"}</label>
+              <input type="number" placeholder="4000" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {t.salePriceLabel || "Sotish narxi (so'm) *"}
-              </label>
-              <input
-                type="number"
-                placeholder="5500"
-                value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-emerald-400 dark:border-emerald-600 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400"
-                required
-              />
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.salePriceLabel || "Sotish narxi *"}</label>
+              <input type="number" placeholder="5500" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-emerald-400 dark:border-emerald-600 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400" required />
             </div>
           </div>
 
-          {/* Stock & Quick toggle */}
-          <div className="grid grid-cols-2 gap-2 items-center">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                {t.stockQtyLabel || "Boshlang'ich qoldiq"}
-              </label>
-              <input
-                type="number"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100"
-              />
+          {pNum > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-1.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1.5 rounded-xl text-xs">
+              <span className="font-bold text-emerald-700 dark:text-emerald-300">💰 {lang === "uz" ? "Foyda:" : "Маржа:"} {formatMoney(sNum - pNum)} ({marginPct}%)</span>
+              <div className="flex gap-1">
+                {[15, 20, 25, 30].map(pct => (
+                  <button key={pct} type="button" onClick={() => applyMarkup(pct)} className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-emerald-300 font-bold text-[11px]">+{pct}%</button>
+                ))}
+              </div>
             </div>
-            <div className="pt-4">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={isQuick}
-                  onChange={(e) => setIsQuick(e.target.checked)}
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                />
-                <span>⚡ Tezkor tovar (Kassa)</span>
-              </label>
+          )}
+
+          {/* Stock & Expiry & Quick toggle */}
+          <div className="grid grid-cols-2 gap-2 items-start">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.stockQtyLabel || "Boshlang'ich qoldiq"}</label>
+              <input type="number" step="any" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
+              <div className="flex flex-wrap gap-1 mt-1">
+                {[1, 5, 10, 20, 50].map(q => (
+                  <button key={q} type="button" onClick={() => setStockQuantity(String(q))} className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border ${Number(stockQuantity) === q ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>{q}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{lang === 'uz' ? "Yaroqlilik muddati:" : "Срок годности:"}</label>
+              <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs" />
+              {addedCount > 0 && (
+                <div className="mt-1 text-[10px] font-bold text-emerald-600">✅ +{addedCount} {lang === 'uz' ? "ta qo'shildi" : "добавлено"}</div>
+              )}
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-            >
-              {t.cancelBtn}
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition"
-            >
-              {loading ? t.saving : t.saveBtn}
-            </button>
-          </div>
-        </form>
-      </div>
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200 pt-1">
+            <input type="checkbox" checked={isQuick} onChange={(e) => setIsQuick(e.target.checked)} className="w-4 h-4 rounded text-emerald-600" />
+            <span>⚡ {lang === 'uz' ? "Tezkor tovar (Kassada 1-bosish)" : "Быстрый товар на кассе"}</span>
+          </label>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex gap-1.5 shrink-0">
+          <button type="button" onClick={onClose} className="px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            {t.cancelBtn}
+          </button>
+          <button type="button" disabled={loading} onClick={() => saveProduct(true)} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40 shadow transition">
+            🔄 {lang === 'uz' ? "Saqlash + Skan" : "Сохр. + Скан"}
+          </button>
+          <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40 shadow transition">
+            {loading ? t.saving : t.saveBtn}
+          </button>
+        </div>
+      </form>
 
       {cameraActive && (
         <CameraScannerModal
@@ -4043,12 +3899,16 @@ const OcrDebtModal = (props) => {
   return <OcrDebtNotebookModal {...props} lang={fallbackLang} />;
 };
 
-function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, onSuccess, notify, t, lang: propLang }) {
+function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDiscount = 0, onClose, onSuccess, notify, t, lang: propLang }) {
   const lang = propLang || 'uz';
   const [method, setMethod] = useState(initialMethod || 'CASH');
-  const [cashReceived, setCashReceived] = useState(initialMethod === 'CASH' ? String(total) : '0');
-  const [cardAmount, setCardAmount] = useState(initialMethod === 'CARD' ? String(total) : '0');
-  const [debtAmount, setDebtAmount] = useState(initialMethod === 'DEBT' ? String(total) : '0');
+  const [discountAmount, setDiscountAmount] = useState(String(initialDiscount || 0));
+  const discNum = Math.max(0, Math.min(Number(discountAmount) || 0, total));
+  const finalTotal = Math.max(0, Math.round((total - discNum) * 100) / 100);
+
+  const [cashReceived, setCashReceived] = useState(initialMethod === 'CASH' ? String(finalTotal) : '0');
+  const [cardAmount, setCardAmount] = useState(initialMethod === 'CARD' ? String(finalTotal) : '0');
+  const [debtAmount, setDebtAmount] = useState(initialMethod === 'DEBT' ? String(finalTotal) : '0');
   const [debtors, setDebtors] = useState([]);
   const [debtorSearch, setDebtorSearch] = useState('');
   const [selectedDebtorId, setSelectedDebtorId] = useState('');
@@ -4062,6 +3922,37 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, on
   useEffect(() => {
     fetchDebtorsList();
   }, [debtorSearch]);
+
+  const syncMethodTotals = (m, netTotal) => {
+    if (m === 'CASH') {
+      setCashReceived(String(netTotal));
+      setCardAmount('0');
+      setDebtAmount('0');
+    } else if (m === 'CARD') {
+      setCashReceived('0');
+      setCardAmount(String(netTotal));
+      setDebtAmount('0');
+    } else if (m === 'DEBT') {
+      setCashReceived('0');
+      setCardAmount('0');
+      setDebtAmount(String(netTotal));
+    } else if (m === 'MIXED') {
+      setCashReceived(String(netTotal));
+      setCardAmount('0');
+      setDebtAmount('0');
+    }
+  };
+
+  const applyDiscountVal = (newDisc) => {
+    const clamped = Math.max(0, Math.min(Math.round(newDisc), total));
+    setDiscountAmount(String(clamped));
+    syncMethodTotals(method, Math.max(0, total - clamped));
+  };
+
+  const roundDownThousand = () => {
+    const remainder = total % 1000;
+    applyDiscountVal(remainder > 0 ? remainder : 0);
+  };
 
   const fetchDebtorsList = async () => {
     try {
@@ -4078,23 +3969,7 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, on
 
   const handleMethodSwitch = (m) => {
     setMethod(m);
-    if (m === 'CASH') {
-      setCashReceived(String(total));
-      setCardAmount('0');
-      setDebtAmount('0');
-    } else if (m === 'CARD') {
-      setCashReceived('0');
-      setCardAmount(String(total));
-      setDebtAmount('0');
-    } else if (m === 'DEBT') {
-      setCashReceived('0');
-      setCardAmount('0');
-      setDebtAmount(String(total));
-    } else if (m === 'MIXED') {
-      setCashReceived(String(total));
-      setCardAmount('0');
-      setDebtAmount('0');
-    }
+    syncMethodTotals(m, finalTotal);
   };
 
   const handleCreateQuickDebtor = async () => {
@@ -4136,7 +4011,7 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, on
   const cashNum = Number(cashReceived) || 0;
   const cardNum = Number(cardAmount) || 0;
   const debtNum = Number(debtAmount) || 0;
-  const cashDue = method === 'CASH' ? total : method === 'MIXED' ? Math.max(0, total - cardNum - debtNum) : 0;
+  const cashDue = method === 'CASH' ? finalTotal : method === 'MIXED' ? Math.max(0, finalTotal - cardNum - debtNum) : 0;
   const changeAmount = (method === 'CASH' || method === 'MIXED') ? Math.max(0, cashNum - cashDue) : 0;
 
   const handleSubmit = async (e) => {
@@ -4152,12 +4027,14 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, on
           product_id: typeof i.product.id === 'number' ? i.product.id : null,
           barcode: i.product.barcode,
           name: i.product.name,
+          price: i.product.sale_price,
           quantity: i.quantity
         })),
         payment_method: method,
+        discount_amount: discNum,
         cash_received: method === 'CASH' ? cashNum : (method === 'MIXED' ? cashNum : 0),
-        card_amount: method === 'CARD' ? total : (method === 'MIXED' ? cardNum : 0),
-        debt_amount: method === 'DEBT' ? total : (method === 'MIXED' ? debtNum : 0),
+        card_amount: method === 'CARD' ? finalTotal : (method === 'MIXED' ? cardNum : 0),
+        debt_amount: method === 'DEBT' ? finalTotal : (method === 'MIXED' ? debtNum : 0),
         debtor_id: selectedDebtorId ? Number(selectedDebtorId) : null,
         due_date: dueDate || null
       };
@@ -4180,20 +4057,44 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, on
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-6 shadow-2xl text-slate-800 dark:text-slate-100 max-h-[calc(100dvh-1.5rem)] flex flex-col">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl text-slate-800 dark:text-slate-100 modal-mobile-safe">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
           <div>
-            <h3 className="font-black text-base sm:text-lg text-slate-900 dark:text-slate-100">
-              💳 {lang === 'uz' ? "To'lovni rasmiylashtirish" : "Оформление оплаты"}
+            <h3 className="font-black text-base text-slate-900 dark:text-slate-100">
+              💳 {lang === 'uz' ? "To'lov" : "Оплата"}
             </h3>
             <p className="text-xs text-slate-500 font-mono font-bold">
-              {lang === 'uz' ? "Jami:" : "Итого:"} <span className="text-emerald-600 dark:text-emerald-400 text-sm">{formatMoney(total)}</span>
+              {discNum > 0 && <span className="line-through mr-1.5 opacity-60">{formatMoney(total)}</span>}
+              <span className="text-emerald-600 dark:text-emerald-400 text-sm">{formatMoney(finalTotal)}</span>
             </p>
           </div>
           <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl p-1">✕</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1">
+          {/* Quick Discount / Rounding Bar */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-bold text-slate-700 dark:text-slate-300">🏷️ {lang === 'uz' ? "Chegirma / Yaxlitlash:" : "Скидка / Округление:"}</span>
+              <input
+                type="number"
+                min="0"
+                max={total}
+                value={discountAmount}
+                onChange={(e) => applyDiscountVal(Number(e.target.value) || 0)}
+                className="w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-right font-mono font-bold text-xs text-rose-600"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <button type="button" onClick={() => applyDiscountVal(0)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold">0</button>
+              <button type="button" onClick={roundDownThousand} className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">
+                {lang === 'uz' ? 'Yaxlitlash (1000)' : 'Округлить'}
+              </button>
+              <button type="button" onClick={() => applyDiscountVal(total * 0.05)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold">-5%</button>
+              <button type="button" onClick={() => applyDiscountVal(total * 0.10)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold">-10%</button>
+            </div>
+          </div>
+
           {/* Payment method tabs */}
           <div className="grid grid-cols-4 gap-1.5">
             {[
@@ -4206,7 +4107,7 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, on
                 key={m.id}
                 type="button"
                 onClick={() => handleMethodSwitch(m.id)}
-                className={`py-2.5 px-2 rounded-2xl text-xs font-bold border transition flex flex-col items-center gap-0.5 touch-target ${
+                className={`py-2 px-1.5 rounded-2xl text-xs font-bold border transition flex flex-col items-center gap-0.5 ${
                   method === m.id
                     ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
                     : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
@@ -4229,24 +4130,24 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, on
                 step="100"
                 value={cashReceived}
                 onChange={(e) => setCashReceived(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 font-mono font-black text-lg text-emerald-600 dark:text-emerald-400"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-black text-lg text-emerald-600 dark:text-emerald-400"
               />
               <div className="flex flex-wrap gap-1.5">
-                {[total, 10000, 20000, 50000, 100000, 200000].map((v, idx) => (
+                {[finalTotal, 10000, 20000, 50000, 100000, 200000].map((v, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setCashReceived(String(v))}
-                    className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold hover:border-emerald-500"
+                    className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold hover:border-emerald-500"
                   >
                     {idx === 0 ? (lang === 'uz' ? 'Aniq' : 'Ровно') : formatMoney(v)}
                   </button>
                 ))}
               </div>
               {changeAmount > 0 && (
-                <div className="bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 rounded-xl p-2.5 flex justify-between items-center">
+                <div className="bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 rounded-xl p-2 flex justify-between items-center">
                   <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">{lang === 'uz' ? "Qaytim:" : "Сдача:"}</span>
-                  <span className="text-lg font-black font-mono text-emerald-700 dark:text-emerald-300">{formatMoney(changeAmount)}</span>
+                  <span className="text-base font-black font-mono text-emerald-700 dark:text-emerald-300">{formatMoney(changeAmount)}</span>
                 </div>
               )}
             </div>
@@ -4255,126 +4156,64 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', onClose, on
           {method === 'MIXED' && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">💳 {lang === 'uz' ? "Karta (so'm):" : "Картой (сум):"}</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={cardAmount}
-                  onChange={(e) => setCardAmount(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-sm"
-                />
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">💳 {lang === 'uz' ? "Karta:" : "Картой:"}</label>
+                <input type="number" min="0" value={cardAmount} onChange={(e) => setCardAmount(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">📓 {lang === 'uz' ? "Qarzga (so'm):" : "В долг (сум):"}</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={debtAmount}
-                  onChange={(e) => setDebtAmount(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-sm text-amber-600"
-                />
+                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">📓 {lang === 'uz' ? "Qarzga:" : "В долг:"}</label>
+                <input type="number" min="0" value={debtAmount} onChange={(e) => setDebtAmount(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-sm text-amber-600" />
               </div>
             </div>
           )}
 
           {(method === 'DEBT' || (method === 'MIXED' && debtNum > 0)) && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-3 space-y-2.5">
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-amber-900 dark:text-amber-300">
-                  👤 {lang === 'uz' ? "Qarzdor mijozni tanlang *" : "Выберите клиента *"}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowNewDebtorForm(!showNewDebtorForm)}
-                  className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
-                >
-                  {showNewDebtorForm ? (lang === 'uz' ? 'Yopish' : 'Скрыть') : (lang === 'uz' ? '+ Yangi mijoz' : '+ Новый клиент')}
+                <label className="text-xs font-bold text-amber-900 dark:text-amber-300">👤 {lang === 'uz' ? "Qarzdor mijoz *" : "Клиент *"}</label>
+                <button type="button" onClick={() => setShowNewDebtorForm(!showNewDebtorForm)} className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline">
+                  {showNewDebtorForm ? (lang === 'uz' ? 'Yopish' : 'Скрыть') : (lang === 'uz' ? '+ Yangi' : '+ Новый')}
                 </button>
               </div>
 
               {showNewDebtorForm ? (
-                <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-amber-300 dark:border-amber-700 space-y-2">
-                  <input
-                    type="text"
-                    placeholder={lang === 'uz' ? "Mijoz ismi (masalan: Alisher aka)" : "Имя клиента"}
-                    value={quickNewName}
-                    onChange={(e) => setQuickNewName(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold"
-                  />
+                <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-amber-300 space-y-2">
+                  <input type="text" placeholder={lang === 'uz' ? "Mijoz ismi" : "Имя клиента"} value={quickNewName} onChange={(e) => setQuickNewName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold" />
                   <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      placeholder="+998 90 ..."
-                      value={quickNewPhone}
-                      onChange={(e) => setQuickNewPhone(e.target.value)}
-                      className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCreateQuickDebtor}
-                      disabled={creatingDebtor}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-bold"
-                    >
-                      {creatingDebtor ? '...' : 'Saqlash'}
-                    </button>
+                    <input type="text" placeholder="+998 90 ..." value={quickNewPhone} onChange={(e) => setQuickNewPhone(e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono" />
+                    <button type="button" onClick={handleCreateQuickDebtor} disabled={creatingDebtor} className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold">{creatingDebtor ? '...' : 'Saqlash'}</button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <input
-                    type="text"
-                    placeholder={lang === 'uz' ? "Ism yoki telefon bo'yicha qidirish..." : "Поиск клиента..."}
-                    value={debtorSearch}
-                    onChange={(e) => setDebtorSearch(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs"
-                  />
-                  <select
-                    value={selectedDebtorId}
-                    onChange={(e) => setSelectedDebtorId(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2.5 text-xs font-bold"
-                    required
-                  >
+                  <input type="text" placeholder={lang === 'uz' ? "Mijozni qidirish..." : "Поиск клиента..."} value={debtorSearch} onChange={(e) => setDebtorSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs" />
+                  <select value={selectedDebtorId} onChange={(e) => setSelectedDebtorId(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold" required>
                     <option value="">{lang === 'uz' ? "-- Mijozni tanlang --" : "-- Выберите клиента --"}</option>
                     {safeArray(debtors).map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.full_name} {d.phone ? `(${d.phone})` : ''} — {formatMoney(d.balance)}
-                      </option>
+                      <option key={d.id} value={d.id}>{d.full_name} {d.phone ? `(${d.phone})` : ''} — {formatMoney(d.balance)}</option>
                     ))}
                   </select>
                 </>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  📅 {lang === 'uz' ? "Qaytarish muddati (ixtiyoriy):" : "Срок возврата:"}
-                </label>
                 <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  <button type="button" onClick={() => setQuickDue(1)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-[11px] font-bold">Ertaga</button>
-                  <button type="button" onClick={() => setQuickDue(3)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-[11px] font-bold">3 kun</button>
-                  <button type="button" onClick={() => setQuickDue(7)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-[11px] font-bold">1 hafta</button>
-                  <button type="button" onClick={() => setQuickDue(30)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-[11px] font-bold">1 oy</button>
+                  <button type="button" onClick={() => setQuickDue(1)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold">Ertaga</button>
+                  <button type="button" onClick={() => setQuickDue(3)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold">3 kun</button>
+                  <button type="button" onClick={() => setQuickDue(7)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold">1 hafta</button>
+                  <button type="button" onClick={() => setQuickDue(30)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold">1 oy</button>
                 </div>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs"
-                />
+                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs" />
               </div>
             </div>
           )}
         </div>
 
         <div className="flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 shrink-0">
-          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 touch-target">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-2xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
             {t.cancelBtn || 'Bekor qilish'}
           </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-3 rounded-2xl text-sm font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 disabled:opacity-40 touch-target"
-          >
-            {loading ? (t.saving || 'Saqlanmoqda...') : (lang === 'uz' ? '✅ Tasdiqlash' : '✅ Подтвердить')}
+          <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-2xl text-sm font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg disabled:opacity-40">
+            {loading ? (t.saving || '...') : (lang === 'uz' ? '✅ Tasdiqlash' : '✅ Подтвердить')}
           </button>
         </div>
       </form>
@@ -4386,74 +4225,74 @@ function ReceiptModal({ receipt, onClose, t }) {
   if (!receipt) return null;
   const lang = (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-slate-900 dark:text-slate-100">
-        <div id="printable-receipt" className="bg-white text-slate-900 p-4 rounded-2xl border border-dashed border-slate-300 font-mono text-xs space-y-2">
-          <div className="text-center border-b border-dashed border-slate-300 pb-2">
-            <div className="font-black text-sm">🛒 GroceryStore POS</div>
-            <div className="text-[11px] text-slate-600">{receipt.receipt_number}</div>
-            <div className="text-[10px] text-slate-500">{new Date(receipt.created_at || Date.now()).toLocaleString()}</div>
-            <div className="text-[10px] text-slate-500">Kassir: {receipt.cashier_name || 'Kassir'}</div>
-          </div>
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-4 sm:p-5 shadow-2xl text-slate-900 dark:text-slate-100 modal-mobile-safe">
+        <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+          <div id="printable-receipt" className="bg-white text-slate-900 p-4 rounded-2xl border border-dashed border-slate-300 font-mono text-xs space-y-2">
+            <div className="text-center border-b border-dashed border-slate-300 pb-2">
+              <div className="font-black text-sm">🛒 GroceryStore POS</div>
+              <div className="text-[11px] text-slate-600">{receipt.receipt_number}</div>
+              <div className="text-[10px] text-slate-500">{new Date(receipt.created_at || Date.now()).toLocaleString()}</div>
+              <div className="text-[10px] text-slate-500">Kassir: {receipt.cashier_name || 'Kassir'}</div>
+            </div>
 
-          <div className="divide-y divide-dashed divide-slate-200">
-            {safeArray(receipt.items).map((it, idx) => (
-              <div key={idx} className="py-1.5 flex justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold truncate">{it.product_name}</div>
-                  <div className="text-[10px] text-slate-500">{it.quantity} x {formatMoney(it.unit_price)}</div>
+            <div className="divide-y divide-dashed divide-slate-200">
+              {safeArray(receipt.items).map((it, idx) => (
+                <div key={idx} className="py-1.5 flex justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold truncate">{it.product_name}</div>
+                    <div className="text-[10px] text-slate-500">{it.quantity} x {formatMoney(it.unit_price)}</div>
+                  </div>
+                  <div className="font-bold whitespace-nowrap">{formatMoney(it.total_price)}</div>
                 </div>
-                <div className="font-bold whitespace-nowrap">{formatMoney(it.total_price)}</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="border-t border-dashed border-slate-300 pt-2 space-y-1">
-            <div className="flex justify-between font-black text-sm">
-              <span>{lang === 'uz' ? 'JAMI:' : 'ИТОГО:'}</span>
-              <span>{formatMoney(receipt.total_amount)}</span>
-            </div>
-            <div className="flex justify-between text-[11px]">
-              <span>{lang === 'uz' ? "To'lov turi:" : 'Оплата:'}</span>
-              <span className="font-bold">{receipt.payment_method}</span>
-            </div>
-            {receipt.cash_received > 0 && (
+            <div className="border-t border-dashed border-slate-300 pt-2 space-y-1">
+              {Number(receipt.discount_amount) > 0 && (
+                <div className="flex justify-between text-[11px] text-rose-600 font-bold">
+                  <span>{lang === 'uz' ? 'Chegirma:' : 'Скидка:'}</span>
+                  <span>-{formatMoney(receipt.discount_amount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-black text-sm">
+                <span>{lang === 'uz' ? 'JAMI:' : 'ИТОГО:'}</span>
+                <span>{formatMoney(receipt.total_amount)}</span>
+              </div>
               <div className="flex justify-between text-[11px]">
-                <span>{lang === 'uz' ? 'Naqd berildi:' : 'Наличными:'}</span>
-                <span>{formatMoney(receipt.cash_received)}</span>
+                <span>{lang === 'uz' ? "To'lov:" : 'Оплата:'}</span>
+                <span className="font-bold">{receipt.payment_method}</span>
               </div>
-            )}
-            {receipt.change_given > 0 && (
-              <div className="flex justify-between text-[11px] font-bold">
-                <span>{lang === 'uz' ? 'Qaytim:' : 'Сдача:'}</span>
-                <span>{formatMoney(receipt.change_given)}</span>
-              </div>
-            )}
-            {receipt.debt_amount > 0 && (
-              <div className="flex justify-between text-[11px] font-bold text-amber-700">
-                <span>{lang === 'uz' ? 'Qarzga:' : 'В долг:'}</span>
-                <span>{formatMoney(receipt.debt_amount)} ({receipt.debtor_name})</span>
-              </div>
-            )}
-          </div>
-          <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300">
-            {lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"}
+              {receipt.cash_received > 0 && (
+                <div className="flex justify-between text-[11px]">
+                  <span>{lang === 'uz' ? 'Naqd:' : 'Нал:'}</span>
+                  <span>{formatMoney(receipt.cash_received)}</span>
+                </div>
+              )}
+              {receipt.change_given > 0 && (
+                <div className="flex justify-between text-[11px] font-bold">
+                  <span>{lang === 'uz' ? 'Qaytim:' : 'Сдача:'}</span>
+                  <span>{formatMoney(receipt.change_given)}</span>
+                </div>
+              )}
+              {receipt.debt_amount > 0 && (
+                <div className="flex justify-between text-[11px] font-bold text-amber-700">
+                  <span>{lang === 'uz' ? 'Qarzga:' : 'В долг:'}</span>
+                  <span>{formatMoney(receipt.debt_amount)} ({receipt.debtor_name})</span>
+                </div>
+              )}
+            </div>
+            <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300">
+              {lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"}
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2 mt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-          >
+        <div className="flex gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
             {lang === 'uz' ? 'Yopish' : 'Закрыть'}
           </button>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow"
-          >
+          <button type="button" onClick={() => window.print()} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow">
             🖨️ {lang === 'uz' ? 'Chop etish' : 'Печать'}
           </button>
         </div>
@@ -5303,19 +5142,33 @@ function CashShiftModal({ token, onClose, notify, lang = 'uz', onShiftChange }) 
   );
 }
 
-function RefundModal({ token, onClose, notify, lang = 'uz', onRefunded }) {
+function RefundModal({ token, onClose, onPrintReceipt, notify, lang = 'uz', onRefunded }) {
   const [receiptNum, setReceiptNum] = useState('');
+  const [recentReceipts, setRecentReceipts] = useState([]);
   const [receiptData, setReceiptData] = useState(null);
   const [returnQtys, setReturnQtys] = useState({});
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const searchReceipt = async (e) => {
-    if (e) e.preventDefault();
-    if (!receiptNum.trim()) return;
+  const loadRecent = async (q = '') => {
+    try {
+      const url = q.trim()
+        ? `${API_BASE}/pos/receipts?limit=25&search=${encodeURIComponent(q.trim())}`
+        : `${API_BASE}/pos/receipts?limit=25`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setRecentReceipts(safeArray(await res.json()));
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    loadRecent('');
+  }, []);
+
+  const selectReceiptByNumber = async (num) => {
+    if (!num) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/pos/receipt/${encodeURIComponent(receiptNum.trim())}`, {
+      const res = await fetch(`${API_BASE}/pos/receipt/${encodeURIComponent(num.trim())}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -5330,6 +5183,15 @@ function RefundModal({ token, onClose, notify, lang = 'uz', onRefunded }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const searchReceipt = async (e) => {
+    if (e) e.preventDefault();
+    if (!receiptNum.trim()) {
+      loadRecent('');
+      return;
+    }
+    await selectReceiptByNumber(receiptNum);
   };
 
   const handleRefund = async () => {
@@ -5366,27 +5228,59 @@ function RefundModal({ token, onClose, notify, lang = 'uz', onRefunded }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl max-h-[calc(100dvh-1.5rem)] flex flex-col text-slate-800 dark:text-slate-100">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
-          <h3 className="font-black text-base">🔄 {lang === 'uz' ? "Tovarni qaytarish (Vozvrat)" : "Возврат товара по чеку"}</h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl modal-mobile-safe text-slate-800 dark:text-slate-100">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+          <div className="flex items-center gap-2">
+            {receiptData && (
+              <button type="button" onClick={() => setReceiptData(null)} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold">←</button>
+            )}
+            <h3 className="font-black text-base">🧾 {lang === 'uz' ? "Cheklar tarixi va Vozvrat" : "Чеки и Возврат"}</h3>
+          </div>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg p-1">✕</button>
         </div>
 
-        <form onSubmit={searchReceipt} className="flex gap-2 mb-3 shrink-0">
+        <form onSubmit={searchReceipt} className="flex gap-1.5 mb-2.5 shrink-0">
           <input
             type="text"
-            placeholder="REC-XXXXXXXX"
+            placeholder={lang === 'uz' ? "Chek raqami (REC-...) yoki bo'sh" : "Номер чека (REC-...)"}
             value={receiptNum}
-            onChange={(e) => setReceiptNum(e.target.value)}
+            onChange={(e) => { setReceiptNum(e.target.value); if (!receiptData) loadRecent(e.target.value); }}
             className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold uppercase"
           />
-          <button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold">
-            {loading ? '...' : (lang === 'uz' ? 'Qidirish' : 'Найти')}
+          <button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold">
+            {loading ? '...' : (lang === 'uz' ? 'Topish' : 'Найти')}
           </button>
         </form>
 
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-          {receiptData && (
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+          {!receiptData ? (
+            safeArray(recentReceipts).length === 0 ? (
+              <div className="text-center py-8 text-xs text-slate-400">{lang === 'uz' ? "Hozircha cheklar yo'q" : "Чеков пока нет"}</div>
+            ) : (
+              safeArray(recentReceipts).map(r => (
+                <div key={r.id} className="p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between gap-2 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold font-mono flex items-center gap-1.5">
+                      <span>{r.receipt_number}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700">{r.payment_method}</span>
+                      {r.has_refund && <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Vozvrat</span>}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      {new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {r.items_count} poz • {formatMoney(r.total_amount)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {onPrintReceipt && (
+                      <button type="button" onClick={() => onPrintReceipt(r)} className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold" title="Print">🖨️</button>
+                    )}
+                    <button type="button" onClick={() => selectReceiptByNumber(r.receipt_number)} className="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold">
+                      🔄 {lang === 'uz' ? 'Qaytarish' : 'Возврат'}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )
+          ) : (
             <>
               <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl text-xs flex justify-between">
                 <div>
@@ -5403,17 +5297,20 @@ function RefundModal({ token, onClose, notify, lang = 'uz', onRefunded }) {
                 <div key={it.product_id} className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 text-xs">
                   <div className="min-w-0 flex-1">
                     <div className="font-bold truncate">{it.product_name}</div>
-                    <div className="text-[11px] text-slate-500">{it.quantity} x {formatMoney(it.unit_price)} (Mumkin: {it.refundable_quantity})</div>
+                    <div className="text-[11px] text-slate-500">{it.quantity} x {formatMoney(it.unit_price)} ({lang === 'uz' ? 'Mumkin:' : 'Дост:'} {it.refundable_quantity})</div>
                   </div>
-                  <input
-                    type="number"
-                    min="0"
-                    max={it.refundable_quantity}
-                    step="any"
-                    value={returnQtys[it.product_id] ?? 0}
-                    onChange={(e) => setReturnQtys(prev => ({ ...prev, [it.product_id]: e.target.value }))}
-                    className="w-20 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-center font-mono font-bold"
-                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button type="button" onClick={() => setReturnQtys(prev => ({ ...prev, [it.product_id]: it.refundable_quantity }))} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-bold">Hammasi</button>
+                    <input
+                      type="number"
+                      min="0"
+                      max={it.refundable_quantity}
+                      step="any"
+                      value={returnQtys[it.product_id] ?? 0}
+                      onChange={(e) => setReturnQtys(prev => ({ ...prev, [it.product_id]: e.target.value }))}
+                      className="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-center font-mono font-bold"
+                    />
+                  </div>
                 </div>
               ))}
 
@@ -5429,7 +5326,7 @@ function RefundModal({ token, onClose, notify, lang = 'uz', onRefunded }) {
         </div>
 
         <div className="flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 shrink-0">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800">Bekor qilish</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800">{lang === 'uz' ? 'Yopish' : 'Закрыть'}</button>
           {receiptData && !receiptData.is_fully_refunded && (
             <button type="button" onClick={handleRefund} disabled={loading} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow">
               🔄 {lang === 'uz' ? "Qaytarishni tasdiqlash" : "Оформить возврат"}
@@ -5441,23 +5338,223 @@ function RefundModal({ token, onClose, notify, lang = 'uz', onRefunded }) {
   );
 }
 
-// ------------------- POS TERMINAL SCREEN -------------------
-function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSetLang, toggleLang: propToggleLang }) {
-  const lang = propLang || (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
-  const setLang = propSetLang || (typeof window !== 'undefined' && window.setPosLang) || ((val) => {
+// ------------------- PRICE CHECKER MODAL -------------------
+function PriceCheckModal({ token, onClose, onAddToCart, notify, t, lang = 'uz' }) {
+  const [query, setQuery] = useState('');
+  const [product, setProduct] = useState(null);
+  const [results, setResults] = useState([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const checkBarcodeOrName = async (code) => {
+    const clean = (code || '').trim();
+    if (!clean) return;
     try {
-      const next = typeof val === 'function' ? val(lang) : val;
-      localStorage.setItem('pos_lang', next);
-      if (typeof window !== 'undefined') window.pos_lang = next;
-      window.location.reload();
+      const res = await fetch(`${API_BASE}/products/barcode/${encodeURIComponent(clean)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const prod = await res.json();
+        setProduct(prod);
+        playAudioCue('add');
+        return;
+      }
+      const listRes = await fetch(`${API_BASE}/products?search=${encodeURIComponent(clean)}&limit=10`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (listRes.ok) {
+        const list = safeArray(await listRes.json());
+        setResults(list);
+        if (list.length === 1) setProduct(list[0]);
+      }
     } catch (e) {}
-  });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-4 sm:p-5 shadow-2xl modal-mobile-safe text-slate-800 dark:text-slate-100">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+          <h3 className="font-black text-base">🏷️ {lang === 'uz' ? "Narx tekshirish (Prays-cheker)" : "Проверка цены"}</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg p-1">✕</button>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); checkBarcodeOrName(query); }} className="flex gap-1.5 mb-3 shrink-0">
+          <input
+            autoFocus
+            type="text"
+            placeholder={lang === 'uz' ? "Shtrixkod yoki tovar nomi..." : "Штрихкод или название..."}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold"
+          />
+          <button type="button" onClick={() => setScannerOpen(true)} className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">📷</button>
+          <button type="submit" className="px-3 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-bold">🔍</button>
+        </form>
+
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+          {product ? (
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-2xl p-4 text-center space-y-2">
+              <div className="text-xs font-mono text-slate-500">{product.barcode}</div>
+              <div className="text-lg font-black text-slate-900 dark:text-slate-100">{product.name}</div>
+              <div className="text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">{formatMoney(product.sale_price)}</div>
+              <div className="text-xs text-slate-500">
+                {lang === 'uz' ? 'Qoldiq:' : 'Остаток:'} <span className="font-bold font-mono">{product.stock_quantity} {product.unit}</span>
+                {product.expiry_date && ` • ⏰ ${product.expiry_date}`}
+              </div>
+              <button
+                type="button"
+                onClick={() => { onAddToCart(product, product.detected_weight || 1.0); onClose(); }}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow"
+              >
+                ➕ {lang === 'uz' ? "Savatga qo'shish" : "Добавить в чек"}
+              </button>
+            </div>
+          ) : results.length > 0 ? (
+            results.map(r => (
+              <button key={r.id} type="button" onClick={() => setProduct(r)} className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex justify-between items-center text-left text-xs">
+                <span className="font-bold truncate pr-2">{r.name}</span>
+                <span className="font-mono font-black text-emerald-600 shrink-0">{formatMoney(r.sale_price)}</span>
+              </button>
+            ))
+          ) : (
+            <div className="text-center py-8 text-xs text-slate-400">
+              {lang === 'uz' ? "Shtrixkodni skanerlang yoki nomini yozing" : "Отсканируйте штрихкод или введите название"}
+            </div>
+          )}
+        </div>
+
+        {scannerOpen && (
+          <CameraScannerModal
+            onScan={(code) => { setScannerOpen(false); setQuery(code); checkBarcodeOrName(code); }}
+            onClose={() => setScannerOpen(false)}
+            notify={notify}
+            t={t}
+            lang={lang}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ------------------- EDIT DEBTOR & REMINDER MODALS -------------------
+function EditDebtorModal({ token, lang = 'uz', debtor, onClose, onSuccess, notify }) {
+  const [fullName, setFullName] = useState(debtor.full_name || '');
+  const [phone, setPhone] = useState(debtor.phone || '');
+  const [dueDate, setDueDate] = useState(debtor.due_date || '');
+  const [note, setNote] = useState(debtor.note || '');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!fullName.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          full_name: fullName.trim(),
+          phone: phone.trim() || null,
+          due_date: dueDate || null,
+          note: note.trim() || null
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Xatolik');
+      onSuccess(data);
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
+      <form onSubmit={submit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-4 sm:p-5 shadow-2xl modal-mobile-safe text-slate-800 dark:text-slate-100">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+          <h3 className="font-bold text-base">✏️ {lang === 'uz' ? "Mijozni tahrirlash" : "Редактировать клиента"}</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 text-lg p-1">✕</button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 text-xs pr-1">
+          <div>
+            <label className="block font-bold mb-1">{lang === 'uz' ? "F.I.Sh. *" : "Имя *"}</label>
+            <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-bold" />
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">{lang === 'uz' ? "Telefon:" : "Телефон:"}</label>
+            <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono" />
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">{lang === 'uz' ? "Qaytarish muddati:" : "Срок возврата:"}</label>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2" />
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">{lang === 'uz' ? "Izoh:" : "Примечание:"}</label>
+            <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2" />
+          </div>
+        </div>
+        <div className="flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 shrink-0">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800">{lang === 'uz' ? 'Bekor qilish' : 'Отмена'}</button>
+          <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white">{loading ? '...' : (lang === 'uz' ? 'Saqlash' : 'Сохранить')}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function RemindDebtorModal({ debtor, onClose, notify, lang = 'uz' }) {
+  const defaultMsg = lang === 'uz'
+    ? `Assalomu alaykum, ${debtor.full_name}! Do'konimizdan ${formatMoney(debtor.balance)} qarzingiz borligini eslatib o'tamiz${debtor.due_date ? ` (muddati: ${debtor.due_date})` : ''}. Rahmat!`
+    : `Здравствуйте, ${debtor.full_name}! Напоминаем о задолженности в магазине: ${formatMoney(debtor.balance)}${debtor.due_date ? ` (срок: ${debtor.due_date})` : ''}. Спасибо!`;
+  const [msg, setMsg] = useState(defaultMsg);
+  const digits = (debtor.phone || '').replace(/\D/g, '');
+  const waNum = digits.startsWith('998') ? digits : (digits.length === 9 ? '998' + digits : digits);
+
+  const copyText = async () => {
+    try {
+      await navigator.clipboard.writeText(msg);
+      notify(lang === 'uz' ? "Matn nusxalandi!" : "Текст скопирован!");
+    } catch (e) {
+      notify(lang === 'uz' ? "Nusxalab bo'lmadi" : "Не удалось скопировать", 'error');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-4 sm:p-5 shadow-2xl modal-mobile-safe text-slate-800 dark:text-slate-100">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+          <h3 className="font-bold text-base">📩 {lang === 'uz' ? "Qarz eslatmasi" : "Напоминание о долге"}</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 text-lg p-1">✕</button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 text-xs">
+          <div className="font-bold">{debtor.full_name} {debtor.phone ? `• ${debtor.phone}` : ''}</div>
+          <textarea rows={4} value={msg} onChange={(e) => setMsg(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs" />
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={copyText} className="py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold">📋 {lang === 'uz' ? 'Nusxalash' : 'Копировать'}</button>
+            {debtor.phone && (
+              <a href={`sms:${debtor.phone}?body=${encodeURIComponent(msg)}`} className="py-2.5 rounded-xl bg-sky-600 text-white font-bold text-center">💬 SMS</a>
+            )}
+            {waNum && (
+              <a href={`https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer" className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-center">🟢 WhatsApp</a>
+            )}
+            <a href={`https://t.me/share/url?url=${encodeURIComponent(' ')}&text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer" className="py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-center">✈️ Telegram</a>
+          </div>
+        </div>
+        <button type="button" onClick={onClose} className="w-full mt-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 shrink-0">{lang === 'uz' ? 'Yopish' : 'Закрыть'}</button>
+      </div>
+    </div>
+  );
+}
+
+// ------------------- POS TERMINAL SCREEN -------------------
+function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSetLang, toggleLang: propToggleLang, currentShift: propShift, onShiftChange, onOpenShift }) {
+  const lang = propLang || (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
 
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
-  const [barcodeQuery, setBarcodeQuery] = useState('');
   const [cart, setCart] = useState([]);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [checkoutInitialMethod, setCheckoutInitialMethod] = useState('CASH');
@@ -5466,14 +5563,15 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const [directLoading, setDirectLoading] = useState(false);
   const [scannerActive, setScannerActive] = useState(false);
   const [showAllCatalog, setShowAllCatalog] = useState(false);
-  const [voiceListening, setVoiceListening] = useState(false);
+  const [priceCheckOpen, setPriceCheckOpen] = useState(false);
   const [voiceAssistantOpen, setVoiceAssistantOpen] = useState(false);
   const [quickProducts, setQuickProducts] = useState([]);
   const [notFoundBarcode, setNotFoundBarcode] = useState(null);
   const [createProductOpen, setCreateProductOpen] = useState(false);
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
-  const [currentShift, setCurrentShift] = useState(null);
+  const [localShift, setLocalShift] = useState(null);
+  const currentShift = propShift !== undefined ? propShift : localShift;
 
   // Parked / Held Carts (MoySklad Queue)
   const [parkedCarts, setParkedCarts] = useState(() => {
@@ -5484,11 +5582,8 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     }
   });
   const [parkedModalOpen, setParkedModalOpen] = useState(false);
-
-  // Quick Banknotes & Change Calculation (1C / MoySklad style)
   const [selectedCashReceived, setSelectedCashReceived] = useState(null);
-
-  const barcodeInputRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   const fetchCurrentShift = async () => {
     try {
@@ -5497,16 +5592,20 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       });
       if (res.ok) {
         const data = await res.json();
-        setCurrentShift(data);
+        setLocalShift(data);
+        if (onShiftChange) onShiftChange();
       }
     } catch (e) {}
   };
 
   useEffect(() => {
     fetchCategories();
-    fetchProducts();
     fetchQuickProducts();
-    fetchCurrentShift();
+    if (propShift === undefined) fetchCurrentShift();
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
   }, [selectedCategory, search]);
 
   const fetchCategories = async () => {
@@ -5520,7 +5619,6 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       const data = await res.json();
       setCategories(Array.isArray(data) ? data : (data?.categories || data?.items || []));
     } catch (e) {
-      console.error('Error fetching categories:', e);
       setCategories([]);
     }
   };
@@ -5528,7 +5626,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const fetchProducts = async () => {
     try {
       const params = new URLSearchParams({ limit: '24' });
-      if (search) params.append('search', search);
+      if (search.trim()) params.append('search', search.trim());
       if (selectedCategory) params.append('category_id', selectedCategory.toString());
 
       const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
@@ -5538,10 +5636,8 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         setProducts([]);
         return;
       }
-      const data = await res.json();
-      setProducts(safeArray(data));
+      setProducts(safeArray(await res.json()));
     } catch (e) {
-      console.error(e);
       setProducts([]);
     }
   };
@@ -5552,44 +5648,27 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (res.ok) {
-        const data = await res.json();
-        const list = safeArray(data);
+        const list = safeArray(await res.json());
         if (list.length > 0) setQuickProducts(list);
       }
-    } catch (e) {
-      console.error('Quick products fetch error:', e);
-    }
-  };
-
-  const playBeep = () => {
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.frequency.value = 880;
-      gainNode.gain.value = 0.25;
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.12);
     } catch (e) {}
   };
+
+  const playBeep = () => playAudioCue('success');
 
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.product.sale_price * item.quantity, 0);
   }, [cart]);
 
-  // When total changes, sync quick cash banknote if exact was selected
   const cashGiven = selectedCashReceived !== null ? selectedCashReceived : cartTotal;
   const cashChange = Math.max(0, cashGiven - cartTotal);
 
-  // ------------------- HOTKEYS LISTENER (1C:Retail Style) -------------------
+  // Hotkeys for PC cashiers (F2, F3, F5, F6, F7, F12, Esc)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't intercept function keys if a modal is open
       if (e.key === 'F2') {
         e.preventDefault();
-        if (barcodeInputRef.current) barcodeInputRef.current.focus();
+        if (searchInputRef.current) searchInputRef.current.focus();
       } else if (e.key === 'F3') {
         e.preventDefault();
         setVoiceAssistantOpen(true);
@@ -5616,10 +5695,9 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cart, cartTotal, checkoutModalOpen, scannerActive, parkedModalOpen, parkedCarts]);
 
-  // ------------------- PARK / HOLD CART QUEUE -------------------
   const parkCurrentCart = () => {
     if (cart.length === 0) {
-      notify(lang === 'uz' ? "Savat bo'sh, saqlashga tovar yo'q" : "Корзина пуста", 'warn');
+      notify(lang === 'uz' ? "Savat bo'sh" : "Корзина пуста", 'warn');
       return;
     }
     const newHold = {
@@ -5635,12 +5713,12 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     setCart([]);
     setSelectedCashReceived(null);
     notify(lang === 'uz' ? `Chek #${newHold.id} saqlandi` : `Чек #${newHold.id} отложен`, 'info');
-    speakAloud(lang === 'uz' ? "Chek saqlandi" : "Чек отложен", lang);
   };
 
   const resumeParkedCart = (heldId) => {
     const found = parkedCarts.find(h => h.id === heldId);
     if (!found) return;
+    let remaining = parkedCarts.filter(h => h.id !== heldId);
     if (cart.length > 0) {
       const autoPark = {
         id: Date.now().toString().slice(-5),
@@ -5649,19 +5727,14 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         total: cartTotal,
         itemCount: cart.reduce((sum, it) => sum + it.quantity, 0)
       };
-      const updated = [autoPark, ...parkedCarts.filter(h => h.id !== heldId)];
-      setParkedCarts(updated);
-      try { localStorage.setItem('pos_parked_carts', JSON.stringify(updated)); } catch (e) {}
-    } else {
-      const updated = parkedCarts.filter(h => h.id !== heldId);
-      setParkedCarts(updated);
-      try { localStorage.setItem('pos_parked_carts', JSON.stringify(updated)); } catch (e) {}
+      remaining = [autoPark, ...remaining];
     }
+    setParkedCarts(remaining);
+    try { localStorage.setItem('pos_parked_carts', JSON.stringify(remaining)); } catch (e) {}
     setCart(found.items);
     setSelectedCashReceived(null);
     setParkedModalOpen(false);
     notify(lang === 'uz' ? `Chek #${heldId} tiklandi` : `Чек #${heldId} восстановлен`, 'success');
-    speakAloud(lang === 'uz' ? "Chek tiklandi" : "Чек восстановлен", lang);
   };
 
   const removeParkedCart = (heldId) => {
@@ -5670,11 +5743,21 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     try { localStorage.setItem('pos_parked_carts', JSON.stringify(updated)); } catch (e) {}
   };
 
-  const handleBarcodeSubmit = async (e) => {
+  const handleSearchOrBarcodeSubmit = async (e) => {
     if (e) e.preventDefault();
-    const code = barcodeQuery.trim();
-    if (!code) return;
-    await processBarcode(code);
+    const raw = search.trim();
+    if (!raw) return;
+    // Try barcode lookup first if it looks like a barcode or matches 1 product cleanly
+    if (/^[0-9A-Za-z\-]{4,64}$/.test(raw) && /\d/.test(raw)) {
+      await processBarcode(raw);
+      return;
+    }
+    if (products.length === 1) {
+      addToCart(products[0], 1.0);
+      playAudioCue('add');
+      setSearch('');
+      notify(products[0].name);
+    }
   };
 
   const processBarcode = async (code) => {
@@ -5685,21 +5768,17 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       if (!res.ok) {
         playAudioCue('listen');
         setCreateProductOpen(code);
-        notify(lang === 'uz' ? `Yangi shtrixkod (${code}). Tovarni kiriting` : `Новый штрихкод (${code}). Заполните данные товара`, 'info');
-        setBarcodeQuery('');
+        notify(lang === 'uz' ? `Yangi shtrixkod (${code}). Tovarni kiriting` : `Новый штрихкод (${code}). Заполните данные`, 'info');
+        setSearch('');
         return;
       }
       const prod = await res.json();
       playAudioCue('add');
       const qty = prod.detected_weight ? Number(prod.detected_weight) : 1.0;
       addToCart(prod, qty);
-      if (prod.detected_weight) {
-        notify((lang === 'uz' ? "Vazn aniqlandi: " : "Вес с весов: ") + qty + " kg");
-      } else {
-        notify(prod.name);
-      }
-      setBarcodeQuery('');
-      if (barcodeInputRef.current) barcodeInputRef.current.focus();
+      notify(prod.detected_weight ? `${prod.name} (${qty} kg)` : prod.name);
+      setSearch('');
+      if (searchInputRef.current) searchInputRef.current.focus();
     } catch (err) {
       notify(err.message, 'error');
     }
@@ -5711,16 +5790,16 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       if (existing) {
         return prev.map((item) =>
           item.product.id === product.id
-            ? { ...item, quantity: Math.round((item.quantity + quantity) * 100) / 100 }
+            ? { ...item, quantity: Math.round((item.quantity + quantity) * 1000) / 1000 }
             : item
         );
       }
-      return [...prev, { product, quantity: Math.round(quantity * 100) / 100 }];
+      return [...prev, { product, quantity: Math.round(quantity * 1000) / 1000 }];
     });
   };
 
   const addQuickItem = (item) => {
-    playBeep();
+    playAudioCue('add');
     const prod = {
       id: item.id || item.barcode,
       name: item.name,
@@ -5731,7 +5810,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       stock_quantity: item.stock_quantity !== undefined ? item.stock_quantity : 999
     };
     addToCart(prod, 1.0);
-    notify(item.name + " (+1)");
+    notify(`${item.name} (+1)`);
   };
 
   const updateQuantity = (productId, delta) => {
@@ -5739,7 +5818,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       prev
         .map((item) => {
           if (item.product.id === productId) {
-            const newQty = Math.round((item.quantity + delta) * 100) / 100;
+            const newQty = Math.round((item.quantity + delta) * 1000) / 1000;
             return newQty > 0 ? { ...item, quantity: newQty } : null;
           }
           return item;
@@ -5771,11 +5850,10 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     setSelectedCashReceived(null);
   };
 
-  // Direct 1-Click Checkout Handler
   const handleDirectCheckout = async (paymentMethod) => {
     if (cart.length === 0) return;
-    if (paymentMethod === 'DEBT') {
-      setCheckoutInitialMethod('DEBT');
+    if (paymentMethod === 'DEBT' || paymentMethod === 'MIXED') {
+      setCheckoutInitialMethod(paymentMethod);
       setCheckoutModalOpen(true);
       return;
     }
@@ -5798,10 +5876,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
       const res = await fetch(`${API_BASE}/pos/checkout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -5816,580 +5891,423 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         total: cartTotal,
         change: data.change_given,
         method: data.payment_method,
-        data: data
+        data
       });
       setTimeout(() => setSuccessToast(null), 6000);
-      
+
       const spkMsg = paymentMethod === 'CASH'
         ? (lang === 'uz' ? `Xarid yakunlandi. Qaytim: ${formatMoney(data.change_given)}` : `Покупка завершена. Сдача: ${formatMoney(data.change_given)}`)
         : (lang === 'uz' ? "Karta orqali to'lov qabul qilindi" : "Оплата картой принята");
       speakAloud(spkMsg, lang);
     } catch (err) {
+      playAudioCue('error');
       notify(err.message, 'error');
     } finally {
       setDirectLoading(false);
     }
   };
 
-  return (
-    <div className="space-y-3">
-      {/* Shift Status & Quick Operations Bar (Family-friendly Controls) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-3 py-2 shadow-sm flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setShiftModalOpen(true)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition touch-target ${
-            currentShift?.is_open
-              ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-              : 'bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
-          }`}
-        >
-          <span>{currentShift?.is_open ? '🟢' : '🔴'}</span>
-          <span>
-            {currentShift?.is_open
-              ? (lang === 'uz' ? `Smena ochiq • Kassa: ${formatMoney(currentShift.shift?.expected_cash || 0)}` : `Смена открыта • Касса: ${formatMoney(currentShift.shift?.expected_cash || 0)}`)
-              : (lang === 'uz' ? "Smena yopiq (Ochish uchun bosing)" : "Смена закрыта (Открыть)")}
-          </span>
-        </button>
+  const quickItemsList = safeArray(quickProducts).length > 0 ? safeArray(quickProducts) : safeArray(products).slice(0, 8);
+  const showingCatalog = search.trim().length > 0 || showAllCatalog || selectedCategory !== null;
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setVoiceAssistantOpen(true)}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1 touch-target"
-          >
-            <span>🎙️</span>
-            <span>{lang === 'uz' ? "Ovozli kassa" : "Голосовой ввод"}</span>
+  return (
+    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-2.5">
+      {/* Pinned Compact POS Control & Search Strip (Always Visible Without Scrolling) */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-sm space-y-1.5">
+        {/* Compact Tool Strip */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <button type="button" onClick={() => setVoiceAssistantOpen(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 whitespace-nowrap shrink-0">
+            🎙️ {lang === 'uz' ? "Ovoz" : "Голос"}
           </button>
-          <button
-            type="button"
-            onClick={() => setRefundModalOpen(true)}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition flex items-center gap-1 touch-target"
-          >
-            <span>🔄</span>
-            <span>{lang === 'uz' ? "Qaytarish" : "Возврат"}</span>
+          <button type="button" onClick={() => setPriceCheckOpen(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap shrink-0">
+            🏷️ {lang === 'uz' ? "Narx?" : "Цена?"}
           </button>
+          <button type="button" onClick={() => setRefundModalOpen(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap shrink-0">
+            🧾 {lang === 'uz' ? "Chek / Vozvrat" : "Чеки / Возврат"}
+          </button>
+          <button type="button" onClick={parkCurrentCart} disabled={cart.length === 0} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 disabled:opacity-40 whitespace-nowrap shrink-0">
+            ⏸️ {lang === 'uz' ? "Saqlash" : "Отложить"}
+          </button>
+          {parkedCarts.length > 0 && (
+            <button type="button" onClick={() => setParkedModalOpen(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-600 text-white whitespace-nowrap shrink-0 animate-pulse">
+              📂 {parkedCarts.length}
+            </button>
+          )}
+          {cart.length > 0 && (
+            <button type="button" onClick={() => clearCart(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200 dark:border-rose-800 whitespace-nowrap shrink-0 ml-auto">
+              🗑️ {lang === 'uz' ? "Tozalash" : "Очистить"}
+            </button>
+          )}
         </div>
+
+        {/* Unified Search / Barcode Input + Prominent Camera Scanner */}
+        <form onSubmit={handleSearchOrBarcodeSubmit} className="flex items-center gap-1.5">
+          <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 focus-within:border-emerald-500">
+            <span className="text-xs mr-1.5">🔍</span>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder={lang === 'uz' ? "Shtrixkod yoki tovar nomi..." : "Штрихкод или название..."}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 bg-transparent py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none min-w-0"
+            />
+            {search && (
+              <button type="button" onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600 px-1 text-xs font-bold">✕</button>
+            )}
+          </div>
+          {search.trim() && (
+            <button type="submit" className="px-3 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-black shrink-0">↵</button>
+          )}
+          <button
+            type="button"
+            onClick={() => setScannerActive(true)}
+            className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black rounded-xl text-xs shadow-md active:scale-95 transition flex items-center gap-1 shrink-0"
+          >
+            <span className="text-sm">📷</span>
+            <span>{lang === 'uz' ? "Skaner" : "Сканер"}</span>
+          </button>
+        </form>
       </div>
 
-      {/* Success Non-blocking Toast Banner */}
+      {/* Non-blocking Sale Success Banner */}
       {successToast && (
-        <div className="bg-emerald-600 text-white rounded-2xl p-3 shadow-xl flex items-center justify-between gap-3 animate-fade-in border border-emerald-400">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">✅</span>
-            <div>
-              <div className="font-extrabold text-xs sm:text-sm">
-                {lang === 'uz' ? "Xarid muvaffaqiyatli yakunlandi!" : "Покупка успешно завершена!"} #{successToast.receiptNumber}
-              </div>
-              <div className="text-[11px] opacity-90 font-mono">
-                {formatMoney(successToast.total)} ({successToast.method})
-                {successToast.change > 0 && (
-                  <span className="ml-2 font-black text-amber-200">
-                    {lang === 'uz' ? "Qaytim:" : "Сдача:"} {formatMoney(successToast.change)}
-                  </span>
-                )}
-              </div>
-            </div>
+        <div className="shrink-0 bg-emerald-600 text-white rounded-xl px-3 py-2 shadow-lg flex items-center justify-between gap-2 text-xs">
+          <div className="truncate font-bold">
+            ✅ #{successToast.receiptNumber} • {formatMoney(successToast.total)}
+            {successToast.change > 0 && <span className="ml-1.5 text-amber-200 font-black">({lang === 'uz' ? 'Qaytim:' : 'Сдача:'} {formatMoney(successToast.change)})</span>}
           </div>
-          <button
-            onClick={() => setLastReceipt(successToast.data)}
-            className="bg-white text-emerald-800 hover:bg-emerald-50 px-3 py-1.5 rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5"
-          >
-            <span>🖨️</span>
-            <span>{t.printReceiptOptional || "Chekni chop etish"}</span>
+          <button type="button" onClick={() => setLastReceipt(successToast.data)} className="bg-white text-emerald-800 px-2.5 py-1 rounded-lg font-bold shrink-0">
+            🖨️ {lang === 'uz' ? 'Chek' : 'Чек'}
           </button>
         </div>
       )}
 
-      {/* MoySklad 2-Column POS Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
-        
-        {/* LEFT COLUMN: Input tools + Search Results + Quick items + Cart Table (7-8 cols) */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-3">
-          
-          {/* Barcode and product search controls */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-sm flex flex-col sm:flex-row gap-2 transition-colors duration-200">
-            {/* Barcode input & Submit */}
-            <form onSubmit={handleBarcodeSubmit} className="flex-1 flex gap-1.5 items-center">
-              <input
-                ref={barcodeInputRef}
-                type="text"
-                placeholder={t.barcodeScanPlaceholder || "Shtrixkodni kiriting (F2)..."}
-                value={barcodeQuery}
-                onChange={(e) => setBarcodeQuery(e.target.value)}
-                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              />
+      {/* Middle Workspace (Scrolls ONLY inside bounded container) */}
+      <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 lg:gap-3 overflow-hidden">
+        {/* Left/Center: Quick Strip + Search Catalog OR Cart */}
+        <div className="flex-1 min-h-0 lg:col-span-7 xl:col-span-8 flex flex-col gap-1.5 overflow-hidden">
+          {/* Compact Horizontal Quick Items Bar (Always 1 tap away) */}
+          <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (showingCatalog) {
+                  setSearch('');
+                  setSelectedCategory(null);
+                  setShowAllCatalog(false);
+                } else {
+                  setShowAllCatalog(true);
+                }
+              }}
+              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold whitespace-nowrap border shrink-0 transition ${
+                showingCatalog
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+              }`}
+            >
+              {showingCatalog ? (lang === 'uz' ? `🧾 Savat (${cart.length})` : `🧾 Чек (${cart.length})`) : (lang === 'uz' ? '📂 Katalog' : '📂 Каталог')}
+            </button>
+            {quickItemsList.map((item) => (
               <button
-                type="submit"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs shadow-sm transition touch-target"
-                title="Shtrixkodni qidirish"
-              >
-                ↵
-              </button>
-            </form>
-
-            <div className="flex items-center gap-2">
-              {/* Prominent Large Camera Scanner Button */}
-              <button
+                key={item.id}
                 type="button"
-                onClick={() => setScannerActive(true)}
-                className="h-11 sm:h-12 px-5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black rounded-2xl text-sm sm:text-base shadow-lg shadow-emerald-600/30 active:scale-95 transition flex items-center justify-center gap-2 touch-target"
-                title={lang === 'uz' ? "Kamera orqali shtrixkod skaneri" : "Сканер через камеру"}
+                onClick={() => addQuickItem(item)}
+                className="px-2.5 py-1.5 rounded-xl bg-emerald-50/90 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-emerald-200 dark:border-slate-700 text-left shrink-0 flex items-center gap-1.5 transition"
               >
-                <span className="text-xl">📷</span>
-                <span className="font-extrabold">{lang === 'uz' ? "Skaner" : "Сканер"}</span>
+                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100 max-w-[110px] truncate">{item.name}</span>
+                <span className="text-[10px] font-black font-mono text-emerald-600 dark:text-emerald-400">{Math.round((item.sale_price || item.price) / 1000)}k</span>
               </button>
-            </div>
-
-            {/* Fast Product Search Input */}
-            <div className="flex items-center gap-1 w-full sm:w-52">
-              <input
-                type="text"
-                placeholder={t.searchProductPlaceholder || "Tovar nomi..."}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="text-slate-400 hover:text-slate-600 p-2 text-xs font-bold"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+            ))}
           </div>
 
-          {/* Live Search & Category Catalog Results Grid */}
-          {(search.trim().length > 0 || showAllCatalog || selectedCategory !== null) && (
-            <div className="bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl p-3 shadow-sm space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                  🔍 {lang === 'uz' ? `Topilgan tovarlar (${products.length}):` : `Найденные товары (${products.length}):`}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => { setSearch(''); setSelectedCategory(null); setShowAllCatalog(false); }}
-                  className="text-xs text-slate-500 hover:text-slate-700 font-bold"
-                >
-                  ✕ {lang === 'uz' ? 'Yopish' : 'Скрыть'}
-                </button>
-              </div>
-              {products.length === 0 ? (
-                <div className="text-center py-4 text-xs text-slate-400">
-                  {lang === 'uz' ? 'Tovar topilmadi' : 'Товары не найдены'}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-60 overflow-y-auto pr-1">
-                  {safeArray(products).map((p) => (
+          {/* Scrollable Body: Catalog Search Grid OR Cart Table/Cards */}
+          <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+            {showingCatalog ? (
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-2 space-y-2">
+                {/* Category Filter Strip */}
+                <div className="shrink-0 flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory(null)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap ${selectedCategory === null ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+                  >
+                    {lang === 'uz' ? 'Hammasi' : 'Все'}
+                  </button>
+                  {safeArray(categories).map((cat) => (
                     <button
-                      key={p.id}
+                      key={cat.id}
                       type="button"
-                      onClick={() => {
-                        addToCart(p, 1.0);
-                        playAudioCue('add');
-                      }}
-                      className="bg-slate-50 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 rounded-xl p-2.5 text-left transition flex flex-col justify-between gap-1 touch-target"
+                      onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
+                      className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap ${selectedCategory === cat.id ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
                     >
-                      <div className="font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-2">{p.name}</div>
-                      <div className="flex items-center justify-between w-full pt-1 border-t border-slate-200/70 dark:border-slate-700">
-                        <span className="text-[11px] font-black font-mono text-emerald-600 dark:text-emerald-400">{formatMoney(p.sale_price)}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{p.stock_quantity} {p.unit}</span>
-                      </div>
+                      {cat.name ? cat.name.split('/')[0].trim() : cat.name}
                     </button>
                   ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Quick 1-Click Items Bar */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-sm space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <span>⚡</span>
-                <span>{lang === 'uz' ? "Tezkor tovarlar (1-bosish):" : "Быстрые товары (1 нажатие):"}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAllCatalog(!showAllCatalog)}
-                className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
-              >
-                {showAllCatalog
-                  ? (lang === 'uz' ? "Katalogni yashirish" : "Скрыть каталог")
-                  : (lang === 'uz' ? "Barcha tovarlar / Kategoriyalar" : "Весь каталог / Категории")}
-              </button>
-            </div>
-
-            {showAllCatalog && (
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 pt-1 no-scrollbar">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategory(null)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${
-                    selectedCategory === null
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {t.allCategories || (lang === 'uz' ? "Barcha toifalar" : "Все категории")}
-                </button>
-                {(Array.isArray(categories) ? categories : (categories?.categories || [])).map((cat) => (
                   <button
-                    key={cat.id}
                     type="button"
-                    onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition ${
-                      selectedCategory === cat.id
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
+                    onClick={() => { setSearch(''); setSelectedCategory(null); setShowAllCatalog(false); }}
+                    className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 whitespace-nowrap ml-auto"
                   >
-                    {cat.name ? cat.name.split('/')[0].trim() : cat.name}
+                    ✕
                   </button>
-                ))}
+                </div>
+
+                {/* Product Results Grid */}
+                <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
+                  {products.length === 0 ? (
+                    <div className="py-8 text-center space-y-2 text-xs text-slate-400">
+                      <div>{lang === 'uz' ? 'Tovar topilmadi' : 'Товары не найдены'}</div>
+                      {isOwner && (
+                        <button type="button" onClick={() => setCreateProductOpen(true)} className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold">
+                          ➕ {lang === 'uz' ? "Yangi tovar qo'shish" : "Добавить товар"}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+                      {safeArray(products).map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => { addToCart(p, 1.0); playAudioCue('add'); notify(`${p.name} (+1)`); }}
+                          className="bg-slate-50 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-left transition flex flex-col justify-between gap-1"
+                        >
+                          <div className="font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight">{p.name}</div>
+                          <div className="flex items-center justify-between w-full pt-1 border-t border-slate-200/70 dark:border-slate-700">
+                            <span className="text-[11px] font-black font-mono text-emerald-600 dark:text-emerald-400">{formatMoney(p.sale_price)}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{p.stock_quantity} {p.unit}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Active Cart Header + Items */
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <div className="shrink-0 flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs">
+                  <span className="font-bold flex items-center gap-1.5">
+                    <span>🧾 {lang === 'uz' ? "Savdo cheki" : "Чек"}</span>
+                    <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-mono text-[11px] font-bold">
+                      {cart.length} {lang === 'uz' ? "poz" : "поз"}
+                    </span>
+                  </span>
+                  <span className="hidden md:inline text-[10px] text-slate-400 font-mono">F2 • F3 • F5 Naqd • F6 Karta • F7 Qarz</span>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {cart.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs gap-2">
+                      <span className="text-3xl opacity-60">🛒</span>
+                      <p className="font-semibold text-slate-600 dark:text-slate-400 max-w-xs">
+                        {safeArray(products).length === 0
+                          ? (lang === 'uz' ? "Do'kon bazasi toza. Birinchi tovarni skanerlab qo'shish uchun pastdagi tugmani bosing." : "База чистая. Отсканируйте первый товар, чтобы добавить его в магазин и начать продажу.")
+                          : (lang === 'uz' ? "Chek bo'sh. Skanerlang yoki tezkor tovarni bosing." : "Чек пуст. Отсканируйте товар или выберите сверху.")}
+                      </p>
+                      <button type="button" onClick={() => setScannerActive(true)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm">
+                        📷 {lang === 'uz' ? "Skaner bilan qo'shish" : "Сканировать товар"}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Mobile Compact Cart Cards (< md) */}
+                      <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                        {safeArray(cart).map((item) => {
+                          const itemTotal = item.product.sale_price * item.quantity;
+                          const isWeight = ['kg', 'l', 'metr'].includes((item.product.unit || '').toLowerCase());
+                          return (
+                            <div key={item.product.id} className="p-2.5 space-y-1.5">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{item.product.name}</div>
+                                  <div className="text-[10px] text-slate-400 font-mono">{formatMoney(item.product.sale_price)} / {item.product.unit || 'dona'}</div>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400">{formatMoney(itemTotal)}</span>
+                                  <button type="button" onClick={() => removeFromCart(item.product.id)} className="w-6 h-6 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 text-xs font-bold flex items-center justify-center">✕</button>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1">
+                                  <button type="button" onClick={() => updateQuantity(item.product.id, -1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black text-sm border border-slate-200 dark:border-slate-700">-</button>
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    value={item.quantity}
+                                    onChange={(e) => setItemExactQty(item.product.id, e.target.value)}
+                                    className="w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1"
+                                  />
+                                  <button type="button" onClick={() => updateQuantity(item.product.id, 1)} className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black text-sm">+</button>
+                                </div>
+                                {isWeight && (
+                                  <div className="flex items-center gap-1">
+                                    {[0.25, 0.5, 1, 2].map(w => (
+                                      <button key={w} type="button" onClick={() => setItemExactQty(item.product.id, w)} className="px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">
+                                        {w}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Desktop Cart Table (>= md) */}
+                      <table className="hidden md:table w-full text-left text-xs">
+                        <thead className="bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                          <tr>
+                            <th className="px-3 py-2 w-8">#</th>
+                            <th className="px-3 py-2">{lang === 'uz' ? "Mahsulot" : "Товар"}</th>
+                            <th className="px-3 py-2 text-right">{lang === 'uz' ? "Narx" : "Цена"}</th>
+                            <th className="px-3 py-2 text-center w-40">{lang === 'uz' ? "Miqdor" : "Кол-во"}</th>
+                            <th className="px-3 py-2 text-right">{lang === 'uz' ? "Jami" : "Сумма"}</th>
+                            <th className="px-2 py-2 w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {safeArray(cart).map((item, idx) => (
+                            <tr key={item.product.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                              <td className="px-3 py-2 text-[11px] text-slate-400 font-mono">{idx + 1}</td>
+                              <td className="px-3 py-2">
+                                <div className="font-bold truncate max-w-xs">{item.product.name}</div>
+                                <div className="text-[10px] text-slate-400 font-mono">{item.product.barcode}</div>
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{formatMoney(item.product.sale_price)}</td>
+                              <td className="px-3 py-2">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button type="button" onClick={() => updateQuantity(item.product.id, -1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black">-</button>
+                                  <input type="number" step="any" value={item.quantity} onChange={(e) => setItemExactQty(item.product.id, e.target.value)} className="w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1" />
+                                  <button type="button" onClick={() => updateQuantity(item.product.id, 1)} className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black">+</button>
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono font-black text-emerald-600 whitespace-nowrap">{formatMoney(item.product.sale_price * item.quantity)}</td>
+                              <td className="px-2 py-2 text-center"><button type="button" onClick={() => removeFromCart(item.product.id)} className="text-slate-400 hover:text-rose-500 font-bold">✕</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </>
+                  )}
+                </div>
               </div>
             )}
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(safeArray(quickProducts).length > 0 ? safeArray(quickProducts) : safeArray(products).slice(0, 8)).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => addQuickItem(item)}
-                  className="bg-emerald-50/80 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-emerald-200 dark:border-slate-700 rounded-xl p-2.5 text-left transition flex items-center gap-2 touch-target shadow-sm"
-                >
-                  <span className="text-xl">{item.icon || '⚡'}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                      {item.name}
-                    </div>
-                    <div className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                      {formatMoney(item.sale_price || item.price)}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Professional Dense Cart Table (MoySklad style) */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                  <span>🧾</span>
-                  <span>{lang === 'uz' ? "Faol savdo cheki" : "Текущий чек"}</span>
-                </span>
-                <span className="text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full font-mono">
-                  {cart.length} {lang === 'uz' ? "pozitsiya" : "поз"}
-                </span>
-              </div>
-
-              {/* Parked Carts Queue Button */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={parkCurrentCart}
-                  disabled={cart.length === 0}
-                  className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition disabled:opacity-40 flex items-center gap-1"
-                  title="Xaridorni navbatga qo'yib boshqasiga o'tish (Esc)"
-                >
-                  <span>⏸️</span>
-                  <span>{lang === 'uz' ? "Chekni saqlash (Esc)" : "Отложить чек (Esc)"}</span>
-                </button>
-
-                {parkedCarts.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setParkedModalOpen(true)}
-                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1 animate-pulse"
-                  >
-                    <span>📂</span>
-                    <span>{lang === 'uz' ? `Saqlanganlar (${parkedCarts.length})` : `Отложенные (${parkedCarts.length})`}</span>
-                  </button>
-                )}
-
-                {cart.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => clearCart(true)}
-                    className="text-xs text-rose-500 hover:text-rose-700 font-bold px-2.5 py-1.5 rounded-lg"
-                    title="Savatni tozalash"
-                  >
-                    🗑️ {t.clearCart || "Tozalash"}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Dense Table */}
-            <div className="overflow-x-auto max-h-80 overflow-y-auto">
-              {cart.length === 0 ? (
-                <div className="h-44 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs">
-                  <span className="text-3xl mb-1.5 opacity-60">🛒</span>
-                  <p className="font-semibold text-slate-600 dark:text-slate-400">
-                    {lang === 'uz' ? "Chek bo'sh. Mahsulot shtrixkodini skanerlang yoki tezkor tovarlardan tanlang." : "Чек пуст. Отсканируйте штрихкод или выберите товар."}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Hotkeys: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">F2</span> Qidiruv | <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">F5</span> Naqd | <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">F6</span> Karta | <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">Esc</span> Saqlash
-                  </p>
-                </div>
-              ) : (
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 backdrop-blur">
-                    <tr>
-                      <th className="px-3 py-2 w-8">#</th>
-                      <th className="px-3 py-2">{lang === 'uz' ? "Mahsulot nomi" : "Наименование"}</th>
-                      <th className="px-3 py-2 text-right">{lang === 'uz' ? "Narxi" : "Цена"}</th>
-                      <th className="px-3 py-2 text-center w-36">{lang === 'uz' ? "Miqdor" : "Кол-во"}</th>
-                      <th className="px-3 py-2 text-right">{lang === 'uz' ? "Jami" : "Сумма"}</th>
-                      <th className="px-2 py-2 text-center w-10"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200 font-medium">
-                    {safeArray(cart).map((item, idx) => {
-                      const itemTotal = item.product.sale_price * item.quantity;
-                      return (
-                        <tr key={item.product.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                          <td className="px-3 py-2 text-[11px] text-slate-400 font-mono">{idx + 1}</td>
-                          <td className="px-3 py-2">
-                            <div className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-xs text-sm">{item.product.name}</div>
-                            <div className="text-[10px] text-slate-400 font-mono">{item.product.barcode}</div>
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                            {formatMoney(item.product.sale_price)}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => updateQuantity(item.product.id, -1)}
-                                className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-black flex items-center justify-center text-base border border-slate-200 dark:border-slate-700"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                step="any"
-                                value={item.quantity}
-                                onChange={(e) => setItemExactQty(item.product.id, e.target.value)}
-                                className="w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-center font-black font-mono text-sm py-1.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => updateQuantity(item.product.id, 1)}
-                                className="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center justify-center text-base shadow-sm"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap text-sm">
-                            {formatMoney(itemTotal)}
-                          </td>
-                          <td className="px-2 py-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => removeFromCart(item.product.id)}
-                              className="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-sm font-bold flex items-center justify-center"
-                              title="O'chirish"
-                            >
-                              ✕
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Big Numbers + Quick Banknotes + Checkout Actions (4-5 cols) */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4 transition-colors duration-200 sticky top-20">
-          
-          {/* Big Monospace Total Box */}
-          <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
-              {lang === 'uz' ? "Jami to'lov miqdori" : "Итого к оплате"}
-            </span>
-            <div className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-              {formatMoney(cartTotal)}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-center gap-2">
-              <span>{cart.length} {lang === 'uz' ? "ta mahsulot" : "товаров"}</span>
-              <span>•</span>
-              <span>{cart.reduce((sum, it) => sum + it.quantity, 0)} {lang === 'uz' ? "dona" : "шт"}</span>
-            </div>
-          </div>
-
-          {/* Quick Banknotes for Fast Cash Change Calculation */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-              <span>💵 {lang === 'uz' ? "Xaridordan olingan naqd pul:" : "Получено наличными:"}</span>
-              <button
-                type="button"
-                onClick={() => setSelectedCashReceived(cartTotal)}
-                className="text-emerald-600 hover:underline font-extrabold text-[11px]"
-              >
-                {lang === 'uz' ? "Aniq (Qaytimsiz)" : "Без сдачи"}
-              </button>
+        {/* Desktop Right Checkout Panel (lg+) */}
+        <div className="hidden lg:flex lg:col-span-5 xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex-col justify-between gap-3 overflow-y-auto">
+          <div className="space-y-3">
+            <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center">
+              <span className="text-xs font-bold uppercase text-slate-500 block">{lang === 'uz' ? "Jami to'lov" : "Итого к оплате"}</span>
+              <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">{formatMoney(cartTotal)}</div>
+              <div className="text-[11px] text-slate-400 mt-1">{cart.length} {lang === 'uz' ? "ta mahsulot" : "поз."}</div>
             </div>
 
-            <div className="grid grid-cols-3 gap-1.5">
-              {[10000, 20000, 50000, 100000, 200000].map((note) => (
-                <button
-                  key={note}
-                  type="button"
-                  onClick={() => setSelectedCashReceived(note)}
-                  className={`py-2 rounded-xl text-xs font-mono font-bold transition border ${
-                    selectedCashReceived === note
-                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
-                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {formatMoney(note)}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span>💵 {lang === 'uz' ? "Olingan naqd:" : "Наличными:"}</span>
+                <button type="button" onClick={() => setSelectedCashReceived(cartTotal)} className="text-emerald-600 hover:underline text-[11px]">
+                  {lang === 'uz' ? "Aniq" : "Ровно"}
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setSelectedCashReceived(cartTotal)}
-                className={`py-2 rounded-xl text-xs font-mono font-bold transition border ${
-                  selectedCashReceived === cartTotal
-                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
-                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                }`}
-              >
-                {lang === 'uz' ? "Aniq" : "Ровно"}
-              </button>
-            </div>
-
-            {/* Instant Change Calculation Display */}
-            {cart.length > 0 && selectedCashReceived !== null && (
-              <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl p-2.5 flex items-center justify-between animate-fade-in">
-                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                  {lang === 'uz' ? "Mijozga qaytim:" : "Сдача клиенту:"}
-                </span>
-                <span className="text-base font-black text-emerald-700 dark:text-emerald-300 font-mono">
-                  {formatMoney(cashChange)}
-                </span>
               </div>
-            )}
-          </div>
-
-          {/* Large 1-Click Payment Action Buttons */}
-          <div className="space-y-2 pt-1">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={cart.length === 0 || directLoading}
-                onClick={() => handleDirectCheckout('CASH')}
-                className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold py-3 px-3 rounded-2xl shadow transition flex flex-col items-center justify-center gap-0.5 touch-target text-xs sm:text-sm"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base">💵</span>
-                  <span>{lang === 'uz' ? "Naqd pul" : "Наличные"}</span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[10000, 20000, 50000, 100000, 200000].map((note) => (
+                  <button key={note} type="button" onClick={() => setSelectedCashReceived(note)} className={`py-2 rounded-xl text-xs font-mono font-bold border ${selectedCashReceived === note ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                    {formatMoney(note)}
+                  </button>
+                ))}
+                <button type="button" onClick={() => setSelectedCashReceived(cartTotal)} className={`py-2 rounded-xl text-xs font-mono font-bold border ${selectedCashReceived === cartTotal ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-emerald-600'}`}>
+                  {lang === 'uz' ? "Aniq" : "Ровно"}
+                </button>
+              </div>
+              {cart.length > 0 && selectedCashReceived !== null && (
+                <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 rounded-xl p-2 flex justify-between text-xs font-bold">
+                  <span>{lang === 'uz' ? "Qaytim:" : "Сдача:"}</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-300">{formatMoney(cashChange)}</span>
                 </div>
-                <span className="text-[10px] opacity-80 font-mono font-normal">Hotkey: F5</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={cart.length === 0 || directLoading}
-                onClick={() => handleDirectCheckout('CARD')}
-                className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold py-3 px-3 rounded-2xl shadow transition flex flex-col items-center justify-center gap-0.5 touch-target text-xs sm:text-sm"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base">💳</span>
-                  <span>{lang === 'uz' ? "Karta (Humo/Uz)" : "Карта"}</span>
-                </div>
-                <span className="text-[10px] opacity-80 font-mono font-normal">Hotkey: F6</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={cart.length === 0 || directLoading}
-                onClick={() => handleDirectCheckout('DEBT')}
-                className="bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-extrabold py-2.5 px-3 rounded-2xl shadow transition flex flex-col items-center justify-center gap-0.5 touch-target text-xs"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>📓</span>
-                  <span>{lang === 'uz' ? "Qarzga berish" : "В долг"}</span>
-                </div>
-                <span className="text-[10px] opacity-80 font-mono font-normal">Hotkey: F7</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={cart.length === 0}
-                onClick={() => setCheckoutModalOpen(true)}
-                className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 font-extrabold py-2.5 px-3 rounded-2xl transition flex flex-col items-center justify-center gap-0.5 touch-target text-xs border border-slate-200 dark:border-slate-700"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>⚙️</span>
-                  <span>{lang === 'uz' ? "Boshqa to'lov" : "Сплит / Сдача"}</span>
-                </div>
-                <span className="text-[10px] opacity-80 font-mono font-normal">F12</span>
-              </button>
+              )}
             </div>
           </div>
 
-          {/* Big Confirm / Submit Button */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow text-xs">
+                💵 {lang === 'uz' ? "Naqd (F5)" : "Нал (F5)"}
+              </button>
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow text-xs">
+                💳 {lang === 'uz' ? "Karta (F6)" : "Карта (F6)"}
+              </button>
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} className="bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-extrabold py-2.5 rounded-2xl shadow text-xs">
+                📓 {lang === 'uz' ? "Qarz (F7)" : "В долг (F7)"}
+              </button>
+              <button type="button" disabled={cart.length === 0} onClick={() => { setCheckoutInitialMethod('MIXED'); setCheckoutModalOpen(true); }} className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 disabled:opacity-40 font-extrabold py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-700">
+                🔀 {lang === 'uz' ? "Split / Skidka" : "Сплит / Скидка"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Pinned Thumb Checkout Dock (Always On Screen Right Above Nav Bar!) */}
+      <div className="lg:hidden shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-lg space-y-1.5">
+        <div className="flex items-center justify-between gap-2 px-1">
+          <div className="flex items-baseline gap-1.5 min-w-0">
+            <span className="text-[11px] font-bold text-slate-500">{lang === 'uz' ? 'Jami:' : 'Итого:'}</span>
+            <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">{formatMoney(cartTotal)}</span>
+            <span className="text-[10px] text-slate-400 font-mono">({cart.length})</span>
+          </div>
           <button
             type="button"
-            disabled={cart.length === 0 || directLoading}
-            onClick={() => handleDirectCheckout('CASH')}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-black py-3.5 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm sm:text-base border border-emerald-400"
+            disabled={cart.length === 0}
+            onClick={() => { setCheckoutInitialMethod('CASH'); setCheckoutModalOpen(true); }}
+            className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 shrink-0"
           >
-            <span>✅</span>
-            <span>{lang === 'uz' ? "Chekni tasdiqlash (Enter / F12)" : "Пробить чек (Enter / F12)"}</span>
+            🏷️ {lang === 'uz' ? 'Chegirma / Qaytim' : 'Скидка / Сдача'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-4 gap-1.5">
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm">
+            <span>💵</span>
+            <span className="text-[10px]">{lang === 'uz' ? "Naqd" : "Нал"}</span>
+          </button>
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="py-2 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm">
+            <span>💳</span>
+            <span className="text-[10px]">{lang === 'uz' ? "Karta" : "Карта"}</span>
+          </button>
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} className="py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm">
+            <span>📓</span>
+            <span className="text-[10px]">{lang === 'uz' ? "Qarz" : "Долг"}</span>
+          </button>
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('MIXED')} className="py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm">
+            <span>🔀</span>
+            <span className="text-[10px]">{lang === 'uz' ? "Split" : "Сплит"}</span>
           </button>
         </div>
       </div>
 
       {/* Parked Carts Modal */}
       {parkedModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl text-slate-800 dark:text-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
-              <h3 className="font-bold text-base flex items-center gap-2">
-                <span>📂</span>
-                <span>{lang === 'uz' ? "Saqlangan (otlojenny) cheklar" : "Отложенные чеки"}</span>
-              </h3>
-              <button onClick={() => setParkedModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-4 sm:p-5 shadow-2xl modal-mobile-safe text-slate-800 dark:text-slate-100">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+              <h3 className="font-bold text-base">📂 {lang === 'uz' ? "Saqlangan cheklar" : "Отложенные чеки"}</h3>
+              <button type="button" onClick={() => setParkedModalOpen(false)} className="text-slate-400 text-lg">✕</button>
             </div>
-            
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
               {safeArray(parkedCarts).map((h) => (
-                <div key={h.id} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between gap-3">
+                <div key={h.id} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between gap-2">
                   <div>
-                    <div className="font-bold text-xs">Chek #{h.id} ({h.timestamp})</div>
-                    <div className="text-[11px] text-slate-500 font-mono">
-                      {h.itemCount} ta tovar • <span className="font-bold text-emerald-600">{formatMoney(h.total)}</span>
-                    </div>
+                    <div className="font-bold text-xs">#{h.id} ({h.timestamp})</div>
+                    <div className="text-[11px] text-slate-500 font-mono">{h.itemCount} poz • <span className="font-bold text-emerald-600">{formatMoney(h.total)}</span></div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => resumeParkedCart(h.id)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow transition"
-                    >
-                      {lang === 'uz' ? "Davom etish" : "Восстановить"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeParkedCart(h.id)}
-                      className="text-slate-400 hover:text-rose-500 px-2 py-1.5 text-xs"
-                    >
-                      ✕
-                    </button>
+                    <button type="button" onClick={() => resumeParkedCart(h.id)} className="bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs">{lang === 'uz' ? "Tiklash" : "Открыть"}</button>
+                    <button type="button" onClick={() => removeParkedCart(h.id)} className="text-slate-400 hover:text-rose-500 px-2 py-1.5 text-xs">✕</button>
                   </div>
                 </div>
               ))}
@@ -6398,78 +6316,40 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         </div>
       )}
 
-      {/* Unknown Barcode Prompt Modal */}
-      {notFoundBarcode && (
-        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl text-center">
-            <span className="text-4xl mb-2 inline-block">🔍</span>
-            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-1">
-              {lang === 'uz' ? "Mahsulot topilmadi" : "Товар не найден"}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mb-3 bg-slate-100 dark:bg-slate-800 py-1.5 px-2 rounded-lg font-bold">
-              {notFoundBarcode}
-            </p>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mb-4">
-              {lang === 'uz' ? "Ushbu shtrixkod bazada yo'q. Uni hoziroq bazaga qo'shasizmi?" : "Этого штрихкода нет в базе. Добавить его прямо сейчас?"}
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setNotFoundBarcode(null)}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 transition"
-              >
-                {t.cancelBtn || "Bekor qilish"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const b = notFoundBarcode;
-                  setNotFoundBarcode(null);
-                  setCreateProductOpen(b);
-                }}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition"
-              >
-                ➕ {lang === 'uz' ? "Qo'shish" : "Добавить"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Voice Assistant Modal */}
-      {voiceAssistantOpen && (
-        <VoiceAssistantModal
+      {priceCheckOpen && (
+        <PriceCheckModal
           token={token}
-          onClose={() => setVoiceAssistantOpen(false)}
-          onAddToCart={(prod, qty) => {
-            addToCart(prod, qty);
-            playAudioCue('add');
-          }}
-          onOpenScanner={() => setScannerActive(true)}
-          onOpenCheckout={() => {
-            if (cart.length > 0) setCheckoutModalOpen(true);
-          }}
-          onClearCart={clearCart}
-          onOpenDebt={() => {
-            if (cart.length > 0) handleDirectCheckout('DEBT');
-          }}
+          onClose={() => setPriceCheckOpen(false)}
+          onAddToCart={(prod, qty) => { addToCart(prod, qty); notify(prod.name); }}
           notify={notify}
           t={t}
           lang={lang}
         />
       )}
 
-      {/* Quick Add Product from POS Modal */}
+      {voiceAssistantOpen && (
+        <VoiceAssistantModal
+          token={token}
+          onClose={() => setVoiceAssistantOpen(false)}
+          onAddToCart={(prod, qty) => { addToCart(prod, qty); playAudioCue('add'); }}
+          onOpenScanner={() => setScannerActive(true)}
+          onOpenCheckout={() => { if (cart.length > 0) setCheckoutModalOpen(true); }}
+          onClearCart={clearCart}
+          onOpenDebt={() => { if (cart.length > 0) handleDirectCheckout('DEBT'); }}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
+
       {createProductOpen && (
         <CreateProductModal
           token={token}
           initialBarcode={typeof createProductOpen === 'string' ? createProductOpen : ''}
           onClose={() => setCreateProductOpen(false)}
-          onSuccess={(newProd) => {
-            setCreateProductOpen(false);
-            if (newProd && newProd.name) {
-              addToCart(newProd, 1.0);
-            }
+          onSuccess={(newProd, opts) => {
+            if (!opts?.keepOpen) setCreateProductOpen(false);
+            if (newProd && newProd.name) addToCart(newProd, 1.0);
             fetchProducts();
             fetchQuickProducts();
           }}
@@ -6479,13 +6359,9 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         />
       )}
 
-      {/* Camera Scanner Modal */}
       {scannerActive && (
         <CameraScannerModal
-          onScan={(code) => {
-            setScannerActive(false);
-            processBarcode(code);
-          }}
+          onScan={(code) => { setScannerActive(false); processBarcode(code); }}
           onClose={() => setScannerActive(false)}
           notify={notify}
           t={t}
@@ -6493,7 +6369,6 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         />
       )}
 
-      {/* Checkout Payment Modal */}
       {checkoutModalOpen && (
         <CheckoutModal
           token={token}
@@ -6509,7 +6384,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
             fetchCurrentShift();
             setSuccessToast({
               receiptNumber: receipt.receipt_number,
-              total: cartTotal,
+              total: receipt.total_amount ?? cartTotal,
               change: receipt.change_given,
               method: receipt.payment_method,
               data: receipt
@@ -6522,32 +6397,21 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         />
       )}
 
-      {/* Cash Shift Modal */}
       {shiftModalOpen && (
-        <CashShiftModal
-          token={token}
-          onClose={() => setShiftModalOpen(false)}
-          notify={notify}
-          lang={lang}
-          onShiftChange={fetchCurrentShift}
-        />
+        <CashShiftModal token={token} onClose={() => setShiftModalOpen(false)} notify={notify} lang={lang} onShiftChange={fetchCurrentShift} />
       )}
 
-      {/* Refund / Storno Modal */}
       {refundModalOpen && (
         <RefundModal
           token={token}
           onClose={() => setRefundModalOpen(false)}
+          onPrintReceipt={(r) => { setRefundModalOpen(false); setLastReceipt(r); }}
           notify={notify}
           lang={lang}
-          onRefunded={() => {
-            fetchCurrentShift();
-            fetchProducts();
-          }}
+          onRefunded={() => { fetchCurrentShift(); fetchProducts(); }}
         />
       )}
 
-      {/* Receipt Modal (opened only when user taps print) */}
       {lastReceipt && (
         <ReceiptModal receipt={lastReceipt} onClose={() => setLastReceipt(null)} t={t} />
       )}
@@ -6555,21 +6419,23 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   );
 }
 
-function DebtsScreen({ token, notify, t }) {
+function DebtsScreen({ token, notify, t, lang: propLang }) {
   const [debtors, setDebtors] = useState([]);
   const [summary, setSummary] = useState(null);
   const [search, setSearch] = useState('');
   const [onlyWithDebt, setOnlyWithDebt] = useState(false);
-  const [sortBy, setSortBy] = useState('overdue'); // 'overdue' | 'max_debt' | 'recent' | 'name'
+  const [sortBy, setSortBy] = useState('overdue');
   const [selectedDebtor, setSelectedDebtor] = useState(null);
 
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [addDebtModalOpen, setAddDebtModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [remindModalOpen, setRemindModalOpen] = useState(false);
   const [createDebtorModalOpen, setCreateDebtorModalOpen] = useState(false);
   const [voiceDebtOpen, setVoiceDebtOpen] = useState(false);
   const [ocrDebtOpen, setOcrDebtOpen] = useState(false);
-  const lang = (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
 
   useEffect(() => {
     fetchDebtors();
@@ -6578,7 +6444,7 @@ function DebtsScreen({ token, notify, t }) {
 
   const fetchDebtors = async () => {
     try {
-      const params = new URLSearchParams({ limit: '150' });
+      const params = new URLSearchParams({ limit: '100' });
       if (search) params.append('search', search);
       if (onlyWithDebt) params.append('only_with_debt', 'true');
 
@@ -6589,8 +6455,7 @@ function DebtsScreen({ token, notify, t }) {
         setDebtors([]);
         return;
       }
-      const data = await res.json();
-      setDebtors(safeArray(data));
+      setDebtors(safeArray(await res.json()));
     } catch (e) {
       notify('Qarzdorlar ro\'yxatini yuklashda xatolik', 'error');
     }
@@ -6601,11 +6466,8 @@ function DebtsScreen({ token, notify, t }) {
       const res = await fetch(`${API_BASE}/debts/summary`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
-      setSummary(data);
-    } catch (e) {
-      console.error(e);
-    }
+      if (res.ok) setSummary(await res.json());
+    } catch (e) {}
   };
 
   const sortedDebtors = useMemo(() => {
@@ -6629,355 +6491,302 @@ function DebtsScreen({ token, notify, t }) {
   }, [debtors, sortBy, lang]);
 
   return (
-    <div className="space-y-4">
-      {/* Summary KPI Cards & Haqqim.uz Header */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.totalOutstandingDebt}</div>
-            <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1 font-mono">
-              -{summary ? formatMoney(summary.total_outstanding_debt) : '0 so\'m'}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
-              haqqim.uz qarz daftari
+    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3">
+      {/* Pinned Top KPI + Quick Add / Voice / OCR + Search / Sort Dock */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-[10px] text-slate-500 font-semibold truncate">{t.totalOutstandingDebt} ({summary ? `${summary.active_debtors_with_debt}/${summary.debtors_count}` : '0/0'})</div>
+            <div className="text-lg sm:text-xl font-black text-rose-600 dark:text-rose-400 font-mono leading-tight">
+              -{summary ? formatMoney(summary.total_outstanding_debt) : "0 so'm"}
             </div>
           </div>
-          <span className="text-3xl">📓</span>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-              {lang === 'uz' ? "Qarzdor mijozlar soni:" : "Клиенты с задолженностью:"}
-            </div>
-            <div className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1 font-mono">
-              {summary ? summary.active_debtors_with_debt : 0}{' '}
-              <span className="text-xs font-normal text-slate-400">/ {summary ? summary.debtors_count : 0} mijoz</span>
-            </div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
-              Faol hisob-kitob
-            </div>
-          </div>
-          <span className="text-3xl">👥</span>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 shadow-sm flex flex-col justify-center gap-2">
-          <button
-            onClick={() => setCreateDebtorModalOpen(true)}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-2xl shadow transition text-xs flex items-center justify-center gap-1.5 touch-target"
-          >
-            <span>➕</span>
-            <span>{lang === 'uz' ? "Yangi mijoz qo'shish" : "Новый клиент"}</span>
-          </button>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setVoiceDebtOpen(true)}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1 touch-target"
-              title="Ovozli qarz yozish"
-            >
-              <span>🎙️</span>
-              <span>{lang === 'uz' ? "Ovozli qarz" : "Голосовой ввод"}</span>
+          <div className="flex items-center gap-1 shrink-0">
+            <button type="button" onClick={() => setCreateDebtorModalOpen(true)} className="px-2.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-sm">
+              ➕ <span className="hidden sm:inline">{lang === 'uz' ? "Yangi" : "Новый"}</span>
             </button>
-            <button
-              onClick={() => setOcrDebtOpen(true)}
-              className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl shadow transition text-[11px] flex items-center justify-center gap-1 touch-target"
-              title="Daftardan rasm olish"
-            >
-              <span>📸</span>
-              <span>{lang === 'uz' ? "Daftar OCR" : "Фото тетради"}</span>
+            <button type="button" onClick={() => setVoiceDebtOpen(true)} className="px-2.5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs shadow-sm" title={t.voiceDebtBtn}>
+              🎙️ <span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
+            </button>
+            <button type="button" onClick={() => setOcrDebtOpen(true)} className="px-2.5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-sm" title={t.scanPaperNotebookBtn}>
+              📸 <span className="hidden sm:inline">OCR</span>
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Search, Sorting & Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2 w-full md:w-auto flex-1">
+        <div className="flex items-center gap-1.5">
           <input
             type="text"
-            placeholder={lang === 'uz' ? "Ism yoki telefon bo'yicha qidiruv..." : "Поиск по имени или телефону..."}
+            placeholder={lang === 'uz' ? "🔍 Ism yoki telefon..." : "🔍 Имя или телефон..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full md:w-80 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+            className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
           />
           <button
+            type="button"
             onClick={() => setOnlyWithDebt(!onlyWithDebt)}
-            className={`px-3 py-2 rounded-2xl text-xs font-bold transition border whitespace-nowrap ${
+            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border whitespace-nowrap shrink-0 ${
               onlyWithDebt
-                ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 text-amber-800 dark:text-amber-300'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
             }`}
           >
-            {lang === 'uz' ? "Faqat qarzi borlar" : "Только с долгом"}
+            {lang === 'uz' ? "Qarzdorlar" : "С долгом"}
           </button>
         </div>
 
-        {/* Sorting selection */}
-        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto no-scrollbar">
-          <span className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">
-            {lang === 'uz' ? "Saralash:" : "Сортировка:"}
-          </span>
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           {[
-            { id: 'overdue', label: lang === 'uz' ? "Muddati o'tganlar" : "Просроченные" },
-            { id: 'max_debt', label: lang === 'uz' ? "Katta qarzlar" : "По сумме" },
+            { id: 'overdue', label: lang === 'uz' ? "Muddati o'tgan" : "Просрочка" },
+            { id: 'max_debt', label: lang === 'uz' ? "Katta" : "Сумма" },
             { id: 'recent', label: lang === 'uz' ? "Yangi" : "Свежие" },
-            { id: 'name', label: lang === 'uz' ? "A-Z" : "Имя" }
+            { id: 'name', label: "A-Z" }
           ].map(s => (
             <button
               key={s.id}
+              type="button"
               onClick={() => setSortBy(s.id)}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap border ${
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap border shrink-0 ${
                 sortBy === s.id
-                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 dark:border-slate-100'
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900'
                   : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
               }`}
             >
-              {s.label}
+              {s.label} ({sortedDebtors.length && s.id === sortBy ? sortedDebtors.length : ''}{s.id !== sortBy ? '' : ''})
             </button>
           ))}
         </div>
       </div>
 
-      {/* Client Counter Header */}
-      <div className="flex items-center justify-between px-1">
-        <h3 className="font-bold text-xs text-slate-500 dark:text-slate-400">
-          {lang === 'uz' ? `Mijozlar (${sortedDebtors.length})` : `Клиенты (${sortedDebtors.length})`}
-        </h3>
-      </div>
-
-      {/* Redesigned Debtors Cards (Haqqim.uz style) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {sortedDebtors.map((debtor) => {
-          const overdue = checkOverdueStatus(debtor.due_date, debtor.balance, lang);
-          const hasDebt = Number(debtor.balance) > 0;
-
-          return (
-            <div
-              key={debtor.id}
-              className={`bg-white dark:bg-slate-900 border rounded-3xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-3 ${
-                overdue?.isOverdue
-                  ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10'
-                  : 'border-slate-200 dark:border-slate-800'
-              }`}
-            >
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    {/* Round Avatar with Initials */}
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 text-slate-800 dark:text-slate-200 font-extrabold flex items-center justify-center text-sm font-mono shrink-0 shadow-inner">
-                      {getInitials(debtor.full_name)}
+      {/* Scrollable Debtors List */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
+        {sortedDebtors.length === 0 ? (
+          <div className="text-center py-12 text-xs text-slate-400">{lang === 'uz' ? "Mijozlar topilmadi" : "Клиенты не найдены"}</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-2">
+            {sortedDebtors.map((debtor) => {
+              const overdue = checkOverdueStatus(debtor.due_date, debtor.balance, lang);
+              const hasDebt = Number(debtor.balance) > 0;
+              return (
+                <div
+                  key={debtor.id}
+                  className={`bg-white dark:bg-slate-900 border rounded-2xl p-3 shadow-sm flex flex-col justify-between gap-2 ${
+                    overdue?.isOverdue
+                      ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10'
+                      : 'border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 font-extrabold flex items-center justify-center text-xs font-mono shrink-0">
+                        {getInitials(debtor.full_name)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1">
+                          <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{debtor.full_name}</h4>
+                          <button type="button" onClick={() => { setSelectedDebtor(debtor); setEditModalOpen(true); }} className="text-[11px] opacity-60 hover:opacity-100" title="Edit">✏️</button>
+                        </div>
+                        {debtor.phone && (
+                          <a href={`tel:${debtor.phone}`} className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono hover:underline">
+                            📞 {debtor.phone}
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 leading-tight">
-                        {debtor.full_name}
-                      </h4>
-                      {debtor.phone && (
-                        <a
-                          href={`tel:${debtor.phone}`}
-                          className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 inline-flex items-center gap-1 hover:underline"
-                        >
-                          <span>📞</span>
-                          <span>{debtor.phone}</span>
-                        </a>
-                      )}
+
+                    <div className="text-right shrink-0">
+                      <div className={`text-sm font-black font-mono ${hasDebt ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
+                        {hasDebt ? '-' : ''}{formatMoney(debtor.balance)}
+                      </div>
+                      {overdue ? (
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold border ${overdue.color}`}>{overdue.badge}</span>
+                      ) : debtor.due_date ? (
+                        <span className="text-[10px] text-slate-400">⏳ {debtor.due_date}</span>
+                      ) : null}
                     </div>
                   </div>
 
-                  {/* Overdue / Due Date Badge */}
-                  <div>
-                    {overdue ? (
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${overdue.color}`}>
-                        {overdue.badge}
-                      </span>
-                    ) : debtor.due_date ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                        ⏳ {debtor.due_date}
-                      </span>
-                    ) : null}
+                  {debtor.note && (
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-2 py-1 rounded-lg truncate italic">
+                      "{debtor.note}"
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-4 gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setPayModalOpen(true); }} className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-1.5 rounded-xl text-[11px] font-bold text-center">
+                      💵 {lang === 'uz' ? "To'lash" : "Оплата"}
+                    </button>
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setAddDebtModalOpen(true); }} className="bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 py-1.5 rounded-xl text-[11px] font-bold text-center">
+                      ➕ {lang === 'uz' ? "Qarz" : "Долг"}
+                    </button>
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setRemindModalOpen(true); }} className="bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 py-1.5 rounded-xl text-[11px] font-bold text-center">
+                      📩 {lang === 'uz' ? "Eslat" : "Напом."}
+                    </button>
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setHistoryModalOpen(true); }} className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-1.5 rounded-xl text-[11px] font-bold text-center">
+                      📜 {lang === 'uz' ? "Tarix" : "Ист."}
+                    </button>
                   </div>
                 </div>
-
-                {debtor.note && (
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl italic">
-                    "{debtor.note}"
-                  </div>
-                )}
-
-                {/* Prominent Debt Amount */}
-                <div className="mt-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-medium">
-                      {lang === 'uz' ? "Haqqimiz (Qarz):" : "Сумма долга:"}
-                    </span>
-                    <span
-                      className={`text-lg font-black font-mono tracking-tight ${
-                        hasDebt ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
-                      }`}
-                    >
-                      {hasDebt ? '-' : ''}{formatMoney(debtor.balance)}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">
-                      {lang === 'uz' ? "Oxirgi o'zgarish:" : "Обновлено:"}
-                    </span>
-                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                      {formatRelativeDate(debtor.updated_at || debtor.created_at, lang) || (lang === 'uz' ? "Yaqinda" : "Недавно")}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  onClick={() => { setSelectedDebtor(debtor); setPayModalOpen(true); }}
-                  className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-2 rounded-xl text-xs font-bold transition text-center touch-target"
-                >
-                  💵 {lang === 'uz' ? "To'lash" : "Оплата"}
-                </button>
-                <button
-                  onClick={() => { setSelectedDebtor(debtor); setAddDebtModalOpen(true); }}
-                  className="bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 py-2 rounded-xl text-xs font-bold transition text-center touch-target"
-                >
-                  ➕ {lang === 'uz' ? "Qarz yozish" : "Записать"}
-                </button>
-                <button
-                  onClick={() => { setSelectedDebtor(debtor); setHistoryModalOpen(true); }}
-                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2 rounded-xl text-xs font-bold transition text-center touch-target"
-                >
-                  📜 {lang === 'uz' ? "Tarix" : "История"}
-                </button>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Modals */}
       {payModalOpen && selectedDebtor && (
-        <PayDebtModal
-          token={token}
-          lang={lang}
-          debtor={selectedDebtor}
-          onClose={() => setPayModalOpen(false)}
-          onSuccess={() => {
-            setPayModalOpen(false);
-            fetchDebtors();
-            fetchSummary();
-            notify(lang === 'uz' ? "Qarz to'lovi qabul qilindi!" : "Оплата долга принята!");
-          }}
-          notify={notify}
-          t={t}
-        />
+        <PayDebtModal token={token} lang={lang} debtor={selectedDebtor} onClose={() => setPayModalOpen(false)} onSuccess={() => { setPayModalOpen(false); fetchDebtors(); fetchSummary(); notify(lang === 'uz' ? "Qarz to'lovi qabul qilindi!" : "Оплата долга принята!"); }} notify={notify} t={t} />
       )}
-
       {addDebtModalOpen && selectedDebtor && (
-        <AddDebtModal
-          token={token}
-          lang={lang}
-          debtor={selectedDebtor}
-          onClose={() => setAddDebtModalOpen(false)}
-          onSuccess={() => {
-            setAddDebtModalOpen(false);
-            fetchDebtors();
-            fetchSummary();
-            notify(lang === 'uz' ? "Yangi qarz yozildi!" : "Долг успешно записан!");
-          }}
-          notify={notify}
-          t={t}
-        />
+        <AddDebtModal token={token} lang={lang} debtor={selectedDebtor} onClose={() => setAddDebtModalOpen(false)} onSuccess={() => { setAddDebtModalOpen(false); fetchDebtors(); fetchSummary(); notify(lang === 'uz' ? "Yangi qarz yozildi!" : "Долг успешно записан!"); }} notify={notify} t={t} />
       )}
-
+      {editModalOpen && selectedDebtor && (
+        <EditDebtorModal token={token} lang={lang} debtor={selectedDebtor} onClose={() => setEditModalOpen(false)} onSuccess={() => { setEditModalOpen(false); fetchDebtors(); notify(lang === 'uz' ? "Ma'lumotlar yangilandi" : "Данные обновлены"); }} notify={notify} />
+      )}
+      {remindModalOpen && selectedDebtor && (
+        <RemindDebtorModal debtor={selectedDebtor} onClose={() => setRemindModalOpen(false)} notify={notify} lang={lang} />
+      )}
       {historyModalOpen && selectedDebtor && (
-        <DebtorHistoryModal
-          token={token}
-          debtor={selectedDebtor}
-          onClose={() => setHistoryModalOpen(false)}
-          notify={notify}
-          t={t}
-        />
+        <DebtorHistoryModal token={token} debtor={selectedDebtor} onClose={() => setHistoryModalOpen(false)} notify={notify} t={t} />
       )}
-
       {createDebtorModalOpen && (
-        <CreateDebtorModal
-          token={token}
-          lang={lang}
-          onClose={() => setCreateDebtorModalOpen(false)}
-          onSuccess={() => {
-            setCreateDebtorModalOpen(false);
-            fetchDebtors();
-            fetchSummary();
-            notify(lang === 'uz' ? "Yangi mijoz qo'shildi!" : "Клиент успешно добавлен!");
-          }}
-          notify={notify}
-          t={t}
-        />
+        <CreateDebtorModal token={token} lang={lang} onClose={() => setCreateDebtorModalOpen(false)} onSuccess={() => { setCreateDebtorModalOpen(false); fetchDebtors(); fetchSummary(); notify(lang === 'uz' ? "Yangi mijoz qo'shildi!" : "Клиент добавлен!"); }} notify={notify} t={t} />
       )}
-
       {voiceDebtOpen && (
-        <VoiceDebtModal
-          token={token}
-          onClose={() => setVoiceDebtOpen(false)}
-          onSuccess={() => {
-            setVoiceDebtOpen(false);
-            fetchDebtors();
-            fetchSummary();
-          }}
-          notify={notify}
-          t={t}
-        />
+        <VoiceDebtModal token={token} onClose={() => setVoiceDebtOpen(false)} onSuccess={() => { setVoiceDebtOpen(false); fetchDebtors(); fetchSummary(); }} notify={notify} t={t} />
       )}
-
       {ocrDebtOpen && (
-        <OcrDebtModal
-          token={token}
-          onClose={() => setOcrDebtOpen(false)}
-          onSuccess={() => {
-            setOcrDebtOpen(false);
-            fetchDebtors();
-            fetchSummary();
-          }}
-          notify={notify}
-          t={t}
-        />
+        <OcrDebtModal token={token} onClose={() => setOcrDebtOpen(false)} onSuccess={() => { setOcrDebtOpen(false); fetchDebtors(); fetchSummary(); }} notify={notify} t={t} />
       )}
+    </div>
+  );
+}
+
+function PrintPriceTagModal({ token, product, onClose, notify, lang = 'uz' }) {
+  const [price, setPrice] = useState(String(product?.sale_price || 0));
+  const [quantity, setQuantity] = useState('1');
+  const [template, setTemplate] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const generateTag = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/expenses/price-tag`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ product_id: product.id, price: Number(price) || product.sale_price, quantity: Number(quantity) || 1 })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Xatolik');
+      setTemplate(data.template || '');
+      notify(lang === 'uz' ? "Narx yorlig'i tayyor!" : 'Ценник сформирован!');
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (product?.id) generateTag();
+  }, [product?.id]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-4 shadow-2xl modal-mobile-safe text-slate-800 dark:text-slate-100">
+        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
+          <h3 className="font-bold text-base">🏷️ {lang === 'uz' ? "Narx yorlig'i (Sennik)" : 'Ценник товара'}</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 text-lg p-1">✕</button>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3 text-xs">
+          <div className="bg-white text-slate-900 border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center space-y-1.5 font-mono">
+            <div className="font-sans font-black text-base leading-tight">{product.name}</div>
+            <div className="text-[11px] text-slate-500">{product.barcode} • {product.unit}</div>
+            <div className="text-3xl font-black text-emerald-700 pt-1">{formatMoney(Number(price) || 0)}</div>
+          </div>
+
+          <form onSubmit={generateTag} className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block font-semibold mb-1">{lang === 'uz' ? 'Narx (so\'m):' : 'Цена:'}</label>
+              <input type="number" step="100" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-bold" />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">{lang === 'uz' ? 'Nusxa soni:' : 'Копий:'}</label>
+              <input type="number" min="1" max="50" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-bold" />
+            </div>
+          </form>
+        </div>
+
+        <div className="flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 shrink-0">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800">{lang === 'uz' ? 'Yopish' : 'Закрыть'}</button>
+          <button type="button" disabled={loading} onClick={() => {
+            if (template) {
+              const win = window.open('', '_blank');
+              if (win) { win.document.write(template); win.document.close(); win.print(); return; }
+            }
+            window.print();
+          }} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow">
+            🖨️ {lang === 'uz' ? 'Chop etish' : 'Печать'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
   const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
+  const [subTab, setSubTab] = useState('products'); // 'products' | 'revision' | 'movements'
   const [createProductOpen, setCreateProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [priceTagProduct, setPriceTagProduct] = useState(null);
+  const [filterScannerOpen, setFilterScannerOpen] = useState(false);
+
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [expiringOnly, setExpiringOnly] = useState(false);
   const [skip, setSkip] = useState(0);
-  const limit = 40;
+  const limit = 30;
+  const csvInputRef = useRef(null);
+
+  // Inventory Revision State
+  const [acts, setActs] = useState([]);
+  const [activeAct, setActiveAct] = useState(null);
+  const [actSearch, setActSearch] = useState('');
+  const [actScannerOpen, setActScannerOpen] = useState(false);
+  const [movements, setMovements] = useState([]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [search, lowStockOnly, skip]);
+    fetch(`${API_BASE}/products/categories/all`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setCategories(safeArray(d)))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (subTab === 'products') fetchProducts();
+    else if (subTab === 'revision' && isOwner) fetchActs();
+    else if (subTab === 'movements' && isOwner) fetchMovements();
+  }, [subTab, search, selectedCategory, lowStockOnly, expiringOnly, skip]);
 
   const fetchProducts = async () => {
     try {
-      const params = new URLSearchParams({
-        skip: skip.toString(),
-        limit: limit.toString()
-      });
-      if (search) params.append('search', search);
+      const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+      if (search.trim()) params.append('search', search.trim());
+      if (selectedCategory) params.append('category_id', String(selectedCategory));
       if (lowStockOnly) params.append('low_stock_only', 'true');
+      if (expiringOnly) params.append('expiring_soon_only', 'true');
 
       const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) {
-        setProducts([]);
-        setTotal(0);
-        return;
-      }
+      if (!res.ok) { setProducts([]); setTotal(0); return; }
       const data = await res.json();
       setProducts(safeArray(data));
       setTotal(data.total || safeArray(data).length || 0);
@@ -6986,243 +6795,484 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
     }
   };
 
+  const fetchActs = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/inventory/acts`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setActs(safeArray(await res.json()));
+    } catch (e) {}
+  };
+
+  const openAct = async (actId) => {
+    try {
+      const res = await fetch(`${API_BASE}/inventory/act/${actId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setActiveAct(await res.json());
+    } catch (e) {}
+  };
+
+  const createAct = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/inventory/act`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: `Reviziya ${new Date().toLocaleDateString()}`, description: 'Mobile inventory count' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Xatolik');
+      setActiveAct(data);
+      fetchActs();
+      notify(lang === 'uz' ? 'Yangi reviziya akti ochildi!' : 'Акт ревизии создан!');
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
+
+  const scanActQty = async (productId, qty) => {
+    if (!activeAct) return;
+    try {
+      const res = await fetch(`${API_BASE}/inventory/act/${activeAct.id}/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ product_id: productId, actual_quantity: Number(qty) || 0 })
+      });
+      if (!res.ok) throw new Error('Xatolik');
+      playAudioCue('add');
+      await openAct(activeAct.id);
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
+
+  const applyAct = async () => {
+    if (!activeAct) return;
+    if (!confirm(lang === 'uz' ? "Ombordagi qoldiqlarni reviziya bo'yicha yangilaysizmi?" : 'Применить итоги ревизии к складу?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/inventory/act/${activeAct.id}/apply`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Xatolik');
+      playAudioCue('success');
+      notify(data.message);
+      setActiveAct(null);
+      fetchActs();
+      fetchProducts();
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
+
+  const fetchMovements = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/inventory/movements?limit=60`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setMovements(safeArray(await res.json()));
+    } catch (e) {}
+  };
+
+  const toggleQuickStar = async (p) => {
+    try {
+      const res = await fetch(`${API_BASE}/products/${p.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ is_quick: !p.is_quick })
+      });
+      if (res.ok) {
+        playAudioCue('add');
+        fetchProducts();
+      }
+    } catch (e) {}
+  };
+
+  const handleCatalogBarcode = async (code) => {
+    const clean = (code || '').trim();
+    if (!clean) return;
+    if (!isOwner) {
+      setSearch(clean);
+      setSkip(0);
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/products/barcode/${encodeURIComponent(clean)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const prod = await res.json();
+        playAudioCue('add');
+        setEditingProduct(prod);
+        setSearch(clean);
+        setSkip(0);
+      } else {
+        playAudioCue('listen');
+        setCreateProductOpen({ barcode: clean, autoScan: false });
+        notify(lang === 'uz' ? `Yangi shtrixkod (${clean}). Tovarni kiriting` : `Новый штрихкод (${clean}). Заполните данные`, 'info');
+      }
+    } catch (e) {
+      setSearch(clean);
+      setSkip(0);
+    }
+  };
+
   const deleteProduct = async (p) => {
-    const confirmMsg = lang === 'uz'
-      ? `Rostdan ham "${p.name}" tovarini o'chirmoqchimisiz?`
-      : `Действительно удалить товар "${p.name}"?`;
+    const confirmMsg = lang === 'uz' ? `Rostdan ham "${p.name}" tovarini o'chirmoqchimisiz?` : `Удалить товар "${p.name}"?`;
     if (!confirm(confirmMsg)) return;
     try {
       const res = await fetch(`${API_BASE}/products/${p.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'O\'chirishda xatolik');
-      }
-      notify(lang === 'uz' ? `"${p.name}" muvaffaqiyatli o'chirildi` : `Товар "${p.name}" удален`);
+      if (!res.ok) throw new Error((await res.json()).detail || 'Xatolik');
+      notify(lang === 'uz' ? `"${p.name}" o'chirildi` : `"${p.name}" удален`);
       fetchProducts();
     } catch (e) {
       notify(e.message, 'error');
     }
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Top Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 shadow-sm transition-colors duration-200">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <span>📦</span>
-            <span>{t.catalogTitle}</span>
-            <span className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 rounded-full font-mono font-bold">
-              {total} SKU
-            </span>
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {lang === 'uz' ? "Shtrixkodlar, tovar narxlari va qoldiq monitoringi" : "Штрихкоды, цены и управление складскими остатками"}
-          </p>
-        </div>
+  const exportCsv = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/products/export-csv`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Export xatoligi');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `catalog_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      notify('CSV yuklab olindi!');
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
 
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <input
-            type="text"
-            placeholder={t.searchProductPlaceholder}
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setSkip(0); }}
-            className="flex-1 md:w-64 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-          />
-          <button
-            onClick={() => { setLowStockOnly(!lowStockOnly); setSkip(0); }}
-            className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
-              lowStockOnly
-                ? 'bg-rose-100 border-rose-300 text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-300'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            {t.lowStockFilter}
-          </button>
-          {isOwner && (
-            <button
-              onClick={() => setCreateProductOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5 touch-target whitespace-nowrap"
-            >
-              <span>➕</span>
-              <span>{lang === 'uz' ? 'Yangi tovar' : 'Новый товар'}</span>
+  const importCsvFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const res = await fetch(`${API_BASE}/products/import-csv`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail?.message || data.detail || 'CSV import xatoligi');
+      notify(data.message || 'CSV import qilindi!');
+      fetchProducts();
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
+
+  const filteredActItems = useMemo(() => {
+    if (!activeAct?.items) return [];
+    if (!actSearch.trim()) return activeAct.items;
+    const q = actSearch.toLowerCase();
+    return activeAct.items.filter(it => (it.product_name || '').toLowerCase().includes(q) || (it.barcode || '').includes(q));
+  }, [activeAct, actSearch]);
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3">
+      {/* Pinned Top Controls Dock */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar">
+            <button type="button" onClick={() => setSubTab('products')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'products' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              📦 {lang === 'uz' ? 'Tovarlar' : 'Товары'} ({total})
+            </button>
+            {isOwner && (
+              <>
+                <button type="button" onClick={() => setSubTab('revision')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'revision' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+                  📋 {lang === 'uz' ? 'Reviziya' : 'Ревизия'}
+                </button>
+                <button type="button" onClick={() => setSubTab('movements')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'movements' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+                  📜 {lang === 'uz' ? 'Harakat' : 'Движ.'}
+                </button>
+              </>
+            )}
+          </div>
+
+          {subTab === 'products' && isOwner && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button type="button" onClick={exportCsv} className="px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold" title="Export CSV">⬇️</button>
+              <button type="button" onClick={() => csvInputRef.current?.click()} className="px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold" title="Import CSV">⬆️</button>
+              <input ref={csvInputRef} type="file" accept=".csv" onChange={importCsvFile} className="hidden" />
+              <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-2 py-1.5 rounded-xl bg-indigo-600 text-white text-[11px] font-bold" title={lang === 'uz' ? 'Skanerlab kiritish' : 'Поточный скан'}>🔄 📷</button>
+              <button type="button" onClick={() => setCreateProductOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm">
+                ➕ <span className="hidden sm:inline">{lang === 'uz' ? 'Yangi' : 'Новый'}</span>
+              </button>
+            </div>
+          )}
+
+          {subTab === 'revision' && isOwner && (
+            <button type="button" onClick={createAct} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shrink-0">
+              ➕ {lang === 'uz' ? 'Yangi akt' : 'Новый акт'}
             </button>
           )}
         </div>
+
+        {subTab === 'products' && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                placeholder={t.searchProductPlaceholder}
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setSkip(0); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && /^[0-9A-Za-z\-]{4,64}$/.test(search.trim()) && /\d/.test(search)) {
+                    e.preventDefault();
+                    handleCatalogBarcode(search.trim());
+                  }
+                }}
+                className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
+              />
+              <button type="button" onClick={() => setFilterScannerOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shrink-0">📷</button>
+              <button type="button" onClick={() => { setLowStockOnly(!lowStockOnly); setSkip(0); }} className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${lowStockOnly ? 'bg-rose-100 border-rose-300 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                ⚠️ <span className="hidden sm:inline">{lang === 'uz' ? 'Kam' : 'Мало'}</span>
+              </button>
+              <button type="button" onClick={() => { setExpiringOnly(!expiringOnly); setSkip(0); }} className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${expiringOnly ? 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                ⏰ <span className="hidden sm:inline">{lang === 'uz' ? 'Muddat' : 'Срок'}</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+              <button type="button" onClick={() => { setSelectedCategory(null); setSkip(0); }} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${selectedCategory === null ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+                {lang === 'uz' ? 'Hammasi' : 'Все'}
+              </button>
+              {safeArray(categories).map(cat => (
+                <button key={cat.id} type="button" onClick={() => { setSelectedCategory(cat.id === selectedCategory ? null : cat.id); setSkip(0); }} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${selectedCategory === cat.id ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+                  {cat.name ? cat.name.split('/')[0].trim() : cat.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Catalog Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm transition-colors duration-200">
-        {/* Mobile Product Cards (< 768px) */}
-        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-          {safeArray(products).map((p) => (
-            <div key={p.id} className="p-3.5 flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="font-bold text-sm text-slate-900 dark:text-slate-100">{p.name}</div>
-                  <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                    🏷️ {p.barcode} • {p.category_name}
+      {/* Scrollable Middle Area */}
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+        {subTab === 'products' && (
+          <>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {safeArray(products).length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-xs">
+                  <div className="text-4xl">📦</div>
+                  <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                    {search || selectedCategory || lowStockOnly || expiringOnly
+                      ? (lang === 'uz' ? "Bunday tovar topilmadi" : "Товары по фильтру не найдены")
+                      : (lang === 'uz' ? "Katalog bo'sh — do'kon tovarlarini qo'shishni boshlang" : "Каталог чист — начните добавлять товары магазина")}
                   </div>
-                </div>
-                <div>
-                  {p.is_low_stock ? (
-                    <span className="bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">
-                      {t.statusOrderMore}
-                    </span>
-                  ) : (
-                    <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap">
-                      {t.statusInNorm}
-                    </span>
+                  {isOwner && (
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold shadow">
+                        📷 {lang === 'uz' ? "Skanerlab kiritish" : "Сканировать товары"}
+                      </button>
+                      <button type="button" onClick={() => setCreateProductOpen({ barcode: search.trim(), autoScan: false })} className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold shadow">
+                        ➕ {lang === 'uz' ? "Qo'lda qo'shish" : "Добавить вручную"}
+                      </button>
+                      <button type="button" onClick={() => csvInputRef.current?.click()} className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold">
+                        ⬆️ CSV
+                      </button>
+                    </div>
                   )}
                 </div>
-              </div>
-              <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
-                <div>
-                  <span className="text-slate-400 text-[10px] block">{t.colStock}</span>
-                  <span className={`font-mono font-bold ${p.is_low_stock ? 'text-rose-500' : 'text-slate-800 dark:text-slate-200'}`}>
-                    {p.stock_quantity} {p.unit}
-                  </span>
-                </div>
-                {isOwner && (
-                  <div className="text-right">
-                    <span className="text-slate-400 text-[10px] block">{t.colPurchasePrice}</span>
-                    <span className="font-mono text-slate-500 dark:text-slate-400">{formatMoney(p.purchase_price)}</span>
+              ) : (
+                <>
+                  {/* Mobile Cards (< md) */}
+              <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                {safeArray(products).map((p) => (
+                  <div key={p.id} className="p-2.5 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1">
+                          {isOwner && (
+                            <button type="button" onClick={() => toggleQuickStar(p)} className={`text-sm ${p.is_quick ? 'opacity-100' : 'opacity-30'}`} title="Tezkor kassa">⚡</button>
+                          )}
+                          <span className="truncate">{p.name}</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-500 mt-0.5 truncate">
+                          {p.barcode} • {p.category_name?.split('/')[0]?.trim()}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400">{formatMoney(p.sale_price)}</div>
+                        <div className={`font-mono text-[11px] font-bold ${p.is_low_stock ? 'text-rose-500' : 'text-slate-500'}`}>
+                          {p.stock_quantity} {p.unit}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px]">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {isOwner && p.purchase_price !== null && (
+                          <span className="font-mono text-slate-400">{lang === 'uz' ? 'Kirim:' : 'Зак:'} {formatMoney(p.purchase_price)}</span>
+                        )}
+                        {p.expiry_date && (
+                          <span className={`px-1.5 py-0.5 rounded font-bold ${p.is_expired ? 'bg-rose-100 text-rose-700' : p.is_expiring_soon ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+                            ⏰ {p.expiry_date}
+                          </span>
+                        )}
+                      </div>
+                      {isOwner && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button type="button" onClick={() => setPriceTagProduct(p)} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs">🏷️</button>
+                          <button type="button" onClick={() => setEditingProduct(p)} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs">✏️</button>
+                          <button type="button" onClick={() => deleteProduct(p)} className="px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 text-xs">🗑️</button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-                <div className="text-right">
-                  <span className="text-slate-400 text-[10px] block">{t.colSalePrice}</span>
-                  <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                    {formatMoney(p.sale_price)}
-                  </span>
-                </div>
+                ))}
               </div>
-              {isOwner && (
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    onClick={() => setEditingProduct(p)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition flex items-center gap-1"
-                  >
-                    <span>✏️</span>
-                    <span>{lang === 'uz' ? 'Tahrirlash' : 'Редактировать'}</span>
-                  </button>
-                  <button
-                    onClick={() => deleteProduct(p)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition flex items-center gap-1"
-                  >
-                    <span>🗑️</span>
-                    <span>{lang === 'uz' ? "O'chirish" : 'Удалить'}</span>
-                  </button>
-                </div>
+
+              {/* Desktop Table (>= md) */}
+              <table className="hidden md:table w-full text-left text-xs">
+                <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-3 py-2.5">⚡</th>
+                    <th className="px-3 py-2.5">{t.colBarcode}</th>
+                    <th className="px-3 py-2.5">{t.colName}</th>
+                    {isOwner && <th className="px-3 py-2.5 text-right">{t.colPurchasePrice}</th>}
+                    <th className="px-3 py-2.5 text-right">{t.colSalePrice}</th>
+                    <th className="px-3 py-2.5 text-right">{t.colStock}</th>
+                    <th className="px-3 py-2.5 text-center">{lang === 'uz' ? 'Muddat' : 'Срок'}</th>
+                    {isOwner && <th className="px-3 py-2.5 text-center">{t.colActions}</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {safeArray(products).map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-3 py-2">
+                        {isOwner && <button type="button" onClick={() => toggleQuickStar(p)} className={p.is_quick ? 'opacity-100' : 'opacity-25'}>⚡</button>}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-[11px] text-slate-500">{p.barcode}</td>
+                      <td className="px-3 py-2 font-medium">{p.name}</td>
+                      {isOwner && <td className="px-3 py-2 text-right font-mono text-slate-500">{formatMoney(p.purchase_price)}</td>}
+                      <td className="px-3 py-2 text-right font-bold text-emerald-600 font-mono">{formatMoney(p.sale_price)}</td>
+                      <td className={`px-3 py-2 text-right font-mono font-bold ${p.is_low_stock ? 'text-rose-500' : ''}`}>{p.stock_quantity} {p.unit}</td>
+                      <td className="px-3 py-2 text-center text-[11px]">
+                        {p.expiry_date ? (
+                          <span className={`px-1.5 py-0.5 rounded font-bold ${p.is_expired ? 'bg-rose-100 text-rose-700' : p.is_expiring_soon ? 'bg-amber-100 text-amber-800' : ''}`}>{p.expiry_date}</span>
+                        ) : '—'}
+                      </td>
+                      {isOwner && (
+                        <td className="px-3 py-2 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button type="button" onClick={() => setPriceTagProduct(p)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">🏷️</button>
+                            <button type="button" onClick={() => setEditingProduct(p)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">✏️</button>
+                            <button type="button" onClick={() => deleteProduct(p)} className="p-1.5 hover:bg-rose-100 rounded-lg text-rose-600">🗑️</button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+                </>
               )}
             </div>
-          ))}
-        </div>
 
-        {/* Desktop Table (>= 768px) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-              <tr>
-                <th className="px-4 py-3">{t.colBarcode}</th>
-                <th className="px-4 py-3">{t.colName}</th>
-                <th className="px-4 py-3">{t.colCategory}</th>
-                {isOwner && <th className="px-4 py-3 text-right">{t.colPurchasePrice}</th>}
-                <th className="px-4 py-3 text-right">{t.colSalePrice}</th>
-                <th className="px-4 py-3 text-right">{t.colStock}</th>
-                <th className="px-4 py-3 text-center">{t.colStatus}</th>
-                {isOwner && <th className="px-4 py-3 text-center">{lang === 'uz' ? 'Amallar' : 'Действия'}</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-              {safeArray(products).map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">{p.barcode}</td>
-                  <td className="px-4 py-2.5 font-medium text-slate-900 dark:text-slate-100">{p.name}</td>
-                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{p.category_name}</td>
-                  {isOwner && (
-                    <td className="px-4 py-2.5 text-right font-mono text-slate-500 dark:text-slate-400">
-                      {formatMoney(p.purchase_price)}
-                    </td>
-                  )}
-                  <td className="px-4 py-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                    {formatMoney(p.sale_price)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono">
-                    <span className={p.is_low_stock ? 'text-rose-500 font-bold' : 'text-slate-800 dark:text-slate-200'}>
-                      {p.stock_quantity} {p.unit}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-center">
-                    {p.is_low_stock ? (
-                      <span className="bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                        {t.statusOrderMore}
-                      </span>
-                    ) : (
-                      <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold">
-                        {t.statusInNorm}
-                      </span>
-                    )}
-                  </td>
-                  {isOwner && (
-                    <td className="px-4 py-2.5 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => setEditingProduct(p)}
-                          className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition"
-                          title={lang === 'uz' ? 'Tahrirlash' : 'Редактировать'}
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => deleteProduct(p)}
-                          className="p-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg text-rose-600 dark:text-rose-400 transition"
-                          title={lang === 'uz' ? "O'chirish" : 'Удалить'}
-                        >
-                          🗑️
-                        </button>
+            {/* Pinned Compact Pagination Footer (No Scrolling Needed!) */}
+            <div className="shrink-0 px-3 py-1.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/40">
+              <span className="font-mono text-[11px]">{skip + 1}–{Math.min(skip + limit, total)} / {total}</span>
+              <div className="flex gap-1.5">
+                <button type="button" disabled={skip === 0} onClick={() => setSkip(Math.max(0, skip - limit))} className="px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 font-bold">←</button>
+                <button type="button" disabled={skip + limit >= total} onClick={() => setSkip(skip + limit)} className="px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 font-bold">→</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {subTab === 'revision' && (
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-2.5 space-y-2">
+            {!activeAct ? (
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
+                {acts.length === 0 ? (
+                  <div className="text-center py-10 text-xs text-slate-400">{lang === 'uz' ? "Hozircha reviziya aktlari yo'q. Yangi akt oching." : "Актов ревизии пока нет."}</div>
+                ) : (
+                  acts.map(a => (
+                    <div key={a.id} onClick={() => openAct(a.id)} className="p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between cursor-pointer hover:border-emerald-500">
+                      <div>
+                        <div className="font-bold text-xs">{a.name} ({a.act_number})</div>
+                        <div className="text-[11px] text-slate-400">{a.total_products} SKU • +{a.surpluses} / -{a.deficits}</div>
                       </div>
-                    </td>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${a.status === 'APPLIED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{a.status}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="shrink-0 flex items-center justify-between gap-2 pb-1 border-b border-slate-200 dark:border-slate-800">
+                  <button type="button" onClick={() => setActiveAct(null)} className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold">← {lang === 'uz' ? 'Orqaga' : 'Назад'}</button>
+                  <input type="text" placeholder="🔍 Shtrixkod / nom..." value={actSearch} onChange={(e) => setActSearch(e.target.value)} className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1 text-xs" />
+                  <button type="button" onClick={() => setActScannerOpen(true)} className="px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-xs font-bold">📷</button>
+                  {activeAct.status !== 'APPLIED' && (
+                    <button type="button" onClick={applyAct} className="px-2.5 py-1 bg-indigo-600 text-white rounded-xl text-xs font-bold">✅ {lang === 'uz' ? "Qo'llash" : "Применить"}</button>
                   )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredActItems.slice(0, 80).map(it => (
+                    <div key={it.product_id} className="py-2 flex items-center justify-between gap-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold truncate">{it.product_name}</div>
+                        <div className="text-[10px] font-mono text-slate-400">{lang === 'uz' ? 'Hisobda:' : 'Учет:'} {it.recorded_quantity} {it.unit} {it.difference !== 0 && `(${it.difference > 0 ? '+' : ''}${it.difference})`}</div>
+                      </div>
+                      <input
+                        type="number"
+                        step="any"
+                        disabled={activeAct.status === 'APPLIED'}
+                        defaultValue={it.actual_quantity}
+                        onBlur={(e) => {
+                          if (Number(e.target.value) !== Number(it.actual_quantity)) scanActQty(it.product_id, e.target.value);
+                        }}
+                        className="w-20 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
-        {/* Pagination */}
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <div>
-            {t.paginationShown} {products.length} {t.paginationOf} {total} SKU
+        {subTab === 'movements' && (
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2">
+            {movements.length === 0 ? (
+              <div className="text-center py-10 text-xs text-slate-400">{lang === 'uz' ? "Harakatlar tarixi bo'sh" : "История движений пуста"}</div>
+            ) : (
+              movements.map(m => (
+                <div key={m.id} className="py-2 flex items-center justify-between gap-2 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold truncate">{m.product_name}</div>
+                    <div className="text-[10px] text-slate-400">{m.movement_type} • {m.reference_id || ''} • {new Date(m.created_at).toLocaleString()}</div>
+                  </div>
+                  <div className="text-right font-mono shrink-0">
+                    <div className={`font-black ${m.quantity_delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {m.quantity_delta >= 0 ? '+' : ''}{m.quantity_delta}
+                    </div>
+                    <div className="text-[10px] text-slate-400">{m.previous_stock} → {m.new_stock}</div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-          <div className="flex gap-2">
-            <button
-              disabled={skip === 0}
-              onClick={() => setSkip(Math.max(0, skip - limit))}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 font-semibold"
-            >
-              {t.prevBtn}
-            </button>
-            <button
-              disabled={skip + limit >= total}
-              onClick={() => setSkip(skip + limit)}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 font-semibold"
-            >
-              {t.nextBtn}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Modals */}
       {createProductOpen && (
         <CreateProductModal
           token={token}
+          initialBarcode={typeof createProductOpen === 'object' ? (createProductOpen.barcode || '') : ''}
+          autoScanOnMount={typeof createProductOpen === 'object' ? Boolean(createProductOpen.autoScan) : false}
           onClose={() => setCreateProductOpen(false)}
-          onSuccess={() => {
-            setCreateProductOpen(false);
+          onSuccess={(_, opts) => {
+            if (!opts?.keepOpen) setCreateProductOpen(false);
             fetchProducts();
           }}
           notify={notify}
@@ -7230,29 +7280,28 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
           lang={lang}
         />
       )}
-
       {editingProduct && (
-        <EditProductModal
-          token={token}
-          product={editingProduct}
-          onClose={() => setEditingProduct(null)}
-          onSuccess={() => {
-            setEditingProduct(null);
-            fetchProducts();
-          }}
-          notify={notify}
-          t={t}
-          lang={lang}
-        />
+        <EditProductModal token={token} product={editingProduct} onClose={() => setEditingProduct(null)} onSuccess={() => { setEditingProduct(null); fetchProducts(); }} notify={notify} t={t} lang={lang} />
+      )}
+      {priceTagProduct && (
+        <PrintPriceTagModal token={token} product={priceTagProduct} onClose={() => setPriceTagProduct(null)} notify={notify} lang={lang} />
+      )}
+      {filterScannerOpen && (
+        <CameraScannerModal onScan={(code) => { setFilterScannerOpen(false); handleCatalogBarcode(code); }} onClose={() => setFilterScannerOpen(false)} notify={notify} t={t} lang={lang} />
+      )}
+      {actScannerOpen && (
+        <CameraScannerModal onScan={(code) => { setActScannerOpen(false); setActSearch(code); }} onClose={() => setActScannerOpen(false)} notify={notify} t={t} lang={lang} />
       )}
     </div>
   );
 }
 
-function SuppliersScreen({ token, notify, t }) {
-  const [activeTab, setActiveTab] = useState('suppliers'); // 'suppliers' | 'invoices'
+function OperationsHubScreen({ token, notify, t, lang: propLang, initialSection = 'suppliers' }) {
+  const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
+  const [section, setSection] = useState(initialSection); // 'suppliers' | 'invoices' | 'expenses'
   const [suppliers, setSuppliers] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [catalogSample, setCatalogSample] = useState([]);
   const [createSupplierModalOpen, setCreateSupplierModalOpen] = useState(false);
   const [createInvoiceModalOpen, setCreateInvoiceModalOpen] = useState(false);
@@ -7261,601 +7310,137 @@ function SuppliersScreen({ token, notify, t }) {
   const [ocrInvoiceOpen, setOcrInvoiceOpen] = useState(false);
   const [reconciliationSupplier, setReconciliationSupplier] = useState(null);
   const [searchSupplier, setSearchSupplier] = useState('');
-  const lang = (typeof window !== "undefined" && window.pos_lang) || (typeof localStorage !== "undefined" && localStorage.getItem("pos_lang")) || "uz";
+  const [createExpenseOpen, setCreateExpenseOpen] = useState(false);
+  const [isSpoilageMode, setIsSpoilageMode] = useState(false);
 
-  useEffect(() => {
-    fetchSuppliers();
-    fetchInvoices();
-    fetchCatalogSample();
-  }, []);
-
-  const fetchSuppliers = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/suppliers`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        setSuppliers([]);
-        return;
-      }
-      const data = await res.json();
-      setSuppliers(safeArray(data));
-    } catch (e) {
-      console.error(e);
-      setSuppliers([]);
-    }
+  const loadAll = () => {
+    fetch(`${API_BASE}/suppliers`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(d => setSuppliers(safeArray(d))).catch(() => {});
+    fetch(`${API_BASE}/suppliers/invoices`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(d => setInvoices(safeArray(d))).catch(() => {});
+    fetch(`${API_BASE}/expenses`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(d => setExpenses(safeArray(d))).catch(() => {});
+    fetch(`${API_BASE}/products?limit=2000`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []).then(d => setCatalogSample(safeArray(d))).catch(() => {});
   };
 
-  const fetchInvoices = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/suppliers/invoices`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        setInvoices([]);
-        return;
-      }
-      const data = await res.json();
-      setInvoices(safeArray(data));
-    } catch (e) {
-      console.error(e);
-      setInvoices([]);
-    }
-  };
-
-  const fetchCatalogSample = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/products?limit=2000`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        setCatalogSample([]);
-        return;
-      }
-      const data = await res.json();
-      setCatalogSample(safeArray(data));
-    } catch (e) {
-      console.error(e);
-      setCatalogSample([]);
-    }
-  };
+  useEffect(() => { loadAll(); }, []);
 
   const filteredSuppliers = safeArray(suppliers).filter(s => {
     if (!searchSupplier.trim()) return true;
     const q = searchSupplier.toLowerCase();
-    return (s.name || '').toLowerCase().includes(q) || (s.phone || '').includes(q) || (s.contact_person || '').toLowerCase().includes(q);
+    return (s.name || '').toLowerCase().includes(q) || (s.phone || '').includes(q);
   });
 
   return (
-    <div className="space-y-4">
-      {/* Top Actions & Sub-Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <span>🚚</span>
-            <span>{t.suppliersTitle}</span>
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {lang === 'uz' ? "Tovarlarni qabul qilish, omborni to'ldirish va hisob-kitob" : 'Приёмка товаров, пополнение склада и расчёты'}
-          </p>
+    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3">
+      {/* Pinned Operations Header */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar">
+            <button type="button" onClick={() => setSection('suppliers')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'suppliers' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              🏢 {lang === 'uz' ? "Ta'minotchi" : 'Поставщики'} ({suppliers.length})
+            </button>
+            <button type="button" onClick={() => setSection('invoices')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'invoices' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              📦 {lang === 'uz' ? 'Faktura' : 'Накладные'} ({invoices.length})
+            </button>
+            <button type="button" onClick={() => setSection('expenses')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'expenses' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              💸 {lang === 'uz' ? 'Xarajat' : 'Расходы'} ({expenses.length})
+            </button>
+          </div>
         </div>
 
-        {/* Sub tabs */}
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
-          <button
-            onClick={() => setActiveTab('suppliers')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-              activeTab === 'suppliers'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            🏢 {lang === 'uz' ? "Ta'minotchilar" : 'Поставщики'} ({suppliers.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('invoices')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-              activeTab === 'invoices'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            📦 {lang === 'uz' ? 'Kirim fakturalari' : 'Накладные'} ({invoices.length})
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setCreateSupplierModalOpen(true)}
-            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm"
-          >
-            {t.addSupplierBtn}
-          </button>
-          <button
-            onClick={() => setOcrInvoiceOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5 touch-target"
-          >
-            <span>📸</span>
-            <span>{t.scanInvoiceBtn || "Faktura OCR"}</span>
-          </button>
-          <button
-            onClick={() => setCreateInvoiceModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-md"
-          >
-            {t.addInvoiceBtn}
-          </button>
+        <div className="flex items-center justify-between gap-1.5">
+          {section === 'suppliers' && (
+            <input type="text" placeholder={lang === 'uz' ? "🔍 Qidiruv..." : "🔍 Поиск..."} value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs" />
+          )}
+          <div className="flex items-center gap-1.5 ml-auto shrink-0">
+            {section !== 'expenses' ? (
+              <>
+                <button type="button" onClick={() => setCreateSupplierModalOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">+🏢</button>
+                <button type="button" onClick={() => setOcrInvoiceOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">📸 OCR</button>
+                <button type="button" onClick={() => setCreateInvoiceModalOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold">➕ {lang === 'uz' ? 'Faktura' : 'Приход'}</button>
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={() => { setIsSpoilageMode(true); setCreateExpenseOpen(true); }} className="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 text-xs font-bold">⚠️ {lang === 'uz' ? 'Spisanie' : 'Списание'}</button>
+                <button type="button" onClick={() => { setIsSpoilageMode(false); setCreateExpenseOpen(true); }} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold">➕ {lang === 'uz' ? 'Xarajat' : 'Расход'}</button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* TAB 1: SUPPLIERS LIST / CARDS */}
-      {activeTab === 'suppliers' && (
-        <div className="space-y-3">
-          {/* Search bar */}
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder={lang === 'uz' ? "Ta'minotchi nomi yoki telefon..." : "Поиск по имени или телефону..."}
-              value={searchSupplier}
-              onChange={(e) => setSearchSupplier(e.target.value)}
-              className="w-full md:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 shadow-sm"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* Scrollable Body */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
+        {section === 'suppliers' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-2">
             {filteredSuppliers.map((s) => (
-              <div
-                key={s.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center text-sm font-mono shrink-0">
-                        {getInitials(s.name)}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{s.name}</h3>
-                        {s.contact_person && (
-                          <div className="text-[11px] text-slate-400">{s.contact_person}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      {s.current_debt > 0 ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                          {lang === 'uz' ? 'Qarz bor' : 'Задолженность'}
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
-                          {lang === 'uz' ? "Qarz yo'q" : 'Расчёт закрыт'}
-                        </span>
-                      )}
-                    </div>
+              <div key={s.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col justify-between gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{s.name}</h3>
+                    {s.phone && <a href={`tel:${s.phone}`} className="text-[11px] text-emerald-600 font-mono">📞 {s.phone}</a>}
                   </div>
-
-                  {/* Phone link */}
-                  <div className="mt-2 text-xs">
-                    {s.phone ? (
-                      <a
-                        href={`tel:${s.phone}`}
-                        className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
-                        title={lang === 'uz' ? "Qo'ng'iroq qilish" : "Позвонить"}
-                      >
-                        <span>📞</span>
-                        <span>{s.phone}</span>
-                      </a>
-                    ) : (
-                      <span className="text-slate-400 text-[11px]">{lang === 'uz' ? 'Telefon kiritilmagan' : 'Телефон не указан'}</span>
-                    )}
-                  </div>
-
-                  {/* Debt amount */}
-                  <div className="mt-3 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-medium">
-                      {lang === 'uz' ? "Ta'minotchi oldidagi qarz:" : 'Долг перед поставщиком:'}
-                    </div>
-                    <div className={`text-base font-black font-mono mt-0.5 ${s.current_debt > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                      {formatMoney(s.current_debt || 0)}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-1 flex justify-between">
-                      <span>{lang === 'uz' ? 'Oxirgi yetkazish:' : 'Поставка:'} {s.last_delivery_date ? formatRelativeDate(s.last_delivery_date, lang) : (lang === 'uz' ? "Mavjud emas" : "Нет")}</span>
-                      <span>{s.invoices_count || 0} {lang === 'uz' ? 'faktura' : 'накладных'}</span>
-                    </div>
-                  </div>
+                  <span className={`text-xs font-black font-mono ${s.current_debt > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {formatMoney(s.current_debt || 0)}
+                  </span>
                 </div>
-
-                {/* Actions */}
-                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                  <button
-                    onClick={() => setReconciliationSupplier(s)}
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
-                  >
-                    <span>🧾</span>
-                    <span>{lang === 'uz' ? 'Sverka akti' : 'Акт сверки'}</span>
-                  </button>
-                  <button
-                    onClick={() => setCreateInvoiceModalOpen(true)}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1"
-                    title={lang === 'uz' ? 'Yangi kirim qilish' : 'Принять накладную'}
-                  >
-                    <span>➕</span>
-                    <span>{lang === 'uz' ? 'Kirim' : 'Прием'}</span>
-                  </button>
+                <div className="flex gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <button type="button" onClick={() => setReconciliationSupplier(s)} className="flex-1 bg-slate-100 dark:bg-slate-800 py-1.5 rounded-xl text-[11px] font-bold">🧾 {lang === 'uz' ? 'Sverka' : 'Сверка'}</button>
+                  <button type="button" onClick={() => setCreateInvoiceModalOpen(true)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-[11px] font-bold">➕ {lang === 'uz' ? 'Kirim' : 'Приход'}</button>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* TAB 2: INVOICES LIST */}
-      {activeTab === 'invoices' && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-          {/* Mobile Invoice Cards (< 768px) */}
-          <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+        {section === 'invoices' && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
             {safeArray(invoices).map((inv) => (
-              <div key={inv.id} className="p-3 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="font-bold text-xs text-slate-900 dark:text-slate-100">
-                      📦 № {inv.invoice_number}
-                    </div>
-                    <div className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
-                      {inv.supplier_name}
-                    </div>
-                  </div>
-                  <div>
-                    {inv.debt_to_supplier > 0 ? (
-                      <span className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold">
-                        {t.statusHasDebt || "Qarz bor"}
-                      </span>
-                    ) : (
-                      <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
-                        {t.statusFullyPaid || "To'langan"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-center font-mono text-[11px]">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">{t.totalToPay}</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{formatMoney(inv.total_amount)}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">{t.paidAmountLabel}</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(inv.paid_amount)}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">{t.debtToSupplierLabel}</span>
-                    <span className="font-bold text-amber-600 dark:text-amber-400">{formatMoney(inv.debt_to_supplier)}</span>
+              <div key={inv.id} className="p-3 flex items-center justify-between gap-2 text-xs">
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold truncate">📦 № {inv.invoice_number} • {inv.supplier_name}</div>
+                  <div className="text-[11px] font-mono text-slate-500">
+                    {lang === 'uz' ? 'Jami:' : 'Сумма:'} {formatMoney(inv.total_amount)} • {lang === 'uz' ? 'Qarz:' : 'Долг:'} <span className={inv.debt_to_supplier > 0 ? 'text-amber-600 font-bold' : 'text-emerald-600'}>{formatMoney(inv.debt_to_supplier)}</span>
                   </div>
                 </div>
                 {inv.debt_to_supplier > 0 && (
-                  <button
-                    onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }}
-                    className="w-full mt-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm"
-                  >
-                    💵 {t.payInvoiceBtn}
-                  </button>
+                  <button type="button" onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }} className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] shrink-0">💵 {lang === 'uz' ? "To'lash" : 'Оплата'}</button>
                 )}
               </div>
             ))}
           </div>
+        )}
 
-          {/* Desktop Table (>= 768px) */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="px-4 py-3">{t.invoiceNumberLabel}</th>
-                  <th className="px-4 py-3">{t.supplierNameLabel}</th>
-                  <th className="px-4 py-3 text-right">{t.totalToPay}</th>
-                  <th className="px-4 py-3 text-right">{t.paidAmountLabel}</th>
-                  <th className="px-4 py-3 text-right">{t.debtToSupplierLabel}</th>
-                  <th className="px-4 py-3 text-center">{t.colStatus}</th>
-                  <th className="px-4 py-3 text-center">{t.colActions || (lang === 'uz' ? 'Amal' : 'Действие')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-                {safeArray(invoices).map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                    <td className="px-4 py-2.5 font-mono font-bold text-slate-900 dark:text-slate-100">
-                      {inv.invoice_number}
-                    </td>
-                    <td className="px-4 py-2.5 font-medium">{inv.supplier_name}</td>
-                    <td className="px-4 py-2.5 text-right font-mono font-bold">
-                      {formatMoney(inv.total_amount)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400">
-                      {formatMoney(inv.paid_amount)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-amber-600 dark:text-amber-400">
-                      {formatMoney(inv.debt_to_supplier)}
-                    </td>
-                    <td className="px-4 py-2.5 text-center">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          inv.status === 'PAID'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                            : inv.status === 'PARTIAL'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
-                        }`}
-                      >
-                        {inv.status === 'PAID'
-                          ? t.invoiceStatusPaid
-                          : inv.status === 'PARTIAL'
-                          ? t.invoiceStatusPartial
-                          : t.invoiceStatusPending}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-center">
-                      {inv.debt_to_supplier > 0 && (
-                        <button
-                          onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-xl text-[11px] font-bold transition"
-                        >
-                          {t.payInvoiceBtn}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {section === 'expenses' && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+            {safeArray(expenses).map((exp) => (
+              <div key={exp.id} className="p-3 flex items-center justify-between gap-2 text-xs">
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800">{expenseCategoryName(exp.category, lang)}</span>
+                    <span className="truncate">{exp.description}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">
+                    {new Date(exp.expense_date).toLocaleDateString()} {exp.product_name ? `• ${exp.product_name} (${exp.spoilage_quantity})` : ''}
+                  </div>
+                </div>
+                <div className="font-mono font-bold text-rose-600 shrink-0">-{formatMoney(exp.amount)}</div>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Modals */}
-      {createSupplierModalOpen && (
-        <CreateSupplierModal
-          token={token}
-          lang={lang}
-          onClose={() => setCreateSupplierModalOpen(false)}
-          onSuccess={() => {
-            setCreateSupplierModalOpen(false);
-            fetchSuppliers();
-            notify(lang === 'uz' ? "Yetkazib beruvchi qo'shildi" : 'Поставщик добавлен');
-          }}
-          notify={notify}
-          t={t}
-        />
-      )}
-
-      {ocrInvoiceOpen && (
-        <OcrInvoiceModal
-          token={token}
-          suppliers={suppliers}
-          catalogSample={catalogSample}
-          onClose={() => setOcrInvoiceOpen(false)}
-          onSuccess={() => {
-            setOcrInvoiceOpen(false);
-            fetchInvoices();
-            fetchSuppliers();
-            notify(lang === 'uz' ? 'Nakladnaya omborga qabul qilindi' : 'Накладная принята на склад');
-          }}
-          notify={notify}
-          t={t}
-          lang={lang}
-        />
-      )}
-
-      {createInvoiceModalOpen && (
-        <CreateInvoiceModal
-          token={token}
-          lang={lang}
-          suppliers={suppliers}
-          catalogSample={catalogSample}
-          onClose={() => setCreateInvoiceModalOpen(false)}
-          onSuccess={() => {
-            setCreateInvoiceModalOpen(false);
-            fetchInvoices();
-            fetchSuppliers();
-            notify(lang === 'uz' ? 'Yuk xati qabul qilindi va ombor yangilandi' : 'Накладная принята, остатки обновлены');
-          }}
-          notify={notify}
-          t={t}
-        />
-      )}
-
-      {payInvoiceModalOpen && selectedInvoice && (
-        <PayInvoiceModal
-          token={token}
-          lang={lang}
-          invoice={selectedInvoice}
-          onClose={() => setPayInvoiceModalOpen(false)}
-          onSuccess={() => {
-            setPayInvoiceModalOpen(false);
-            fetchInvoices();
-            fetchSuppliers();
-            notify(lang === 'uz' ? "Ta'minotchiga to'lov saqlandi" : 'Оплата поставщику сохранена');
-          }}
-          notify={notify}
-          t={t}
-        />
-      )}
-
-      {reconciliationSupplier && (
-        <SupplierReconciliationModal
-          token={token}
-          supplierId={reconciliationSupplier.id}
-          onClose={() => setReconciliationSupplier(null)}
-          notify={notify}
-          lang={lang}
-          t={t}
-        />
-      )}
+      {createSupplierModalOpen && <CreateSupplierModal token={token} lang={lang} onClose={() => setCreateSupplierModalOpen(false)} onSuccess={() => { setCreateSupplierModalOpen(false); loadAll(); notify('Saved'); }} notify={notify} t={t} />}
+      {ocrInvoiceOpen && <OcrInvoiceModal token={token} suppliers={suppliers} catalogSample={catalogSample} onClose={() => setOcrInvoiceOpen(false)} onSuccess={() => { setOcrInvoiceOpen(false); loadAll(); notify('Saved'); }} notify={notify} t={t} lang={lang} />}
+      {createInvoiceModalOpen && <CreateInvoiceModal token={token} lang={lang} suppliers={suppliers} catalogSample={catalogSample} onClose={() => setCreateInvoiceModalOpen(false)} onSuccess={() => { setCreateInvoiceModalOpen(false); loadAll(); notify('Saved'); }} notify={notify} t={t} />}
+      {payInvoiceModalOpen && selectedInvoice && <PayInvoiceModal token={token} lang={lang} invoice={selectedInvoice} onClose={() => setPayInvoiceModalOpen(false)} onSuccess={() => { setPayInvoiceModalOpen(false); loadAll(); notify('Paid'); }} notify={notify} t={t} />}
+      {reconciliationSupplier && <SupplierReconciliationModal token={token} supplierId={reconciliationSupplier.id} onClose={() => setReconciliationSupplier(null)} notify={notify} lang={lang} t={t} />}
+      {createExpenseOpen && <CreateExpenseModal token={token} lang={lang} catalogSample={catalogSample} isSpoilage={isSpoilageMode} onClose={() => setCreateExpenseOpen(false)} onSuccess={() => { setCreateExpenseOpen(false); loadAll(); notify('Saved'); }} notify={notify} t={t} />}
     </div>
   );
 }
 
-function ExpensesScreen({ token, notify, t }) {
-  const lang = (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
-  const [expenses, setExpenses] = useState([]);
-  const [catalogSample, setCatalogSample] = useState([]);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [isSpoilageMode, setIsSpoilageMode] = useState(false);
-
-  useEffect(() => {
-    fetchExpenses();
-    fetchCatalogSample();
-  }, []);
-
-  const fetchExpenses = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/expenses`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        setExpenses([]);
-        return;
-      }
-      const data = await res.json();
-      setExpenses(safeArray(data));
-    } catch (e) {
-      console.error(e);
-      setExpenses([]);
-    }
-  };
-
-  const fetchCatalogSample = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/products?limit=100`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        setCatalogSample([]);
-        return;
-      }
-      const data = await res.json();
-      setCatalogSample(safeArray(data));
-    } catch (e) {
-      console.error(e);
-      setCatalogSample([]);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Top Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <span>💸</span>
-            <span>{t.expensesTitle}</span>
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {lang === 'ru' ? 'Аренда, зарплата, коммунальные услуги и списание испорченных товаров' : 'Ijara, maosh, kommunal xizmatlar va yaroqsiz tovarlarni hisobdan chiqarish'}
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => { setIsSpoilageMode(true); setCreateModalOpen(true); }}
-            className="bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-sm"
-          >
-            {t.spoilageBtn}
-          </button>
-          <button
-            onClick={() => { setIsSpoilageMode(false); setCreateModalOpen(true); }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 rounded-2xl text-xs font-bold transition shadow-md"
-          >
-            {t.addExpenseBtn}
-          </button>
-        </div>
-      </div>
-
-      {/* Expenses List */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-        {/* Mobile Expenses Cards (< 768px) */}
-        <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-          {safeArray(expenses).map((exp) => (
-            <div key={exp.id} className="p-3 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  {expenseCategoryName(exp.category, lang)}
-                </span>
-                <span className="font-mono text-[11px] text-slate-400">
-                  {new Date(exp.expense_date).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                {exp.description}
-                {exp.product_name && (
-                  <span className="block text-[11px] text-rose-500 font-mono mt-0.5">
-                    ⚠️ {lang === 'ru' ? 'Товар' : 'Mahsulot'}: {exp.product_name} ({exp.spoilage_quantity} {lang === 'ru' ? 'шт. списано' : 'dona hisobdan chiqarildi'})
-                  </span>
-                )}
-              </div>
-              <div className="text-right font-mono font-bold text-sm text-rose-600 dark:text-rose-400">
-                -{formatMoney(exp.amount)}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop Table (>= 768px) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
-              <tr>
-                <th className="px-4 py-3">{t.dateLabel}</th>
-                <th className="px-4 py-3">{t.expenseCategoryLabel}</th>
-                <th className="px-4 py-3">{t.expenseDescLabel}</th>
-                <th className="px-4 py-3 text-right">{lang === 'ru' ? 'Сумма' : 'Summa'}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-              {safeArray(expenses).map((exp) => (
-                <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                    {new Date(exp.expense_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-2.5 font-semibold">
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      {expenseCategoryName(exp.category, lang)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 font-medium">
-                    {exp.description}
-                    {exp.product_name && (
-                      <span className="block text-[11px] text-rose-500 font-mono">
-                        ⚠️ {lang === 'ru' ? 'Товар' : 'Mahsulot'}: {exp.product_name} ({exp.spoilage_quantity} {lang === 'ru' ? 'шт. списано' : 'dona hisobdan chiqarildi'})
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
-                    -{formatMoney(exp.amount)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Create Modal */}
-      {createModalOpen && (
-        <CreateExpenseModal
-          token={token}
-          lang={lang}
-          catalogSample={catalogSample}
-          isSpoilage={isSpoilageMode}
-          onClose={() => setCreateModalOpen(false)}
-          onSuccess={() => {
-            setCreateModalOpen(false);
-            fetchExpenses();
-            notify(lang === 'ru' ? 'Расход сохранён' : 'Xarajat muvaffaqiyatli qayd etildi');
-          }}
-          notify={notify}
-          t={t}
-          lang={lang}
-        />
-      )}
-    </div>
-  );
-}
+function SuppliersScreen(props) { return <OperationsHubScreen {...props} initialSection="suppliers" />; }
+function ExpensesScreen(props) { return <OperationsHubScreen {...props} initialSection="expenses" />; }
 
 // ------------------- CREATE EXPENSE MODAL -------------------
 function CreateExpenseModal({ token, catalogSample, isSpoilage, onClose, onSuccess, notify, t, lang }) {
@@ -7989,15 +7574,23 @@ function CreateExpenseModal({ token, catalogSample, isSpoilage, onClose, onSucce
 // ------------------- ACCOUNTING & ANALYTICS DASHBOARD -------------------
 function AnalyticsScreen({ token, notify, t }) {
   const lang = (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
+  const [subView, setSubView] = useState('finance'); // 'finance' | 'insights' | 'telegram'
   const [period, setPeriod] = useState('today');
   const [selectedDate, setSelectedDate] = useState('');
   const [data, setData] = useState(null);
+  const [insights, setInsights] = useState(null);
+  const [tgStatus, setTgStatus] = useState(null);
+  const [tgToken, setTgToken] = useState('');
+  const [tgChatId, setTgChatId] = useState('');
+  const [tgSending, setTgSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [viewingDayDetails, setViewingDayDetails] = useState(null);
 
   useEffect(() => {
-    fetchDashboard();
-  }, [period, selectedDate]);
+    if (subView === 'finance') fetchDashboard();
+    else if (subView === 'insights') fetchInsights();
+    else if (subView === 'telegram') fetchTgStatus();
+  }, [subView, period, selectedDate]);
 
   const fetchDashboard = async () => {
     setLoading(true);
@@ -8005,11 +7598,8 @@ function AnalyticsScreen({ token, notify, t }) {
       const url = selectedDate
         ? `${API_BASE}/analytics/dashboard?period=custom&date=${selectedDate}`
         : `${API_BASE}/analytics/dashboard?period=${period}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const resData = await res.json();
-      setData(resData);
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setData(await res.json());
     } catch (e) {
       notify('Hisobotni yuklashda xatolik', 'error');
     } finally {
@@ -8017,18 +7607,94 @@ function AnalyticsScreen({ token, notify, t }) {
     }
   };
 
-  const handlePeriodChange = (newPeriod) => {
-    setSelectedDate('');
-    setPeriod(newPeriod);
+  const fetchInsights = async () => {
+    setLoading(true);
+    try {
+      const p = period === 'custom' ? 'month' : period;
+      const res = await fetch(`${API_BASE}/ai/insights?period=${p}&lang=${lang}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setInsights(await res.json());
+    } catch (e) {} finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTgStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/telegram/status`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const d = await res.json();
+        setTgStatus(d);
+        if (d.owner_chat_id) setTgChatId(String(d.owner_chat_id));
+      }
+    } catch (e) {}
+  };
+
+  const saveTgSettings = async (e) => {
+    e.preventDefault();
+    setTgSending(true);
+    try {
+      const res = await fetch(`${API_BASE}/telegram/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bot_token: tgToken.trim(), owner_chat_id: Number(tgChatId) })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Xatolik');
+      notify(d.message);
+      setTgToken('');
+      fetchTgStatus();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setTgSending(false);
+    }
+  };
+
+  const triggerTgAction = async (endpoint) => {
+    setTgSending(true);
+    try {
+      const res = await fetch(`${API_BASE}/telegram/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({})
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Xatolik');
+      notify(d.message || 'Yuborildi!');
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setTgSending(false);
+    }
   };
 
   return (
-    <div className="space-y-4">
-      {/* Period Toggles & Date Picker Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="font-bold text-sm text-slate-800 dark:text-slate-200">{t.periodLabel}</div>
-          <div className="flex gap-1">
+    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3">
+      {/* Pinned Period & View Switcher */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar">
+            <button type="button" onClick={() => setSubView('finance')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'finance' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              💰 {lang === 'uz' ? 'Moliya' : 'Финансы'}
+            </button>
+            <button type="button" onClick={() => setSubView('insights')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'insights' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              🧠 {lang === 'uz' ? 'AI Tahlil' : 'AI Инсайты'}
+            </button>
+            <button type="button" onClick={() => setSubView('telegram')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'telegram' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
+              🤖 Telegram
+            </button>
+          </div>
+
+          {subView === 'finance' && (
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl px-2 py-1 shrink-0">
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-transparent text-[11px] font-bold outline-none" />
+              {selectedDate && <button type="button" onClick={() => setSelectedDate('')} className="text-rose-500 text-xs font-bold">✕</button>}
+            </div>
+          )}
+        </div>
+
+        {subView !== 'telegram' && (
+          <div className="flex gap-1 overflow-x-auto no-scrollbar">
             {[
               { id: 'today', label: t.periodToday },
               { id: 'week', label: t.periodWeek },
@@ -8037,301 +7703,153 @@ function AnalyticsScreen({ token, notify, t }) {
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => handlePeriodChange(item.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border ${
+                type="button"
+                onClick={() => { setSelectedDate(''); setPeriod(item.id); }}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border whitespace-nowrap ${
                   period === item.id && !selectedDate
-                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
               >
                 {item.label}
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Date picker */}
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-3 py-1.5 shadow-inner">
-          <span className="text-xs">📅</span>
-          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-            {lang === 'uz' ? 'Kunni tanlash:' : 'Выбрать дату:'}
-          </span>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer"
-          />
-          {selectedDate && (
-            <button
-              onClick={() => setSelectedDate('')}
-              className="text-xs text-rose-500 hover:text-rose-700 font-bold ml-1 px-1 rounded"
-              title={lang === 'uz' ? 'Tozalash' : 'Сбросить дату'}
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      {loading || !data ? (
-        <div className="py-20 text-center text-xs text-slate-400">{t.processing}</div>
-      ) : (
-        <>
-          {/* Main Financial KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Revenue */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.kpiRevenue}</div>
-              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
-                {formatMoney(data.revenue)}
+      {/* Scrollable Analytics Content */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 space-y-2.5 pb-2">
+        {subView === 'finance' && (loading || !data ? (
+          <div className="py-16 text-center text-xs text-slate-400">{t.processing}</div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
+                <div className="text-[11px] text-slate-500 font-semibold">{t.kpiRevenue}</div>
+                <div className="text-lg sm:text-xl font-black text-emerald-600 font-mono mt-0.5">{formatMoney(data.revenue)}</div>
+                <div className="text-[10px] text-slate-400">{data.sales_count} {t.kpiReceiptsCount} • {formatMoney(data.average_receipt)}</div>
               </div>
-              <div className="text-[11px] text-slate-400 mt-1">
-                {data.sales_count} {t.kpiReceiptsCount} ({t.kpiAvgReceipt} {formatMoney(data.average_receipt)})
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
+                <div className="text-[11px] text-slate-500 font-semibold">{t.kpiNetProfit}</div>
+                <div className={`text-lg sm:text-xl font-black font-mono mt-0.5 ${data.net_profit >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatMoney(data.net_profit)}</div>
+                <div className="text-[10px] text-slate-400">{t.kpiMarginPct} {data.margin_percentage}%</div>
               </div>
-            </div>
-
-            {/* COGS */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.kpiCogs}</div>
-              <div className="text-2xl font-black text-slate-700 dark:text-slate-200 mt-1 font-mono">
-                {formatMoney(data.cogs)}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
+                <div className="text-[11px] text-slate-500 font-semibold">{t.kpiCogs}</div>
+                <div className="text-base sm:text-lg font-black font-mono mt-0.5">{formatMoney(data.cogs)}</div>
+                <div className="text-[10px] text-cyan-600 font-bold">{t.kpiGrossMargin}: {formatMoney(data.gross_margin)}</div>
               </div>
-              <div className="text-[11px] text-slate-400 mt-1">{t.cogsDesc || (lang === 'uz' ? "Sotilgan tovarlar tannarxi" : "Себестоимость проданных товаров")}</div>
-            </div>
-
-            {/* Gross Margin */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.kpiGrossMargin}</div>
-              <div className="text-2xl font-black text-cyan-600 dark:text-cyan-400 mt-1 font-mono">
-                {formatMoney(data.gross_margin)}
-              </div>
-              <div className="text-[11px] text-cyan-600 dark:text-cyan-500 mt-1 font-bold">
-                {t.kpiMarginPct} {data.margin_percentage}%
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
+                <div className="text-[11px] text-slate-500 font-semibold">{t.kpiCustomerDebt}</div>
+                <div className="text-base sm:text-lg font-black text-amber-600 font-mono mt-0.5">{formatMoney(data.customer_debt_outstanding)}</div>
+                <div className="text-[10px] text-rose-500 font-bold">⚠️ {data.low_stock_count} {lang === 'uz' ? 'kam tovar' : 'мало на скл.'}</div>
               </div>
             </div>
 
-            {/* Net Profit */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{t.kpiNetProfit}</div>
-              <div className={`text-2xl font-black mt-1 font-mono ${data.net_profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
-                {formatMoney(data.net_profit)}
-              </div>
-              <div className="text-[11px] text-slate-400 mt-1">
-                {lang === 'uz' ? 'Xarajatlar ayirilgandan so‘ng' : 'После вычета расходов'}
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Daily Breakdown (for Week and Month periods) */}
-          {!selectedDate && (period === 'week' || period === 'month') && data.daily_breakdown && data.daily_breakdown.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <span>📅</span>
-                  <span>{lang === 'uz' ? "Kunlik srez va taqvim (Har bir kun bo'yicha hisobot)" : 'Разбивка по дням (кликните на день для полного среза)'}</span>
-                </h3>
-                <span className="text-[11px] text-slate-400 font-medium">
-                  {lang === 'uz' ? 'Kunni tanlang' : 'Нажмите для деталей дня'}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-                {safeArray(data.daily_breakdown).map((day) => (
-                  <button
-                    key={day.date}
-                    onClick={() => setViewingDayDetails(day.date)}
-                    className="p-3 rounded-2xl border text-left transition hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between bg-slate-50 hover:bg-emerald-50/60 dark:bg-slate-800/60 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-emerald-500 group shadow-sm"
-                  >
-                    <div>
-                      <div className="text-[11px] font-bold text-slate-700 dark:text-slate-200 group-hover:text-emerald-600 transition">
-                        {day.date}
-                      </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        {day.sales_count} {lang === 'uz' ? 'ta chek' : 'чеков'}
-                      </div>
-                    </div>
-                    <div className="mt-2.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
-                      <div className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
-                        {formatMoney(day.revenue)}
-                      </div>
-                      <div className={`text-[10px] font-mono mt-0.5 font-semibold ${day.net_profit >= 0 ? 'text-slate-500 dark:text-slate-400' : 'text-rose-500'}`}>
-                        {day.net_profit >= 0 ? '+' : ''}{formatMoney(day.net_profit)}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Breakdown Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Payments Breakdown */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">{t.paymentsBreakdownTitle}</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">💵 {t.methodCash}</span>
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(data.cash_total)}</span>
-                </div>
-                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">💳 {t.methodCard}</span>
-                  <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">{formatMoney(data.card_total)}</span>
-                </div>
-                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">📓 {t.methodDebt}</span>
-                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatMoney(data.debt_total)}</span>
+            {!selectedDate && (period === 'week' || period === 'month') && data.daily_breakdown?.length > 0 && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
+                <h3 className="font-bold text-xs mb-2">📅 {lang === 'uz' ? 'Kunlik hisobot (bosing)' : 'По дням'}</h3>
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {safeArray(data.daily_breakdown).map((day) => (
+                    <button key={day.date} type="button" onClick={() => setViewingDayDetails(day.date)} className="shrink-0 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-left min-w-[105px]">
+                      <div className="text-[10px] font-bold text-slate-500">{day.date.slice(5)} ({day.sales_count})</div>
+                      <div className="text-xs font-black font-mono text-emerald-600">{formatMoney(day.revenue)}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Expenses Breakdown */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">{t.expensesBreakdownTitle}</h3>
-              <div className="space-y-2">
-                {Object.entries(data?.expenses_by_category || {}).length === 0 ? (
-                  <div className="text-xs text-slate-400 text-center py-4">{lang === 'uz' ? 'Xarajatlar mavjud emas' : 'Расходов пока нет'}</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5 text-xs">
+                <h3 className="font-bold">{t.paymentsBreakdownTitle}</h3>
+                <div className="flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"><span>💵 {t.methodCash}</span><span className="font-mono font-bold text-emerald-600">{formatMoney(data.cash_total)}</span></div>
+                <div className="flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"><span>💳 {t.methodCard}</span><span className="font-mono font-bold text-cyan-600">{formatMoney(data.card_total)}</span></div>
+                <div className="flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"><span>📓 {t.methodDebt}</span><span className="font-mono font-bold text-amber-600">{formatMoney(data.debt_total)}</span></div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5 text-xs">
+                <h3 className="font-bold">{t.topSellingTitle}</h3>
+                {safeArray(data?.top_selling_products).length === 0 ? (
+                  <div className="text-slate-400 py-3 text-center">{lang === 'uz' ? "Savdolar yo'q" : 'Нет продаж'}</div>
                 ) : (
-                  Object.entries(data?.expenses_by_category || {}).map(([cat, amt]) => (
-                    <div key={cat} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{expenseCategoryName(cat, lang)}</span>
-                      <span className="font-mono font-bold text-rose-600 dark:text-rose-400">-{formatMoney(amt)}</span>
+                  safeArray(data?.top_selling_products).map((item, idx) => (
+                    <div key={item.product_id} className="flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40">
+                      <span className="font-medium truncate pr-2">{idx + 1}. {item.name}</span>
+                      <span className="font-mono font-bold text-emerald-600 shrink-0">{item.quantity_sold} • {formatMoney(item.revenue)}</span>
                     </div>
                   ))
                 )}
               </div>
             </div>
-          </div>
+          </>
+        ))}
 
-          {/* Top Selling Products */}
-          {data.top_selling_products && data.top_selling_products.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">{t.topSellingTitle}</h3>
-              <div className="space-y-2">
-                {safeArray(data?.top_selling_products).map((item, idx) => (
-                  <div key={item.product_id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-bold flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <span className="font-medium text-xs text-slate-800 dark:text-slate-200">{item.name}</span>
-                    </div>
-                    <div className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                      {item.quantity_sold} {lang === 'uz' ? 'dona' : 'шт.'} • {formatMoney(item.revenue)}
-                    </div>
+        {subView === 'insights' && (loading || !insights ? (
+          <div className="py-16 text-center text-xs text-slate-400">{t.processing}</div>
+        ) : (
+          <div className="space-y-2.5 text-xs">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+              <h3 className="font-bold">🧠 {lang === 'uz' ? "Do'kon egasiga AI tavsiyalar" : 'AI Рекомендации владельцу'}</h3>
+              {safeArray(insights.owner_recommendations).map((rec, i) => (
+                <div key={i} className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">{rec}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5">
+                <h3 className="font-bold text-rose-600">⚠️ {lang === 'uz' ? 'Tez tugayotgan (Zakaz)' : 'Срочный закуп'} ({safeArray(insights.low_stock_items).length})</h3>
+                {safeArray(insights.low_stock_items).slice(0, 8).map(it => (
+                  <div key={it.id} className="flex justify-between p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40">
+                    <span className="truncate">{it.name}</span>
+                    <span className="font-mono font-bold text-rose-500">{it.stock_quantity} {it.unit}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5">
+                <h3 className="font-bold text-amber-600">🐢 {lang === 'uz' ? 'Sekin aylanayotgan tovarlar' : 'Неликвид / Медленный сбыт'} ({safeArray(insights.slow_turnover_items).length})</h3>
+                {safeArray(insights.slow_turnover_items).slice(0, 8).map(it => (
+                  <div key={it.id} className="flex justify-between p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40">
+                    <span className="truncate">{it.name}</span>
+                    <span className="font-mono text-slate-500">{it.stock_quantity} {it.unit}</span>
                   </div>
                 ))}
               </div>
             </div>
-          )}
-        </>
-      )}
+          </div>
+        ))}
 
-      {/* Day Details Modal */}
+        {subView === 'telegram' && (
+          <div className="space-y-2.5 text-xs">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold">🤖 Telegram Bot Hisobotlar</h3>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${tgStatus?.configured ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>
+                  {tgStatus?.configured ? '🟢 Ulangan' : '🟡 Sozlanmagan'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('test-send')} className="py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold">🧪 Test xabar</button>
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('z-report')} className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold">📊 Z-Hisobot yuborish</button>
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('alert-low-stock')} className="py-2.5 rounded-xl bg-amber-600 text-white font-bold">⚠️ Kam qoldiq alert</button>
+              </div>
+            </div>
+
+            <form onSubmit={saveTgSettings} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+              <div className="font-bold">{lang === 'uz' ? 'Bot sozlamalarini ulash:' : 'Настройка Telegram бота:'}</div>
+              <input type="password" required placeholder="Bot Token (123456:ABC...)" value={tgToken} onChange={(e) => setTgToken(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs" />
+              <div className="flex gap-2">
+                <input type="number" required placeholder="Owner Chat ID (masalan: 123456789)" value={tgChatId} onChange={(e) => setTgChatId(e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs" />
+                <button type="submit" disabled={tgSending} className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold">{tgSending ? '...' : 'Saqlash'}</button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+
       {viewingDayDetails && (
-        <DayDetailsModal
-          dateStr={viewingDayDetails}
-          token={token}
-          onClose={() => setViewingDayDetails(null)}
-          notify={notify}
-          lang={lang}
-          t={t}
-        />
+        <DayDetailsModal dateStr={viewingDayDetails} token={token} onClose={() => setViewingDayDetails(null)} notify={notify} lang={lang} t={t} />
       )}
-    </div>
-  );
-}
-
-function PriceTagModal({ onClose, t, sessionLocal }) {
-  const [productId, setProductId] = useState(0);
-  const [price, setPrice] = useState(0);
-  const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [template, setTemplate] = useState('');
-  
-  const handleGenerate = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await fetch('/api/v1/expenses/price-tag', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ product_id: productId, price, quantity })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Xatolik');
-      setTemplate(data.template);
-      notify('Fiyatka generatsiyalandi!');
-    } catch (err) {
-      notify(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 backdrop-blur-sm">
-      <form onSubmit={handleGenerate} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl text-slate-800 dark:text-slate-100">
-        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mb-3">🏷️ Fiyatka generatori</h3>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Mahsulot ID
-            </label>
-            <input
-              type="number"
-              value={productId}
-              onChange={(e) => setProductId(Number(e.target.value))}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Sotish narxi (so'm)
-            </label>
-            <input
-              type="number"
-              step="any"
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Miqdar
-            </label>
-            <input
-              type="number"
-              step="any"
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Shblash uchun narx
-            </label>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Barcha mahsulotlar uchun bir xil narx kiriting
-            </p>
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm sm:text-base flex items-center justify-center gap-2"
-          >
-            {loading ? 'Yuborilmoqda...' : 'Generatsiya qilish'}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

@@ -13,10 +13,10 @@ import qrcode.image.svg
 from .config import settings
 from typing import List
 from sqlmodel import select
-from .models import Category
+from .models import Category, SystemSetting
 from .database import init_db, engine, get_session
-from .seed import seed_accounts, seed_database
-from .routers import auth, products, pos, debts, suppliers, expenses, analytics, backup, ai, inventory
+from .seed import seed_accounts, seed_database, ensure_default_categories, purge_seeded_demo_data
+from .routers import auth, products, pos, debts, suppliers, expenses, analytics, backup, ai, inventory, telegram
 
 def get_current_port() -> int:
     """Returns runtime port from environment, defaulting to 7860 on Spaces or 8000 locally."""
@@ -67,11 +67,22 @@ async def lifespan(app: FastAPI):
         print(f"seed_accounts warning: {e}")
 
     try:
-        if settings.AUTO_SEED_CATALOG:
-            with Session(engine) as session:
+        with Session(engine) as session:
+            ensure_default_categories(session)
+            if settings.AUTO_SEED_CATALOG:
                 seed_database(session, target_sku_count=2000)
+            else:
+                purged = session.get(SystemSetting, "demo_purged_v1")
+                if not purged or purged.value != "true":
+                    purge_seeded_demo_data(session)
+                    if not purged:
+                        purged = SystemSetting(key="demo_purged_v1", value="true")
+                    else:
+                        purged.value = "true"
+                    session.add(purged)
+                    session.commit()
     except Exception as e:
-        print(f"seed_database warning: {e}")
+        print(f"seed/startup catalog setup warning: {e}")
     yield
     # Shutdown
 
@@ -108,6 +119,7 @@ app.include_router(expenses.router, prefix=api_prefix)
 app.include_router(inventory.router, prefix=api_prefix)
 app.include_router(analytics.router, prefix=api_prefix)
 app.include_router(ai.router, prefix=api_prefix)
+app.include_router(telegram.router, prefix=api_prefix)
 
 # Root category aliases for public catalog discovery
 @app.get(f"{api_prefix}/categories", response_model=List[Category], tags=["Categories"])

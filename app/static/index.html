@@ -77,20 +77,26 @@
       scrollbar-width: none;
     }
     .touch-target {
-      min-height: 44px;
-      min-width: 44px;
+      min-height: 40px;
+      min-width: 40px;
+    }
+    .app-viewport {
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     .app-header-identity, .app-header-actions, .app-tab-nav, main { min-width: 0; }
-    .app-tab-nav > button { flex: 0 0 auto; }
     input, select, textarea, button { max-width: 100%; }
+    .modal-mobile-safe {
+      max-height: 92dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
     @media (max-width: 640px) {
-      .app-header-top { align-items: stretch; flex-direction: column !important; gap: .35rem; }
-      .app-header-identity { justify-content: space-between; width: 100%; flex-wrap: wrap; }
-      .app-header-actions { justify-content: flex-end; flex-wrap: wrap; width: 100%; }
-      .app-tab-nav { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: .35rem; overflow: visible; }
-      .app-tab-nav > button { min-width: 0; width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; padding: .55rem .45rem; }
-      .app-main-content { padding-left: .5rem; padding-right: .5rem; }
-      .modal-mobile-safe { max-height: calc(100dvh - 1.5rem); overflow-y: auto; }
+      .touch-target { min-height: 38px; min-width: 38px; }
     }
     /* Viewfinder scanning reticle */
     @keyframes laserScan {

@@ -1,6 +1,7 @@
 import csv
 import io
 import math
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from fastapi.responses import Response
@@ -11,14 +12,59 @@ from sqlalchemy.exc import IntegrityError
 from ..database import get_session
 from ..models import (
     Product, Category, User, UserRole, Sale, SaleItem,
+    SaleRefund, SaleRefundItem, InventoryAct, InventoryActItem, StockMovement,
+    CashShift, CashShiftAction,
     SupplierInvoice, SupplierInvoiceItem, SystemSetting,
     Expense, Debtor, DebtTransaction, Supplier
 )
 from ..auth import get_current_user, require_role, verify_password
-from ..seed import seed_database
+from ..seed import seed_database, purge_seeded_demo_data
 from ..services.translit import get_search_variants
 
 router = APIRouter(prefix="/products", tags=["Products & Catalog"])
+TZ_TASHKENT = timezone(timedelta(hours=5))
+
+def _expiry_meta(expiry_date: Optional[str]) -> tuple[bool, bool, Optional[int]]:
+    """Return (is_expired, is_expiring_soon, days_remaining) for YYYY-MM-DD expiry strings."""
+    if not expiry_date:
+        return False, False, None
+    try:
+        target = datetime.strptime(expiry_date.strip()[:10], "%Y-%m-%d").date()
+        today = datetime.now(TZ_TASHKENT).date()
+        days = (target - today).days
+        return days < 0, 0 <= days <= 7, days
+    except ValueError:
+        return False, False, None
+
+def _serialize_product(
+    product: Product,
+    is_owner: bool,
+    category_name: Optional[str] = None,
+    detected_weight: Optional[float] = None,
+) -> dict:
+    is_expired, is_expiring_soon, days_to_expiry = _expiry_meta(getattr(product, "expiry_date", None))
+    data = {
+        "id": product.id,
+        "barcode": product.barcode,
+        "name": product.name,
+        "category_id": product.category_id,
+        "category_name": category_name or "Kategoriyasiz / Без категории",
+        "unit": product.unit,
+        "purchase_price": product.purchase_price if is_owner else None,
+        "sale_price": product.sale_price,
+        "stock_quantity": product.stock_quantity,
+        "min_stock_alert": product.min_stock_alert,
+        "expiry_date": getattr(product, "expiry_date", None),
+        "is_expired": is_expired,
+        "is_expiring_soon": is_expiring_soon,
+        "days_to_expiry": days_to_expiry,
+        "is_quick": bool(getattr(product, "is_quick", False)),
+        "is_low_stock": product.stock_quantity <= product.min_stock_alert,
+        "is_active": product.is_active,
+    }
+    if detected_weight is not None:
+        data["detected_weight"] = detected_weight
+    return data
 
 class ProductCreate(BaseModel):
     barcode: str = Field(..., min_length=1, max_length=64)
@@ -29,6 +75,7 @@ class ProductCreate(BaseModel):
     sale_price: float = Field(..., ge=0.0, le=1000000000.0)
     stock_quantity: float = Field(default=0.0, ge=0.0, le=1000000.0)
     min_stock_alert: float = Field(default=5.0, ge=0.0, le=100000.0)
+    expiry_date: Optional[str] = Field(default=None, max_length=32)
     is_quick: bool = Field(default=False)
 
 class ProductUpdate(BaseModel):
@@ -40,6 +87,7 @@ class ProductUpdate(BaseModel):
     sale_price: Optional[float] = Field(default=None, ge=0.0, le=1000000000.0)
     stock_quantity: Optional[float] = Field(default=None, ge=0.0, le=1000000.0)
     min_stock_alert: Optional[float] = Field(default=None, ge=0.0, le=100000.0)
+    expiry_date: Optional[str] = Field(default=None, max_length=32)
     is_quick: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -72,6 +120,7 @@ def list_products(
     search: Optional[str] = Query(None, description="Qidiruv / Поиск по названию или штрихкоду"),
     category_id: Optional[int] = Query(None, description="Kategoriya ID"),
     low_stock_only: bool = Query(False, description="Faqat oz qolgan tovarlar / Только товары с остатком ниже минимального"),
+    expiring_soon_only: bool = Query(False, description="Muddati yaqinlashgan tovarlar (7 kun) / Скоро истекает срок"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=2000),
     current_user: User = Depends(get_current_user),
@@ -95,6 +144,10 @@ def list_products(
     if low_stock_only:
         query = query.where(Product.stock_quantity <= Product.min_stock_alert)
 
+    if expiring_soon_only:
+        cutoff = (datetime.now(TZ_TASHKENT).date() + timedelta(days=7)).isoformat()
+        query = query.where(Product.expiry_date != None, Product.expiry_date != "", Product.expiry_date <= cutoff)
+
     # Get total count efficiently without loading full records into memory
     count_query = select(func.count()).select_from(query.subquery())
     total = session.exec(count_query).one()
@@ -107,24 +160,10 @@ def list_products(
 
     is_owner = (current_user.role == UserRole.OWNER)
 
-    result_items = []
-    for p in items:
-        result_items.append({
-            "id": p.id,
-            "barcode": p.barcode,
-            "name": p.name,
-            "category_id": p.category_id,
-            "category_name": categories.get(p.category_id, "Kategoriyasiz / Без категории"),
-            "unit": p.unit,
-            # Hide purchase price from cashier per RBAC
-            "purchase_price": p.purchase_price if is_owner else None,
-            "sale_price": p.sale_price,
-            "stock_quantity": p.stock_quantity,
-            "min_stock_alert": p.min_stock_alert,
-            "is_quick": bool(getattr(p, "is_quick", False)),
-            "is_low_stock": p.stock_quantity <= p.min_stock_alert,
-            "is_active": p.is_active
-        })
+    result_items = [
+        _serialize_product(p, is_owner=is_owner, category_name=categories.get(p.category_id))
+        for p in items
+    ]
 
     return {
         "total": total,
@@ -150,16 +189,7 @@ def get_quick_products(
         ).all()
 
     is_owner = (current_user.role == UserRole.OWNER)
-    return [{
-        "id": p.id,
-        "barcode": p.barcode,
-        "name": p.name,
-        "unit": p.unit,
-        "sale_price": p.sale_price,
-        "purchase_price": p.purchase_price if is_owner else None,
-        "stock_quantity": p.stock_quantity,
-        "is_quick": bool(getattr(p, "is_quick", False))
-    } for p in items]
+    return [_serialize_product(p, is_owner=is_owner) for p in items]
 
 
 CSV_COLUMNS = ["barcode", "name", "sale_price", "purchase_price", "stock_quantity", "unit", "category_name", "min_stock_alert", "is_quick"]
@@ -365,23 +395,9 @@ def get_product_by_barcode(
 
     cat = session.exec(select(Category).where(Category.id == product.category_id)).first() if product.category_id else None
     is_owner = (current_user.role == UserRole.OWNER)
-
-    return {
-        "id": product.id,
-        "barcode": product.barcode,
-        "name": product.name,
-        "category_id": product.category_id,
-        "category_name": cat.name if cat else "Kategoriyasiz / Без категории",
-        "unit": product.unit,
-        "purchase_price": product.purchase_price if is_owner else None,
-        "sale_price": product.sale_price,
-        "stock_quantity": product.stock_quantity,
-        "min_stock_alert": product.min_stock_alert,
-        "is_quick": bool(getattr(product, "is_quick", False)),
-        "is_low_stock": product.stock_quantity <= product.min_stock_alert,
-        "is_active": product.is_active,
-        "detected_weight": detected_weight
-    }
+    data = _serialize_product(product, is_owner=is_owner, category_name=cat.name if cat else None, detected_weight=detected_weight)
+    data["detected_weight"] = detected_weight
+    return data
 
 # Categories
 @router.get("/categories", response_model=List[Category])
@@ -403,22 +419,7 @@ def get_product(
 
     cat = session.exec(select(Category).where(Category.id == product.category_id)).first() if product.category_id else None
     is_owner = (current_user.role == UserRole.OWNER)
-
-    return {
-        "id": product.id,
-        "barcode": product.barcode,
-        "name": product.name,
-        "category_id": product.category_id,
-        "category_name": cat.name if cat else "Kategoriyasiz / Без категории",
-        "unit": product.unit,
-        "purchase_price": product.purchase_price if is_owner else None,
-        "sale_price": product.sale_price,
-        "stock_quantity": product.stock_quantity,
-        "min_stock_alert": product.min_stock_alert,
-        "is_quick": bool(getattr(product, "is_quick", False)),
-        "is_low_stock": product.stock_quantity <= product.min_stock_alert,
-        "is_active": product.is_active
-    }
+    return _serialize_product(product, is_owner=is_owner, category_name=cat.name if cat else None)
 
 @router.post("", response_model=dict)
 def create_product(
@@ -439,22 +440,29 @@ def create_product(
             existing.sale_price = data.sale_price
             existing.stock_quantity = data.stock_quantity
             existing.min_stock_alert = data.min_stock_alert
+            existing.expiry_date = data.expiry_date.strip()[:10] if data.expiry_date else None
             existing.is_quick = data.is_quick
             session.add(existing)
             session.commit()
             session.refresh(existing)
-            return {"message": "Mahsulot qayta faollashtirildi", "id": existing.id, "barcode": existing.barcode}
+            out = _serialize_product(existing, is_owner=True)
+            out["message"] = "Mahsulot qayta faollashtirildi"
+            return out
         raise HTTPException(status_code=400, detail="Bunday shtrixkodli mahsulot allaqachon mavjud / Товар с таким штрихкодом уже существует")
 
     product_data = data.model_dump()
     product_data["barcode"] = clean_barcode
     product_data["name"] = data.name.strip()
+    if product_data.get("expiry_date"):
+        product_data["expiry_date"] = product_data["expiry_date"].strip()[:10]
 
     product = Product(**product_data)
     session.add(product)
     session.commit()
     session.refresh(product)
-    return {"message": "Mahsulot muvaffaqiyatli yaratildi / Товар успешно создан", "id": product.id, "barcode": product.barcode}
+    out = _serialize_product(product, is_owner=True)
+    out["message"] = "Mahsulot muvaffaqiyatli yaratildi / Товар успешно создан"
+    return out
 
 @router.put("/{product_id}", response_model=dict)
 def update_product(
@@ -478,6 +486,9 @@ def update_product(
 
     if "name" in update_data and update_data["name"]:
         update_data["name"] = update_data["name"].strip()
+    if "expiry_date" in update_data:
+        exp_val = update_data["expiry_date"]
+        update_data["expiry_date"] = exp_val.strip()[:10] if exp_val and exp_val.strip() else None
 
     for key, val in update_data.items():
         setattr(product, key, val)
@@ -515,14 +526,21 @@ def clear_catalog(
     if not verify_password(data.current_password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Current password is incorrect")
 
+    session.exec(delete(SaleRefundItem))
+    session.exec(delete(SaleRefund))
+    session.exec(delete(InventoryActItem))
+    session.exec(delete(InventoryAct))
+    session.exec(delete(StockMovement))
     session.exec(delete(Expense))
     session.exec(delete(DebtTransaction))
+    session.exec(delete(SaleItem))
+    session.exec(delete(Sale))
+    session.exec(delete(CashShiftAction))
+    session.exec(delete(CashShift))
     session.exec(delete(Debtor))
     session.exec(delete(SupplierInvoiceItem))
     session.exec(delete(SupplierInvoice))
     session.exec(delete(Supplier))
-    session.exec(delete(SaleItem))
-    session.exec(delete(Sale))
     session.exec(delete(Product))
 
     cleared_setting = session.get(SystemSetting, "catalog_cleared")
@@ -537,6 +555,15 @@ def clear_catalog(
         "status": "ok",
         "message": "Barcha test tovarlar, qarzlar, xarajatlar va cheklar tozalandi. Do'kon toza varaqdan boshlashga 100% tayyor! / Все тестовые товары, долги, расходы и чеки очищены. База готова к реальной торговле!"
     }
+
+
+@router.post("/purge-demo")
+def purge_demo_records(
+    current_user: User = Depends(require_role([UserRole.OWNER])),
+    session: Session = Depends(get_session),
+):
+    removed = purge_seeded_demo_data(session)
+    return {"status": "ok", "removed": removed}
 
 @router.post("/reseed-catalog")
 def reseed_catalog(

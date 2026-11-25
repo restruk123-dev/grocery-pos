@@ -40,7 +40,7 @@ def print_banner(local_ip: str, port: int):
     print(f"[*] Mahalliy kompyuterda ochish:  {local_url}")
     print(f"[*] Telefon / planshetda ochish:   {url}")
     print("-" * 64)
-    print("🔑 Kirish ma'lumotlari (Demo):")
+    print("🔑 Kirish ma'lumotlari:")
     print("   • Foydalanuvchi hisoblari uchun egasi sozlagan login va kuchli parollardan foydalaning.")
     print("-" * 64)
 

@@ -90,6 +90,23 @@ def init_db() -> None:
             except Exception:
                 pass
 
+    # Safe expiry_date & discount_amount column migrations
+    for tbl, col, pg_def, sq_def in [
+        ("product", "expiry_date", "VARCHAR(32)", "VARCHAR(32)"),
+        ("sale", "discount_amount", "DOUBLE PRECISION DEFAULT 0", "REAL DEFAULT 0"),
+    ]:
+        try:
+            with engine.connect() as conn:
+                conn.exec_driver_sql(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS {col} {pg_def}")
+                conn.commit()
+        except Exception:
+            try:
+                with engine.connect() as conn:
+                    conn.exec_driver_sql(f"ALTER TABLE {tbl} ADD COLUMN {col} {sq_def}")
+                    conn.commit()
+            except Exception:
+                pass
+
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session

@@ -100,6 +100,7 @@ class Product(SQLModel, table=True):
     sale_price: float = Field(default=0.0)      # цена продажи
     stock_quantity: float = Field(default=0.0)  # текущий остаток
     min_stock_alert: float = Field(default=5.0) # мин. остаток
+    expiry_date: Optional[str] = Field(default=None) # YYYY-MM-DD срок годности
     is_quick: bool = Field(default=False)       # Быстрый товар для кассы (без штрихкода)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utc_now)
@@ -131,6 +132,7 @@ class Sale(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     receipt_number: str = Field(unique=True, index=True)
     total_amount: float
+    discount_amount: float = Field(default=0.0)
     payment_method: PaymentMethod
     cash_received: float = Field(default=0.0)
     change_given: float = Field(default=0.0)

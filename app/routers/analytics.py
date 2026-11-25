@@ -16,6 +16,9 @@ router = APIRouter(prefix="/analytics", tags=["Accounting & Analytics (Buxgalter
 # Uzbekistan Tashkent timezone: UTC+5
 TZ_TASHKENT = timezone(timedelta(hours=5))
 
+def _to_tashkent(dt: datetime) -> datetime:
+    return (dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt).astimezone(TZ_TASHKENT)
+
 class TopProductMetric(BaseModel):
     product_id: int
     name: str
@@ -211,9 +214,9 @@ def get_analytics_dashboard(
         # Group by day string in Tashkent timezone
         days_map: Dict[str, Dict[str, Any]] = {}
         
-        # Determine day range
-        cur = start_date.astimezone(TZ_TASHKENT).date()
-        end_cur = end_date.astimezone(TZ_TASHKENT).date()
+        # Determine day range (cap "all" to recent 30 days to avoid iterating from 2020)
+        end_cur = _to_tashkent(end_date).date()
+        cur = (end_cur - timedelta(days=29)) if period == "all" else _to_tashkent(start_date).date()
         while cur <= end_cur:
             d_str = cur.strftime("%Y-%m-%d")
             # Format Uzbek / Russian friendly day label, e.g. "12.11 (Pay/Чт)"
@@ -230,14 +233,14 @@ def get_analytics_dashboard(
             cur += timedelta(days=1)
 
         for s in sales:
-            s_d = s.created_at.astimezone(TZ_TASHKENT).strftime("%Y-%m-%d")
+            s_d = _to_tashkent(s.created_at).strftime("%Y-%m-%d")
             if s_d in days_map:
                 days_map[s_d]["revenue"] += s.total_amount
                 days_map[s_d]["sales_count"] += 1
                 days_map[s_d]["cogs"] += sale_item_map.get(s.id, 0.0)
 
         for e in expenses:
-            e_d = e.expense_date.astimezone(TZ_TASHKENT).strftime("%Y-%m-%d")
+            e_d = _to_tashkent(e.expense_date).strftime("%Y-%m-%d")
             if e_d in days_map:
                 days_map[e_d]["total_expenses"] += e.amount
 
@@ -349,7 +352,7 @@ def get_day_details(
 
     detailed_sales = []
     for s in sales:
-        time_local = s.created_at.astimezone(TZ_TASHKENT).strftime("%H:%M")
+        time_local = _to_tashkent(s.created_at).strftime("%H:%M")
         detailed_sales.append({
             "id": s.id,
             "receipt_number": s.receipt_number,
