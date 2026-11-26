@@ -935,13 +935,13 @@ function SettingsModal({
             <div className="p-3 atelier-subtle rounded-2xl">
               <label className="font-semibold atelier-text-muted block mb-2">{lang === "uz" ? "Mavzu va Ovoz" : "Оформление и звук"}</label>
               <div className="grid grid-cols-3 gap-1.5">
-                <button type="button" onClick={() => onToggleTheme("light")} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "light" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`} title="Alabaster (День)">
+                <button type="button" onClick={() => onToggleTheme("light")} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "light" ? "atelier-btn-primary shadow-sm" : "atelier-btn-soft"}`} title="Royal Crystal Light 3D">
                   <Icon name="sun" size={14} /><span>{lang === "uz" ? "Kun" : "День"}</span>
                 </button>
-                <button type="button" onClick={() => onToggleTheme("dark")} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "dark" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`} title="Espresso (Ночь)">
+                <button type="button" onClick={() => onToggleTheme("dark")} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "dark" ? "atelier-btn-primary shadow-sm" : "atelier-btn-soft"}`} title="Royal Indigo Glass 3D">
                   <Icon name="moon" size={14} /><span>{lang === "uz" ? "Tun" : "Ночь"}</span>
                 </button>
-                <button type="button" onClick={onToggleSound} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center ${soundEnabled ? "atelier-btn-cta" : "atelier-card atelier-text-muted"}`} title={lang === "uz" ? "Tovush signallari" : "Звуковые сигналы"}>
+                <button type="button" onClick={onToggleSound} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center ${soundEnabled ? "atelier-btn-cta" : "atelier-btn-soft atelier-text-muted"}`} title={lang === "uz" ? "Tovush signallari" : "Звуковые сигналы"}>
                   <Icon name={soundEnabled ? 'soundOn' : 'soundOff'} size={15} />
                 </button>
               </div>
@@ -1752,11 +1752,11 @@ function App() {
     if (theme === 'light') {
       root.classList.remove('dark');
       root.classList.add('light');
-      if (meta) meta.setAttribute('content', '#F6F4EF');
+      if (meta) meta.setAttribute('content', '#EEF2FF');
     } else {
       root.classList.remove('light');
       root.classList.add('dark');
-      if (meta) meta.setAttribute('content', '#11100E');
+      if (meta) meta.setAttribute('content', '#0A0F24');
     }
     localStorage.setItem('pos_theme', theme);
   }, [theme]);
@@ -6846,13 +6846,13 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="atelier-btn-cta disabled:opacity-40 font-bold py-3.5 rounded-2xl shadow-sm text-xs flex items-center justify-center gap-1.5">
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="atelier-btn-cta disabled:opacity-40 font-bold py-3.5 rounded-2xl text-xs flex items-center justify-center gap-1.5">
                 <Icon name="cash" size={16} /><span>{lang === 'uz' ? "Naqd (F5)" : "Наличные"}</span>
               </button>
-              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="atelier-btn-primary disabled:opacity-40 font-bold py-3.5 rounded-2xl shadow-sm text-xs flex items-center justify-center gap-1.5">
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="atelier-btn-sky disabled:opacity-40 font-bold py-3.5 rounded-2xl text-xs flex items-center justify-center gap-1.5">
                 <Icon name="card" size={16} /><span>{lang === 'uz' ? "Karta (F6)" : "Картой"}</span>
               </button>
-              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} style={{ color: 'var(--warm-fg)' }} className="atelier-btn-soft disabled:opacity-40 font-semibold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5">
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} className="atelier-btn-amber disabled:opacity-40 font-bold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5">
                 <Icon name="debts" size={15} /><span>{lang === 'uz' ? "Qarzga (F7)" : "В долг"}</span>
               </button>
               <button type="button" disabled={cart.length === 0} onClick={() => { setCheckoutInitialMethod('MIXED'); setCheckoutModalOpen(true); }} className="atelier-btn-soft disabled:opacity-40 font-semibold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5">
@@ -6883,15 +6883,15 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         </div>
 
         <div className="grid grid-cols-4 gap-1.5">
-          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="py-2.5 rounded-2xl atelier-btn-cta disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5 shadow-sm">
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="py-2.5 rounded-2xl atelier-btn-cta disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5">
             <Icon name="cash" size={16} />
             <span>{lang === 'uz' ? "Naqd" : "Нал"}</span>
           </button>
-          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="py-2.5 rounded-2xl atelier-btn-primary disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5">
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="py-2.5 rounded-2xl atelier-btn-sky disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5">
             <Icon name="card" size={16} />
             <span>{lang === 'uz' ? "Karta" : "Карта"}</span>
           </button>
-          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} style={{ color: 'var(--warm-fg)' }} className="py-2.5 rounded-2xl atelier-btn-soft disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5">
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} className="py-2.5 rounded-2xl atelier-btn-amber disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5">
             <Icon name="debts" size={16} />
             <span>{lang === 'uz' ? "Qarz" : "В долг"}</span>
           </button>
@@ -7131,13 +7131,13 @@ function DebtsScreen({ token, notify, t, lang: propLang }) {
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button type="button" onClick={() => setCreateDebtorModalOpen(true)} className="px-3 py-2 atelier-btn-cta font-bold rounded-2xl text-xs shadow-sm flex items-center gap-1">
+            <button type="button" onClick={() => setCreateDebtorModalOpen(true)} className="px-3 py-2 atelier-btn-cta font-bold rounded-2xl text-xs flex items-center gap-1">
               <Icon name="plus" size={14} /><span>{lang === 'uz' ? "Yangi" : "Новый"}</span>
             </button>
-            <button type="button" onClick={() => setVoiceDebtOpen(true)} className="px-2.5 py-2 atelier-btn-soft font-semibold rounded-2xl text-xs flex items-center gap-1" title={t.voiceDebtBtn}>
+            <button type="button" onClick={() => setVoiceDebtOpen(true)} className="px-2.5 py-2 atelier-btn-primary font-semibold rounded-2xl text-xs flex items-center gap-1" title={t.voiceDebtBtn}>
               <Icon name="mic" size={14} /><span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
             </button>
-            <button type="button" onClick={() => setOcrDebtOpen(true)} className="px-2.5 py-2 atelier-btn-soft font-semibold rounded-2xl text-xs flex items-center gap-1" title={t.scanPaperNotebookBtn}>
+            <button type="button" onClick={() => setOcrDebtOpen(true)} className="px-2.5 py-2 atelier-btn-amber font-bold rounded-2xl text-xs flex items-center gap-1" title={t.scanPaperNotebookBtn}>
               <Icon name="camera" size={14} /><span className="hidden sm:inline">OCR</span>
             </button>
           </div>
@@ -7240,13 +7240,13 @@ function DebtsScreen({ token, notify, t, lang: propLang }) {
                   )}
 
                   <div className="grid grid-cols-4 gap-1.5 pt-2 border-t atelier-border">
-                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setPayModalOpen(true); }} className="atelier-btn-cta py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 col-span-1">
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setPayModalOpen(true); }} className="atelier-btn-cta py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1">
                       <Icon name="check" size={12} /><span>{lang === 'uz' ? "To'lash" : "Принять"}</span>
                     </button>
-                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setAddDebtModalOpen(true); }} style={{ color: 'var(--warm-fg)' }} className="atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1">
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setAddDebtModalOpen(true); }} className="atelier-btn-amber py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1">
                       <Icon name="plus" size={12} /><span>{lang === 'uz' ? "Qarz" : "Долг"}</span>
                     </button>
-                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setRemindModalOpen(true); }} className="atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1">
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setRemindModalOpen(true); }} className="atelier-btn-sky py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1">
                       <Icon name="bell" size={12} /><span>{lang === 'uz' ? "Eslat" : "Напом."}</span>
                     </button>
                     <button type="button" onClick={() => { setSelectedDebtor(debtor); setHistoryModalOpen(true); }} className="atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1">
@@ -7606,19 +7606,19 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden gap-2 sm:gap-3">
-      {/* Pinned Top Controls Dock */}
+      {/* Pinned Clean 3D Top Controls Dock (Zero Clutter, Zero Cutoffs) */}
       <div className="shrink-0 atelier-card rounded-[24px] p-2.5 sm:p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar">
-            <button type="button" onClick={() => setSubTab('products')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'products' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+          <div className="flex-1 min-w-0 flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar">
+            <button type="button" onClick={() => setSubTab('products')} className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 shrink-0 ${subTab === 'products' ? 'atelier-pill-active' : 'atelier-text-muted'}`}>
               <Icon name="box" size={13} /><span>{lang === 'uz' ? 'Tovarlar' : 'Товары'} ({total})</span>
             </button>
             {isOwner && (
               <>
-                <button type="button" onClick={() => setSubTab('revision')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'revision' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+                <button type="button" onClick={() => setSubTab('revision')} className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 shrink-0 ${subTab === 'revision' ? 'atelier-pill-active' : 'atelier-text-muted'}`}>
                   <Icon name="check" size={13} /><span>{lang === 'uz' ? 'Reviziya' : 'Ревизия'}</span>
                 </button>
-                <button type="button" onClick={() => setSubTab('movements')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'movements' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+                <button type="button" onClick={() => setSubTab('movements')} className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 shrink-0 ${subTab === 'movements' ? 'atelier-pill-active' : 'atelier-text-muted'}`}>
                   <Icon name="history" size={13} /><span>{lang === 'uz' ? 'Harakat' : 'Движение'}</span>
                 </button>
               </>
@@ -7626,26 +7626,14 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
           </div>
 
           {subTab === 'products' && isOwner && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button type="button" onClick={exportCsv} className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center" title="Export CSV">
-                <Icon name="download" size={14} />
-              </button>
-              <button type="button" onClick={() => csvInputRef.current?.click()} className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center" title="Import CSV">
-                <Icon name="upload" size={14} />
-              </button>
-              <input ref={csvInputRef} type="file" accept=".csv" onChange={importCsvFile} className="hidden" />
-              <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-2.5 h-8 rounded-full atelier-btn-soft text-xs font-semibold flex items-center gap-1" title={lang === 'uz' ? 'Skanerlab kiritish' : 'Поточный скан'}>
-                <Icon name="scan" size={14} />
-              </button>
-              <button type="button" onClick={() => setCreateProductOpen(true)} className="px-3 h-8 rounded-full atelier-btn-cta text-xs font-bold shadow-sm flex items-center gap-1">
-                <Icon name="plus" size={14} /><span className="hidden sm:inline">{lang === 'uz' ? 'Yangi' : 'Добавить'}</span>
-              </button>
-            </div>
+            <button type="button" onClick={() => setCreateProductOpen(true)} className="px-3.5 h-9 rounded-2xl atelier-btn-cta text-xs font-bold flex items-center gap-1.5 shrink-0">
+              <Icon name="plus" size={15} /><span>{lang === 'uz' ? "Qo'shish" : "Добавить"}</span>
+            </button>
           )}
 
           {subTab === 'revision' && isOwner && (
-            <button type="button" onClick={createAct} className="px-3 py-1.5 rounded-full atelier-btn-cta text-xs font-bold shrink-0 flex items-center gap-1">
-              <Icon name="plus" size={14} /><span>{lang === 'uz' ? 'Yangi akt' : 'Новый акт'}</span>
+            <button type="button" onClick={createAct} className="px-3.5 h-9 rounded-2xl atelier-btn-cta text-xs font-bold shrink-0 flex items-center gap-1.5">
+              <Icon name="plus" size={15} /><span>{lang === 'uz' ? 'Yangi akt' : 'Новый акт'}</span>
             </button>
           )}
         </div>
@@ -7654,7 +7642,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
           <>
             <div className="flex items-center gap-1.5">
               <div className="flex-1 flex items-center atelier-input rounded-2xl px-3">
-                <span className="atelier-text-muted mr-2"><Icon name="search" size={14} /></span>
+                <span className="atelier-text-muted mr-2"><Icon name="search" size={15} /></span>
                 <input
                   type="text"
                   placeholder={lang === 'uz' ? "Nom yoki shtrixkod..." : "Поиск товара или штрихкода..."}
@@ -7666,29 +7654,46 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
                       handleCatalogBarcode(search.trim());
                     }
                   }}
-                  className="flex-1 min-w-0 bg-transparent py-2 text-xs focus:outline-none"
+                  className="flex-1 min-w-0 bg-transparent py-2.5 text-xs focus:outline-none"
                 />
               </div>
-              <button type="button" onClick={() => setFilterScannerOpen(true)} className="w-9 h-9 rounded-2xl atelier-btn-primary flex items-center justify-center shrink-0">
-                <Icon name="scan" size={16} />
+              <button type="button" onClick={() => setFilterScannerOpen(true)} className="px-3 h-9 rounded-2xl atelier-btn-primary text-xs font-bold flex items-center gap-1 shrink-0" title={lang === 'uz' ? "Skaner bilan izlash" : "Поиск камерой"}>
+                <Icon name="scan" size={15} />
               </button>
-              <button type="button" onClick={() => { setLowStockOnly(!lowStockOnly); setSkip(0); }} className={`px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${lowStockOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
-                {lang === 'uz' ? 'Kam' : 'Мало'}
-              </button>
-              <button type="button" onClick={() => { setExpiringOnly(!expiringOnly); setSkip(0); }} className={`px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${expiringOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
-                {lang === 'uz' ? 'Muddat' : 'Срок'}
-              </button>
-              <button type="button" onClick={() => { setTobaccoOnly(!tobaccoOnly); setSkip(0); }} className={`px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${tobaccoOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
-                {lang === 'uz' ? 'Marka' : 'Марка'}
-              </button>
+              {isOwner && (
+                <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-3 h-9 rounded-2xl atelier-btn-sky text-xs font-bold flex items-center gap-1 shrink-0" title={lang === 'uz' ? 'Ketma-ket skan' : 'Поточный скан'}>
+                  <Icon name="camera" size={14} /><span className="hidden sm:inline">{lang === 'uz' ? 'Potok' : 'Поток'}</span>
+                </button>
+              )}
+              <input ref={csvInputRef} type="file" accept=".csv" onChange={importCsvFile} className="hidden" />
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-              <button type="button" onClick={() => { setSelectedCategory(null); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${selectedCategory === null ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`}>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+              <button type="button" onClick={() => { setLowStockOnly(!lowStockOnly); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap transition ${lowStockOnly ? 'atelier-btn-amber' : 'atelier-btn-soft'}`}>
+                {lang === 'uz' ? 'Kam qolgan' : 'Мало'}
+              </button>
+              <button type="button" onClick={() => { setExpiringOnly(!expiringOnly); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap transition ${expiringOnly ? 'atelier-btn-amber' : 'atelier-btn-soft'}`}>
+                {lang === 'uz' ? 'Muddat' : 'Срок'}
+              </button>
+              <button type="button" onClick={() => { setTobaccoOnly(!tobaccoOnly); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap transition ${tobaccoOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
+                {lang === 'uz' ? 'Markirovka' : 'Маркировка'}
+              </button>
+              {isOwner && (
+                <>
+                  <button type="button" onClick={exportCsv} className="px-2.5 py-1 rounded-full atelier-btn-soft text-[11px] font-semibold shrink-0 flex items-center gap-1 whitespace-nowrap" title="Export CSV">
+                    <Icon name="download" size={12} /><span>CSV</span>
+                  </button>
+                  <button type="button" onClick={() => csvInputRef.current?.click()} className="px-2.5 py-1 rounded-full atelier-btn-soft text-[11px] font-semibold shrink-0 flex items-center gap-1 whitespace-nowrap" title="Import CSV">
+                    <Icon name="upload" size={12} /><span>CSV</span>
+                  </button>
+                </>
+              )}
+              <span className="w-px h-4 atelier-border bg-current opacity-20 shrink-0" />
+              <button type="button" onClick={() => { setSelectedCategory(null); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap ${selectedCategory === null ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`}>
                 {lang === 'uz' ? 'Hammasi' : 'Все'}
               </button>
               {safeArray(categories).map(cat => (
-                <button key={cat.id} type="button" onClick={() => { setSelectedCategory(cat.id === selectedCategory ? null : cat.id); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${selectedCategory === cat.id ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`}>
+                <button key={cat.id} type="button" onClick={() => { setSelectedCategory(cat.id === selectedCategory ? null : cat.id); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap ${selectedCategory === cat.id ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`}>
                   {cat.name ? cat.name.split('/')[0].trim() : cat.name}
                 </button>
               ))}
@@ -7703,28 +7708,39 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
           <>
             <div className="flex-1 min-h-0 overflow-y-auto">
               {safeArray(products).length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-xs">
-                  <div className="w-14 h-14 rounded-2xl atelier-subtle flex items-center justify-center atelier-text-muted">
-                    <Icon name="box" size={26} />
-                  </div>
-                  <div className="font-semibold text-sm max-w-xs">
-                    {search || selectedCategory || lowStockOnly || expiringOnly
-                      ? (lang === 'uz' ? "Bunday tovar topilmadi" : "Товары по фильтру не найдены")
-                      : (lang === 'uz' ? "Katalog bo'sh — do'kon tovarlarini qo'shishni boshlang" : "Каталог чист — добавьте первые товары магазина")}
-                  </div>
-                  {isOwner && (
-                    <div className="flex flex-wrap justify-center gap-2">
-                      <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-4 py-2.5 rounded-full atelier-btn-cta font-bold shadow-sm flex items-center gap-1.5">
-                        <Icon name="scan" size={15} /><span>{lang === 'uz' ? "Skanerlab kiritish" : "Сканировать товары"}</span>
-                      </button>
-                      <button type="button" onClick={() => setCreateProductOpen({ barcode: search.trim(), autoScan: false })} className="px-4 py-2.5 rounded-full atelier-btn-primary font-semibold flex items-center gap-1.5">
-                        <Icon name="plus" size={15} /><span>{lang === 'uz' ? "Qo'lda qo'shish" : "Добавить вручную"}</span>
-                      </button>
-                      <button type="button" onClick={() => csvInputRef.current?.click()} className="px-4 py-2.5 rounded-full atelier-btn-soft font-semibold flex items-center gap-1.5">
-                        <Icon name="upload" size={14} /><span>CSV</span>
-                      </button>
+                <div className="h-full flex items-center justify-center p-4">
+                  <div className="atelier-card rounded-[28px] p-6 w-full max-w-sm text-center space-y-4">
+                    <div className="w-14 h-14 rounded-2xl atelier-btn-primary mx-auto flex items-center justify-center">
+                      <Icon name="box" size={26} />
                     </div>
-                  )}
+                    <div className="space-y-1">
+                      <div className="font-bold text-sm">
+                        {search || selectedCategory || lowStockOnly || expiringOnly || tobaccoOnly
+                          ? (lang === 'uz' ? "Bunday tovar topilmadi" : "Товары по фильтру не найдены")
+                          : (lang === 'uz' ? "Katalog bo'sh" : "Каталог пока пуст")}
+                      </div>
+                      <p className="text-xs atelier-text-muted leading-relaxed">
+                        {search || selectedCategory || lowStockOnly || expiringOnly || tobaccoOnly
+                          ? (lang === 'uz' ? "Qidiruv so'zini yoki filtrlarni o'zgartirib ko'ring." : "Попробуйте сбросить фильтр или изменить запрос.")
+                          : (lang === 'uz' ? "Do'kon tovarlarini kamera skaneri yoki qo'lda kiritish bilan boshlang." : "Добавьте первые товары магазина через камеру или вручную.")}
+                      </p>
+                    </div>
+                    {isOwner && (
+                      <div className="space-y-2 pt-1">
+                        <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="w-full py-3 rounded-2xl atelier-btn-cta font-bold text-xs flex items-center justify-center gap-2">
+                          <Icon name="scan" size={16} /><span>{lang === 'uz' ? "Kamera bilan skanerlab kiritish" : "Сканировать товары камерой"}</span>
+                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button type="button" onClick={() => setCreateProductOpen({ barcode: search.trim(), autoScan: false })} className="py-2.5 rounded-2xl atelier-btn-primary font-semibold text-xs flex items-center justify-center gap-1.5">
+                            <Icon name="plus" size={15} /><span>{lang === 'uz' ? "Qo'lda" : "Вручную"}</span>
+                          </button>
+                          <button type="button" onClick={() => csvInputRef.current?.click()} className="py-2.5 rounded-2xl atelier-btn-soft font-semibold text-xs flex items-center justify-center gap-1.5">
+                            <Icon name="upload" size={14} /><span>CSV</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <>

@@ -7,7 +7,7 @@
 
   <!-- PWA Meta Tags -->
   <link rel="manifest" href="/manifest.json">
-  <meta id="meta-theme-color" name="theme-color" content="#11100E">
+  <meta id="meta-theme-color" name="theme-color" content="#0A0F24">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 
-  <!-- Immediate Theme Initializer to prevent flashing -->
+  <!-- Immediate Theme Initializer -->
   <script>
     try {
       const savedTheme = localStorage.getItem('pos_theme') || 'dark';
@@ -23,17 +23,17 @@
       if (savedTheme === 'light') {
         document.documentElement.classList.remove('dark');
         document.documentElement.classList.add('light');
-        if (meta) meta.setAttribute('content', '#F6F4EF');
+        if (meta) meta.setAttribute('content', '#EEF2FF');
       } else {
         document.documentElement.classList.remove('light');
         document.documentElement.classList.add('dark');
-        if (meta) meta.setAttribute('content', '#11100E');
+        if (meta) meta.setAttribute('content', '#0A0F24');
       }
     } catch (e) {}
   </script>
 
-  <!-- Compiled Tailwind CSS (100% Offline) -->
-  <link rel="stylesheet" href="/static/app.css">
+  <!-- Compiled Tailwind CSS + Royal Indigo Glass 3D Design System -->
+  <link rel="stylesheet" href="/static/app.css?v=11">
 
   <!-- React 18 Standalone UMD -->
   <script src="/static/vendor/react.production.min.js"></script>
@@ -46,170 +46,19 @@
   <script src="/static/vendor/tesseract.min.js"></script>
 
   <style>
-    :root, html.light {
-      color-scheme: light;
-      --bg-app: #F6F4EF;
-      --bg-card: #FFFFFF;
-      --bg-card-glass: rgba(255, 255, 255, 0.92);
-      --bg-subtle: #EDEAE1;
-      --bg-hover: #E4E0D4;
-      --border-hair: rgba(24, 28, 25, 0.08);
-      --border-strong: rgba(24, 28, 25, 0.16);
-      --text-main: #181C19;
-      --text-muted: #646A65;
-      --accent: #163A2E;
-      --accent-hover: #1D4B3C;
-      --accent-fg: #FAF8F4;
-      --cta: #8CE85B;
-      --cta-hover: #7AD948;
-      --cta-fg: #0D261D;
-      --accent-soft: #E5EFEA;
-      --accent-soft-fg: #163A2E;
-      --warm-bg: #FEF3C7;
-      --warm-fg: #92400E;
-      --danger-bg: #FEE2E2;
-      --danger-fg: #B91C1C;
-      --shadow-card: 0 2px 12px -2px rgba(24, 28, 25, 0.05), 0 1px 3px rgba(24, 28, 25, 0.03);
-    }
-
-    html.dark {
-      color-scheme: dark;
-      --bg-app: #11100E;
-      --bg-card: #1B1917;
-      --bg-card-glass: rgba(27, 25, 23, 0.92);
-      --bg-subtle: #25221F;
-      --bg-hover: #302C28;
-      --border-hair: rgba(250, 247, 242, 0.08);
-      --border-strong: rgba(250, 247, 242, 0.17);
-      --text-main: #FAF7F2;
-      --text-muted: #A39B91;
-      --accent: #E2B76B;
-      --accent-hover: #ECC783;
-      --accent-fg: #14120F;
-      --cta: #34D399;
-      --cta-hover: #24C38A;
-      --cta-fg: #08221A;
-      --accent-soft: rgba(226, 183, 107, 0.14);
-      --accent-soft-fg: #E2B76B;
-      --warm-bg: rgba(251, 191, 36, 0.13);
-      --warm-fg: #FBBF24;
-      --danger-bg: rgba(248, 113, 113, 0.14);
-      --danger-fg: #FCA5A5;
-      --shadow-card: 0 10px 28px -8px rgba(0, 0, 0, 0.55);
-    }
-
     *, *::before, *::after { box-sizing: border-box; }
     html, body, #root { width: 100%; min-width: 0; max-width: 100%; overflow-x: hidden; }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      background-color: var(--bg-app);
-      color: var(--text-main);
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
       letter-spacing: -0.005em;
     }
-
-    .font-nums, .font-mono {
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* Atelier Design System Primitives */
-    .atelier-app {
-      background-color: var(--bg-app);
-      color: var(--text-main);
-    }
-    .atelier-header {
-      background-color: var(--bg-card-glass);
-      border-bottom: 1px solid var(--border-hair);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-    }
-    .atelier-nav {
-      background-color: var(--bg-card-glass);
-      border-top: 1px solid var(--border-hair);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-    }
-    .atelier-card {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-hair);
-      box-shadow: var(--shadow-card);
-    }
-    .atelier-subtle {
-      background-color: var(--bg-subtle);
-      border: 1px solid transparent;
-    }
-    .atelier-input {
-      background-color: var(--bg-subtle);
-      color: var(--text-main);
-      border: 1px solid var(--border-hair);
-      transition: border-color 0.15s ease, background-color 0.15s ease;
-    }
-    .atelier-input:focus, .atelier-input:focus-within {
-      background-color: var(--bg-card);
-      border-color: var(--accent);
-      outline: none;
-    }
-    .atelier-btn-primary {
-      background-color: var(--accent);
-      color: var(--accent-fg);
-      transition: transform 0.12s ease, background-color 0.15s ease, opacity 0.15s ease;
-    }
-    .atelier-btn-primary:hover:not(:disabled) { background-color: var(--accent-hover); }
-    .atelier-btn-primary:active:not(:disabled) { transform: scale(0.98); }
-
-    .atelier-btn-cta {
-      background-color: var(--cta);
-      color: var(--cta-fg);
-      transition: transform 0.12s ease, background-color 0.15s ease, opacity 0.15s ease;
-    }
-    .atelier-btn-cta:hover:not(:disabled) { background-color: var(--cta-hover); }
-    .atelier-btn-cta:active:not(:disabled) { transform: scale(0.98); }
-
-    .atelier-btn-soft {
-      background-color: var(--bg-subtle);
-      color: var(--text-main);
-      border: 1px solid var(--border-hair);
-      transition: background-color 0.15s ease, transform 0.12s ease;
-    }
-    .atelier-btn-soft:hover:not(:disabled) { background-color: var(--bg-hover); }
-    .atelier-btn-soft:active:not(:disabled) { transform: scale(0.98); }
-
-    .atelier-pill-active {
-      background-color: var(--accent-soft);
-      color: var(--accent-soft-fg);
-      border: 1px solid var(--border-strong);
-    }
-    .atelier-text-muted { color: var(--text-muted); }
-    .atelier-text-accent { color: var(--accent); }
-    .atelier-border { border-color: var(--border-hair); }
-    .atelier-modal {
-      background-color: var(--bg-card);
-      color: var(--text-main);
-      border: 1px solid var(--border-hair);
-      box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.45);
-    }
-
-    /* Warm Palette Harmonization for Secondary Modals */
-    html.light .bg-slate-100 { background-color: #EFECE4; }
-    html.light .bg-slate-50 { background-color: #F7F5F0; }
-    html.light .border-slate-200 { border-color: rgba(24, 28, 25, 0.09); }
-    html.light .border-slate-300 { border-color: rgba(24, 28, 25, 0.15); }
-    html.dark .dark\:bg-slate-950 { background-color: #11100E; }
-    html.dark .dark\:bg-slate-900 { background-color: #1B1917; }
-    html.dark .dark\:bg-slate-800 { background-color: #25221F; }
-    html.dark .dark\:bg-slate-800\/60, html.dark .dark\:bg-slate-800\/70, html.dark .dark\:bg-slate-800\/80 { background-color: rgba(37, 34, 31, 0.78); }
-    html.dark .dark\:border-slate-800 { border-color: rgba(250, 247, 242, 0.09); }
-    html.dark .dark\:border-slate-700 { border-color: rgba(250, 247, 242, 0.15); }
-    html.dark .dark\:text-slate-100 { color: #FAF7F2; }
-    html.dark .dark\:text-slate-400 { color: #A39B91; }
-
-    /* Custom Scrollbars */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(128, 120, 110, 0.25); border-radius: 6px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(128, 120, 110, 0.45); }
+    ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.35); border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.55); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -242,8 +91,8 @@
       left: 5%;
       width: 90%;
       height: 2.5px;
-      background: var(--cta);
-      box-shadow: 0 0 14px 2px var(--cta);
+      background: #34D399;
+      box-shadow: 0 0 14px 2px #34D399;
       animation: laserScan 2s infinite ease-in-out;
     }
     @media print {
@@ -255,13 +104,13 @@
 </head>
 <body class="atelier-app min-h-screen antialiased select-none md:select-auto transition-colors duration-200">
   <div id="root">
-    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-app); color: var(--text-main);">
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-app, #0A0F24); color: var(--text-main, #F8FAFC);">
       <div style="text-align: center;">
-        <div style="width: 52px; height: 52px; border-radius: 18px; margin: 0 auto 14px; background: var(--accent); color: var(--accent-fg); display: flex; align-items: center; justify-content: center;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <div style="width: 56px; height: 56px; border-radius: 18px; margin: 0 auto 14px; background: linear-gradient(135deg,#6366F1,#3B82F6); color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(99,102,241,0.45);">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
         </div>
         <div style="font-weight: 700; font-size: 1.15rem; letter-spacing: -0.01em;">GroceryStore POS</div>
-        <div style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.35rem;">Yuklanmoqda / Загрузка...</div>
+        <div style="color: #A5B4FC; font-size: 0.82rem; margin-top: 0.35rem;">Yuklanmoqda / Загрузка...</div>
       </div>
     </div>
   </div>
@@ -271,13 +120,13 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('Service Worker registered:', reg.scope))
-          .catch(err => console.log('Service Worker failed:', err));
+          .then(reg => { if (reg && reg.update) reg.update(); })
+          .catch(() => {});
       });
     }
   </script>
 
   <!-- React Standalone Application -->
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=11"></script>
 </body>
 </html>

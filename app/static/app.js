@@ -1318,23 +1318,23 @@ function SettingsModal({
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => onToggleTheme("light"),
-    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "light" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`,
-    title: "Alabaster (День)"
+    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "light" ? "atelier-btn-primary shadow-sm" : "atelier-btn-soft"}`,
+    title: "Royal Crystal Light 3D"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "sun",
     size: 14
   }), /*#__PURE__*/React.createElement("span", null, lang === "uz" ? "Kun" : "День")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => onToggleTheme("dark"),
-    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "dark" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`,
-    title: "Espresso (Ночь)"
+    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "dark" ? "atelier-btn-primary shadow-sm" : "atelier-btn-soft"}`,
+    title: "Royal Indigo Glass 3D"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "moon",
     size: 14
   }), /*#__PURE__*/React.createElement("span", null, lang === "uz" ? "Tun" : "Ночь")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onToggleSound,
-    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center ${soundEnabled ? "atelier-btn-cta" : "atelier-card atelier-text-muted"}`,
+    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center ${soundEnabled ? "atelier-btn-cta" : "atelier-btn-soft atelier-text-muted"}`,
     title: lang === "uz" ? "Tovush signallari" : "Звуковые сигналы"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: soundEnabled ? 'soundOn' : 'soundOff',
@@ -2261,11 +2261,11 @@ function App() {
     if (theme === 'light') {
       root.classList.remove('dark');
       root.classList.add('light');
-      if (meta) meta.setAttribute('content', '#F6F4EF');
+      if (meta) meta.setAttribute('content', '#EEF2FF');
     } else {
       root.classList.remove('light');
       root.classList.add('dark');
-      if (meta) meta.setAttribute('content', '#11100E');
+      if (meta) meta.setAttribute('content', '#0A0F24');
     }
     localStorage.setItem('pos_theme', theme);
   }, [theme]);
@@ -7712,7 +7712,7 @@ function PosScreen({
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('CASH'),
-    className: "atelier-btn-cta disabled:opacity-40 font-bold py-3.5 rounded-2xl shadow-sm text-xs flex items-center justify-center gap-1.5"
+    className: "atelier-btn-cta disabled:opacity-40 font-bold py-3.5 rounded-2xl text-xs flex items-center justify-center gap-1.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "cash",
     size: 16
@@ -7720,7 +7720,7 @@ function PosScreen({
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('CARD'),
-    className: "atelier-btn-primary disabled:opacity-40 font-bold py-3.5 rounded-2xl shadow-sm text-xs flex items-center justify-center gap-1.5"
+    className: "atelier-btn-sky disabled:opacity-40 font-bold py-3.5 rounded-2xl text-xs flex items-center justify-center gap-1.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "card",
     size: 16
@@ -7728,10 +7728,7 @@ function PosScreen({
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('DEBT'),
-    style: {
-      color: 'var(--warm-fg)'
-    },
-    className: "atelier-btn-soft disabled:opacity-40 font-semibold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5"
+    className: "atelier-btn-amber disabled:opacity-40 font-bold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "debts",
     size: 15
@@ -7775,7 +7772,7 @@ function PosScreen({
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('CASH'),
-    className: "py-2.5 rounded-2xl atelier-btn-cta disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5 shadow-sm"
+    className: "py-2.5 rounded-2xl atelier-btn-cta disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "cash",
     size: 16
@@ -7783,7 +7780,7 @@ function PosScreen({
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('CARD'),
-    className: "py-2.5 rounded-2xl atelier-btn-primary disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5"
+    className: "py-2.5 rounded-2xl atelier-btn-sky disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "card",
     size: 16
@@ -7791,10 +7788,7 @@ function PosScreen({
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('DEBT'),
-    style: {
-      color: 'var(--warm-fg)'
-    },
-    className: "py-2.5 rounded-2xl atelier-btn-soft disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5"
+    className: "py-2.5 rounded-2xl atelier-btn-amber disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "debts",
     size: 16
@@ -8055,14 +8049,14 @@ function DebtsScreen({
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateDebtorModalOpen(true),
-    className: "px-3 py-2 atelier-btn-cta font-bold rounded-2xl text-xs shadow-sm flex items-center gap-1"
+    className: "px-3 py-2 atelier-btn-cta font-bold rounded-2xl text-xs flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "plus",
     size: 14
   }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Yangi" : "Новый")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setVoiceDebtOpen(true),
-    className: "px-2.5 py-2 atelier-btn-soft font-semibold rounded-2xl text-xs flex items-center gap-1",
+    className: "px-2.5 py-2 atelier-btn-primary font-semibold rounded-2xl text-xs flex items-center gap-1",
     title: t.voiceDebtBtn
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "mic",
@@ -8072,7 +8066,7 @@ function DebtsScreen({
   }, lang === 'uz' ? "Ovoz" : "Голос")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setOcrDebtOpen(true),
-    className: "px-2.5 py-2 atelier-btn-soft font-semibold rounded-2xl text-xs flex items-center gap-1",
+    className: "px-2.5 py-2 atelier-btn-amber font-bold rounded-2xl text-xs flex items-center gap-1",
     title: t.scanPaperNotebookBtn
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "camera",
@@ -8185,7 +8179,7 @@ function DebtsScreen({
         setSelectedDebtor(debtor);
         setPayModalOpen(true);
       },
-      className: "atelier-btn-cta py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 col-span-1"
+      className: "atelier-btn-cta py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1"
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "check",
       size: 12
@@ -8195,10 +8189,7 @@ function DebtsScreen({
         setSelectedDebtor(debtor);
         setAddDebtModalOpen(true);
       },
-      style: {
-        color: 'var(--warm-fg)'
-      },
-      className: "atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1"
+      className: "atelier-btn-amber py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1"
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "plus",
       size: 12
@@ -8208,7 +8199,7 @@ function DebtsScreen({
         setSelectedDebtor(debtor);
         setRemindModalOpen(true);
       },
-      className: "atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1"
+      className: "atelier-btn-sky py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1"
     }, /*#__PURE__*/React.createElement(Icon, {
       name: "bell",
       size: 12
@@ -8699,79 +8690,42 @@ function CatalogScreen({
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar"
+    className: "flex-1 min-w-0 flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubTab('products'),
-    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'products' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+    className: `px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 shrink-0 ${subTab === 'products' ? 'atelier-pill-active' : 'atelier-text-muted'}`
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "box",
     size: 13
   }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Tovarlar' : 'Товары', " (", total, ")")), isOwner && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubTab('revision'),
-    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'revision' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+    className: `px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 shrink-0 ${subTab === 'revision' ? 'atelier-pill-active' : 'atelier-text-muted'}`
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "check",
     size: 13
   }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Reviziya' : 'Ревизия')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubTab('movements'),
-    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'movements' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+    className: `px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 shrink-0 ${subTab === 'movements' ? 'atelier-pill-active' : 'atelier-text-muted'}`
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "history",
     size: 13
-  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Harakat' : 'Движение')))), subTab === 'products' && isOwner && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 shrink-0"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: exportCsv,
-    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center",
-    title: "Export CSV"
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "download",
-    size: 14
-  })), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => csvInputRef.current?.click(),
-    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center",
-    title: "Import CSV"
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "upload",
-    size: 14
-  })), /*#__PURE__*/React.createElement("input", {
-    ref: csvInputRef,
-    type: "file",
-    accept: ".csv",
-    onChange: importCsvFile,
-    className: "hidden"
-  }), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setCreateProductOpen({
-      barcode: '',
-      autoScan: true
-    }),
-    className: "px-2.5 h-8 rounded-full atelier-btn-soft text-xs font-semibold flex items-center gap-1",
-    title: lang === 'uz' ? 'Skanerlab kiritish' : 'Поточный скан'
-  }, /*#__PURE__*/React.createElement(Icon, {
-    name: "scan",
-    size: 14
-  })), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Harakat' : 'Движение')))), subTab === 'products' && isOwner && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateProductOpen(true),
-    className: "px-3 h-8 rounded-full atelier-btn-cta text-xs font-bold shadow-sm flex items-center gap-1"
+    className: "px-3.5 h-9 rounded-2xl atelier-btn-cta text-xs font-bold flex items-center gap-1.5 shrink-0"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "plus",
-    size: 14
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "hidden sm:inline"
-  }, lang === 'uz' ? 'Yangi' : 'Добавить'))), subTab === 'revision' && isOwner && /*#__PURE__*/React.createElement("button", {
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qo'shish" : "Добавить")), subTab === 'revision' && isOwner && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: createAct,
-    className: "px-3 py-1.5 rounded-full atelier-btn-cta text-xs font-bold shrink-0 flex items-center gap-1"
+    className: "px-3.5 h-9 rounded-2xl atelier-btn-cta text-xs font-bold shrink-0 flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "plus",
-    size: 14
+    size: 15
   }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Yangi akt' : 'Новый акт'))), subTab === 'products' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement("div", {
@@ -8780,7 +8734,7 @@ function CatalogScreen({
     className: "atelier-text-muted mr-2"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "search",
-    size: 14
+    size: 15
   })), /*#__PURE__*/React.createElement("input", {
     type: "text",
     placeholder: lang === 'uz' ? "Nom yoki shtrixkod..." : "Поиск товара или штрихкода...",
@@ -8795,44 +8749,82 @@ function CatalogScreen({
         handleCatalogBarcode(search.trim());
       }
     },
-    className: "flex-1 min-w-0 bg-transparent py-2 text-xs focus:outline-none"
+    className: "flex-1 min-w-0 bg-transparent py-2.5 text-xs focus:outline-none"
   })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setFilterScannerOpen(true),
-    className: "w-9 h-9 rounded-2xl atelier-btn-primary flex items-center justify-center shrink-0"
+    className: "px-3 h-9 rounded-2xl atelier-btn-primary text-xs font-bold flex items-center gap-1 shrink-0",
+    title: lang === 'uz' ? "Skaner bilan izlash" : "Поиск камерой"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "scan",
-    size: 16
-  })), /*#__PURE__*/React.createElement("button", {
+    size: 15
+  })), isOwner && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setCreateProductOpen({
+      barcode: '',
+      autoScan: true
+    }),
+    className: "px-3 h-9 rounded-2xl atelier-btn-sky text-xs font-bold flex items-center gap-1 shrink-0",
+    title: lang === 'uz' ? 'Ketma-ket skan' : 'Поточный скан'
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "camera",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline"
+  }, lang === 'uz' ? 'Potok' : 'Поток')), /*#__PURE__*/React.createElement("input", {
+    ref: csvInputRef,
+    type: "file",
+    accept: ".csv",
+    onChange: importCsvFile,
+    className: "hidden"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"
+  }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setLowStockOnly(!lowStockOnly);
       setSkip(0);
     },
-    className: `px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${lowStockOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
-  }, lang === 'uz' ? 'Kam' : 'Мало'), /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap transition ${lowStockOnly ? 'atelier-btn-amber' : 'atelier-btn-soft'}`
+  }, lang === 'uz' ? 'Kam qolgan' : 'Мало'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setExpiringOnly(!expiringOnly);
       setSkip(0);
     },
-    className: `px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${expiringOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap transition ${expiringOnly ? 'atelier-btn-amber' : 'atelier-btn-soft'}`
   }, lang === 'uz' ? 'Muddat' : 'Срок'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setTobaccoOnly(!tobaccoOnly);
       setSkip(0);
     },
-    className: `px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${tobaccoOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
-  }, lang === 'uz' ? 'Marka' : 'Марка')), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 overflow-x-auto no-scrollbar"
-  }, /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap transition ${tobaccoOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
+  }, lang === 'uz' ? 'Markirovka' : 'Маркировка'), isOwner && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: exportCsv,
+    className: "px-2.5 py-1 rounded-full atelier-btn-soft text-[11px] font-semibold shrink-0 flex items-center gap-1 whitespace-nowrap",
+    title: "Export CSV"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "download",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, "CSV")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => csvInputRef.current?.click(),
+    className: "px-2.5 py-1 rounded-full atelier-btn-soft text-[11px] font-semibold shrink-0 flex items-center gap-1 whitespace-nowrap",
+    title: "Import CSV"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "upload",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, "CSV"))), /*#__PURE__*/React.createElement("span", {
+    className: "w-px h-4 atelier-border bg-current opacity-20 shrink-0"
+  }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setSelectedCategory(null);
       setSkip(0);
     },
-    className: `px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${selectedCategory === null ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap ${selectedCategory === null ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`
   }, lang === 'uz' ? 'Hammasi' : 'Все'), safeArray(categories).map(cat => /*#__PURE__*/React.createElement("button", {
     key: cat.id,
     type: "button",
@@ -8840,50 +8832,58 @@ function CatalogScreen({
       setSelectedCategory(cat.id === selectedCategory ? null : cat.id);
       setSkip(0);
     },
-    className: `px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${selectedCategory === cat.id ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap ${selectedCategory === cat.id ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`
   }, cat.name ? cat.name.split('/')[0].trim() : cat.name))))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 atelier-card rounded-[24px] overflow-hidden flex flex-col"
   }, subTab === 'products' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto"
   }, safeArray(products).length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-xs"
+    className: "h-full flex items-center justify-center p-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-14 h-14 rounded-2xl atelier-subtle flex items-center justify-center atelier-text-muted"
+    className: "atelier-card rounded-[28px] p-6 w-full max-w-sm text-center space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-14 h-14 rounded-2xl atelier-btn-primary mx-auto flex items-center justify-center"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "box",
     size: 26
   })), /*#__PURE__*/React.createElement("div", {
-    className: "font-semibold text-sm max-w-xs"
-  }, search || selectedCategory || lowStockOnly || expiringOnly ? lang === 'uz' ? "Bunday tovar topilmadi" : "Товары по фильтру не найдены" : lang === 'uz' ? "Katalog bo'sh — do'kon tovarlarini qo'shishni boshlang" : "Каталог чист — добавьте первые товары магазина"), isOwner && /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-wrap justify-center gap-2"
+    className: "space-y-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-sm"
+  }, search || selectedCategory || lowStockOnly || expiringOnly || tobaccoOnly ? lang === 'uz' ? "Bunday tovar topilmadi" : "Товары по фильтру не найдены" : lang === 'uz' ? "Katalog bo'sh" : "Каталог пока пуст"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs atelier-text-muted leading-relaxed"
+  }, search || selectedCategory || lowStockOnly || expiringOnly || tobaccoOnly ? lang === 'uz' ? "Qidiruv so'zini yoki filtrlarni o'zgartirib ko'ring." : "Попробуйте сбросить фильтр или изменить запрос." : lang === 'uz' ? "Do'kon tovarlarini kamera skaneri yoki qo'lda kiritish bilan boshlang." : "Добавьте первые товары магазина через камеру или вручную.")), isOwner && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateProductOpen({
       barcode: '',
       autoScan: true
     }),
-    className: "px-4 py-2.5 rounded-full atelier-btn-cta font-bold shadow-sm flex items-center gap-1.5"
+    className: "w-full py-3 rounded-2xl atelier-btn-cta font-bold text-xs flex items-center justify-center gap-2"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "scan",
-    size: 15
-  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Skanerlab kiritish" : "Сканировать товары")), /*#__PURE__*/React.createElement("button", {
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Kamera bilan skanerlab kiritish" : "Сканировать товары камерой")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateProductOpen({
       barcode: search.trim(),
       autoScan: false
     }),
-    className: "px-4 py-2.5 rounded-full atelier-btn-primary font-semibold flex items-center gap-1.5"
+    className: "py-2.5 rounded-2xl atelier-btn-primary font-semibold text-xs flex items-center justify-center gap-1.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "plus",
     size: 15
-  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qo'lda qo'shish" : "Добавить вручную")), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qo'lda" : "Вручную")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => csvInputRef.current?.click(),
-    className: "px-4 py-2.5 rounded-full atelier-btn-soft font-semibold flex items-center gap-1.5"
+    className: "py-2.5 rounded-2xl atelier-btn-soft font-semibold text-xs flex items-center justify-center gap-1.5"
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "upload",
     size: 14
-  }), /*#__PURE__*/React.createElement("span", null, "CSV")))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("span", null, "CSV")))))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "block md:hidden divide-y atelier-border"
   }, safeArray(products).map(p => /*#__PURE__*/React.createElement("div", {
     key: p.id,
