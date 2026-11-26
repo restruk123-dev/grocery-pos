@@ -683,6 +683,373 @@ function checkOverdueStatus(dueDateStr, balance, lang = "uz") {
   return null;
 }
 
+// ------------------- MINIMAL VECTOR ICON SET -------------------
+function Icon({
+  name,
+  size = 16,
+  className = ""
+}) {
+  const s = size;
+  const props = {
+    width: s,
+    height: s,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.9,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    className: `shrink-0 ${className}`
+  };
+  switch (name) {
+    case 'bag':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M3 6h18"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M16 10a4 4 0 0 1-8 0"
+      }));
+    case 'pos':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("rect", {
+        width: "18",
+        height: "14",
+        x: "3",
+        y: "5",
+        rx: "2"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "3",
+        y1: "10",
+        x2: "21",
+        y2: "10"
+      }));
+    case 'debts':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "9",
+        cy: "7",
+        r: "4"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M22 21v-2a4 4 0 0 0-3-3.87"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M16 3.13a4 4 0 0 1 0 7.75"
+      }));
+    case 'box':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "m7.5 4.27 9 5.15"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m3.3 7 8.7 5 8.7-5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M12 22V12"
+      }));
+    case 'truck':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M15 18H9"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "17",
+        cy: "18",
+        r: "2"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "7",
+        cy: "18",
+        r: "2"
+      }));
+    case 'chart':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M3 3v18h18"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m19 9-5 5-4-4-3 3"
+      }));
+    case 'scan':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M3 7V5a2 2 0 0 1 2-2h2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M17 3h2a2 2 0 0 1 2 2v2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M21 17v2a2 2 0 0 1-2 2h-2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M7 21H5a2 2 0 0 1-2-2v-2"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "12",
+        r: "3"
+      }));
+    case 'search':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("circle", {
+        cx: "11",
+        cy: "11",
+        r: "8"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m21 21-4.3-4.3"
+      }));
+    case 'mic':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M19 10v2a7 7 0 0 1-14 0v-2"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "19",
+        x2: "12",
+        y2: "22"
+      }));
+    case 'tag':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M7 7h.01"
+      }));
+    case 'receipt':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M12 17V7"
+      }));
+    case 'pause':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("rect", {
+        width: "4",
+        height: "14",
+        x: "6",
+        y: "5",
+        rx: "1"
+      }), /*#__PURE__*/React.createElement("rect", {
+        width: "4",
+        height: "14",
+        x: "14",
+        y: "5",
+        rx: "1"
+      }));
+    case 'folder':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"
+      }));
+    case 'trash':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M3 6h18"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+      }));
+    case 'settings':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "12",
+        r: "3"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+      }));
+    case 'sun':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "12",
+        r: "4"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M12 2v2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M12 20v2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m4.93 4.93 1.41 1.41"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m17.66 17.66 1.41 1.41"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M2 12h2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M20 12h2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m6.34 17.66-1.41 1.41"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m19.07 4.93-1.41 1.41"
+      }));
+    case 'moon':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"
+      }));
+    case 'soundOn':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("polygon", {
+        points: "11 5 6 9 2 9 2 15 6 15 11 19 11 5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M15.54 8.46a5 5 0 0 1 0 7.07"
+      }));
+    case 'soundOff':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("polygon", {
+        points: "11 5 6 9 2 9 2 15 6 15 11 19 11 5"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "22",
+        y1: "9",
+        x2: "16",
+        y2: "15"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "16",
+        y1: "9",
+        x2: "22",
+        y2: "15"
+      }));
+    case 'cash':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("rect", {
+        width: "20",
+        height: "12",
+        x: "2",
+        y: "6",
+        rx: "2"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "12",
+        r: "2"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M6 12h.01M18 12h.01"
+      }));
+    case 'split':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M16 3h5v5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M8 3H3v5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m15 9 6-6"
+      }));
+    case 'plus':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M5 12h14"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M12 5v14"
+      }));
+    case 'minus':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M5 12h14"
+      }));
+    case 'close':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M18 6 6 18"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m6 6 12 12"
+      }));
+    case 'check':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M20 6 9 17l-5-5"
+      }));
+    case 'arrowRight':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M5 12h14"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "m12 5 7 7-7 7"
+      }));
+    case 'user':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "7",
+        r: "4"
+      }));
+    case 'camera':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "13",
+        r: "3"
+      }));
+    case 'printer':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("polyline", {
+        points: "6 9 6 2 18 2 18 9"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"
+      }), /*#__PURE__*/React.createElement("rect", {
+        width: "12",
+        height: "8",
+        x: "6",
+        y: "14"
+      }));
+    case 'shield':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"
+      }));
+    case 'phone':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"
+      }));
+    case 'edit':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"
+      }));
+    case 'bell':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M10.3 21a1.94 1.94 0 0 0 3.4 0"
+      }));
+    case 'history':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M3 3v5h5"
+      }), /*#__PURE__*/React.createElement("path", {
+        d: "M12 7v5l4 2"
+      }));
+    case 'download':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+      }), /*#__PURE__*/React.createElement("polyline", {
+        points: "7 10 12 15 17 10"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "15",
+        x2: "12",
+        y2: "3"
+      }));
+    case 'upload':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+      }), /*#__PURE__*/React.createElement("polyline", {
+        points: "17 8 12 3 7 8"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "3",
+        x2: "12",
+        y2: "15"
+      }));
+    case 'alert':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "9",
+        x2: "12",
+        y2: "13"
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: "12",
+        y1: "17",
+        x2: "12.01",
+        y2: "17"
+      }));
+    case 'bolt':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("polygon", {
+        points: "13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+      }));
+    case 'sparkles':
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("path", {
+        d: "m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"
+      }));
+    default:
+      return /*#__PURE__*/React.createElement("svg", props, /*#__PURE__*/React.createElement("circle", {
+        cx: "12",
+        cy: "12",
+        r: "9"
+      }));
+  }
+}
+
 // ------------------- UNIFIED SETTINGS MODAL -------------------
 function SettingsModal({
   token,
@@ -901,61 +1268,78 @@ function SettingsModal({
     }
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm"
+    className: "fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-2.5 sm:p-4 backdrop-blur-md"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl text-slate-800 dark:text-slate-100 modal-mobile-safe"
+    className: "atelier-modal rounded-[28px] w-full max-w-lg p-4 sm:p-5 modal-mobile-safe"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0"
+    className: "flex items-center justify-between pb-3 border-b atelier-border mb-3 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-2xl"
-  }, "⚙️"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-    className: "font-bold text-base text-slate-900 dark:text-slate-100"
-  }, lang === "uz" ? "Tizim sozlamalari" : "Настройки системы"), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-slate-400"
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-9 h-9 rounded-2xl atelier-subtle flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "settings",
+    size: 18
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base"
+  }, lang === "uz" ? "Tizim sozlamalari" : "Настройки"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs atelier-text-muted"
   }, user?.full_name || user?.username, " (", user?.role === 'owner' ? t.ownerRole : t.cashierRole, ")"))), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onClose,
-    className: "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1"
-  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "close",
+    size: 16
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 sm:grid-cols-2 gap-2"
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-2.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800"
+    className: "p-3 atelier-subtle rounded-2xl"
   }, /*#__PURE__*/React.createElement("label", {
-    className: "font-bold text-slate-700 dark:text-slate-300 block mb-2"
-  }, "🌐 ", lang === "uz" ? "Til" : "Язык"), /*#__PURE__*/React.createElement("div", {
+    className: "font-semibold atelier-text-muted block mb-2"
+  }, lang === "uz" ? "Til / Язык" : "Язык интерфейса"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => onLangChange("uz"),
-    className: `py-2 rounded-xl font-bold transition ${lang === "uz" ? "bg-emerald-600 text-white shadow-sm" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`
-  }, "🇺🇿 O'zbek"), /*#__PURE__*/React.createElement("button", {
+    className: `py-2 rounded-xl font-semibold transition ${lang === "uz" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`
+  }, "O'zbekcha"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => onLangChange("ru"),
-    className: `py-2 rounded-xl font-bold transition ${lang === "ru" ? "bg-emerald-600 text-white shadow-sm" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`
-  }, "🇷🇺 Русский"))), /*#__PURE__*/React.createElement("div", {
-    className: "p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800"
+    className: `py-2 rounded-xl font-semibold transition ${lang === "ru" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`
+  }, "Русский"))), /*#__PURE__*/React.createElement("div", {
+    className: "p-3 atelier-subtle rounded-2xl"
   }, /*#__PURE__*/React.createElement("label", {
-    className: "font-bold text-slate-700 dark:text-slate-300 block mb-2"
-  }, "🌓 ", lang === "uz" ? "Mavzu va Ovoz" : "Тема и Звук"), /*#__PURE__*/React.createElement("div", {
+    className: "font-semibold atelier-text-muted block mb-2"
+  }, lang === "uz" ? "Mavzu va Ovoz" : "Оформление и звук"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => onToggleTheme("light"),
-    className: `py-2 rounded-xl font-bold transition ${theme === "light" ? "bg-amber-500 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`
-  }, "☀️"), /*#__PURE__*/React.createElement("button", {
+    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "light" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`,
+    title: "Alabaster (День)"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "sun",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, lang === "uz" ? "Kun" : "День")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => onToggleTheme("dark"),
-    className: `py-2 rounded-xl font-bold transition ${theme === "dark" ? "bg-indigo-600 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`
-  }, "🌙"), /*#__PURE__*/React.createElement("button", {
+    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "dark" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`,
+    title: "Espresso (Ночь)"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "moon",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, lang === "uz" ? "Tun" : "Ночь")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onToggleSound,
-    className: `py-2 rounded-xl font-bold transition ${soundEnabled ? "bg-emerald-600 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400"}`,
+    className: `py-2 rounded-xl font-semibold transition flex items-center justify-center ${soundEnabled ? "atelier-btn-cta" : "atelier-card atelier-text-muted"}`,
     title: lang === "uz" ? "Tovush signallari" : "Звуковые сигналы"
-  }, soundEnabled ? '🔊' : '🔇')))), user?.role === 'owner' && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: soundEnabled ? 'soundOn' : 'soundOff',
+    size: 15
+  }))))), user?.role === 'owner' && /*#__PURE__*/React.createElement("div", {
     className: "p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-bold text-slate-800 dark:text-slate-200"
@@ -1873,12 +2257,15 @@ function App() {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.uz;
   useEffect(() => {
     const root = document.documentElement;
+    const meta = document.getElementById('meta-theme-color');
     if (theme === 'light') {
       root.classList.remove('dark');
       root.classList.add('light');
+      if (meta) meta.setAttribute('content', '#F6F4EF');
     } else {
       root.classList.remove('light');
       root.classList.add('dark');
+      if (meta) meta.setAttribute('content', '#11100E');
     }
     localStorage.setItem('pos_theme', theme);
   }, [theme]);
@@ -1927,30 +2314,42 @@ function App() {
   const isOwner = user.role === 'owner';
   const navTabs = [{
     id: 'pos',
-    icon: '🛒',
+    icon: 'pos',
     label: lang === 'uz' ? 'Kassa' : 'Касса'
   }, {
     id: 'debts',
-    icon: '📓',
+    icon: 'debts',
     label: lang === 'uz' ? 'Qarzlar' : 'Долги'
   }, {
     id: 'catalog',
-    icon: '📦',
-    label: lang === 'uz' ? 'Tovarlar' : 'Склад'
+    icon: 'box',
+    label: lang === 'uz' ? 'Tovarlar' : 'Товары'
   }, ...(isOwner ? [{
     id: 'suppliers',
-    icon: '🚚',
+    icon: 'truck',
     label: lang === 'uz' ? 'Kirim' : 'Приход'
   }, {
     id: 'analytics',
-    icon: '📊',
-    label: lang === 'uz' ? 'Hisobot' : 'Отчет'
+    icon: 'chart',
+    label: lang === 'uz' ? 'Hisobot' : 'Отчёты'
   }] : [])];
   return /*#__PURE__*/React.createElement("div", {
-    className: "app-viewport bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200"
+    className: "app-viewport atelier-app transition-colors duration-200"
   }, notification && /*#__PURE__*/React.createElement("div", {
-    className: `fixed top-12 right-3 left-3 sm:left-auto sm:max-w-sm z-50 px-3.5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2 border text-xs font-semibold ${notification.type === 'error' ? 'bg-rose-100 border-rose-300 text-rose-800 dark:bg-rose-950/95 dark:border-rose-600 dark:text-rose-200' : 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/95 dark:border-emerald-600 dark:text-emerald-200'}`
-  }, /*#__PURE__*/React.createElement("span", null, notification.type === 'error' ? '⚠️' : '✅'), /*#__PURE__*/React.createElement("span", {
+    style: {
+      backgroundColor: notification.type === 'error' ? 'var(--danger-bg)' : 'var(--bg-card)',
+      color: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--text-main)',
+      borderColor: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--border-strong)'
+    },
+    className: "fixed top-14 right-3 left-3 sm:left-auto sm:max-w-sm z-50 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 border text-xs font-semibold"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--cta)'
+    }
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: notification.type === 'error' ? 'alert' : 'check',
+    size: 16
+  })), /*#__PURE__*/React.createElement("span", {
     className: "truncate"
   }, notification.message)), networkModalOpen && /*#__PURE__*/React.createElement(NetworkQrModal, {
     onClose: () => setNetworkModalOpen(false),
@@ -1996,57 +2395,91 @@ function App() {
     notify: notify,
     t: t
   }), /*#__PURE__*/React.createElement("header", {
-    className: "shrink-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-2.5 py-1.5"
+    className: "shrink-0 z-40 atelier-header px-3 py-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "max-w-7xl mx-auto flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5 min-w-0"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-lg shrink-0"
-  }, "🛒"), /*#__PURE__*/React.createElement("button", {
+    className: "flex items-center gap-2 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-8 h-8 rounded-xl atelier-btn-primary flex items-center justify-center shrink-0"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "bag",
+    size: 16
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCashierSwitchOpen(true),
-    className: "text-[11px] font-bold px-2 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1 truncate max-w-[125px] sm:max-w-none",
-    title: lang === 'uz' ? "Smenani almashtirish" : "Смена кассира"
-  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-semibold px-2.5 py-1.5 rounded-full atelier-btn-soft flex items-center gap-1.5 truncate max-w-[125px] sm:max-w-none",
+    title: lang === 'uz' ? "Kassirni almashtirish" : "Смена кассира"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "user",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", {
     className: "truncate"
-  }, "👤 ", user ? user.full_name.split(' ')[0] : 'Kassir'), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px]"
-  }, "🔄")), /*#__PURE__*/React.createElement("button", {
+  }, user ? user.full_name.split(' ')[0] : 'Kassir')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setShiftModalOpen(true),
-    className: `text-[11px] font-bold px-2 py-1 rounded-xl border flex items-center gap-1 shrink-0 ${currentShift?.is_open ? 'bg-emerald-500/10 border-emerald-400/50 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/10 border-rose-400/50 text-rose-700 dark:text-rose-300'}`,
+    style: {
+      backgroundColor: currentShift?.is_open ? 'var(--accent-soft)' : 'var(--warm-bg)',
+      color: currentShift?.is_open ? 'var(--accent-soft-fg)' : 'var(--warm-fg)',
+      borderColor: 'var(--border-hair)'
+    },
+    className: "text-[11px] font-semibold px-2.5 py-1.5 rounded-full border flex items-center gap-1.5 shrink-0",
     title: lang === 'uz' ? "Kassa smenasi va Z-hisobot" : "Кассовая смена"
-  }, /*#__PURE__*/React.createElement("span", null, currentShift?.is_open ? '🟢' : '🔴'), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono"
-  }, currentShift?.is_open ? formatMoney(currentShift.shift?.expected_cash || 0) : lang === 'uz' ? 'Smena' : 'Смена'))), /*#__PURE__*/React.createElement("nav", {
-    className: "hidden lg:flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      backgroundColor: currentShift?.is_open ? 'var(--cta)' : 'var(--warm-fg)'
+    },
+    className: "w-2 h-2 rounded-full shrink-0"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "font-nums"
+  }, currentShift?.is_open ? formatMoney(currentShift.shift?.expected_cash || 0) : lang === 'uz' ? 'Smena yopiq' : 'Открыть смену'))), /*#__PURE__*/React.createElement("nav", {
+    className: "hidden lg:flex items-center gap-1 p-1 rounded-2xl atelier-subtle"
   }, navTabs.map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab.id,
     type: "button",
     onClick: () => setActiveTab(tab.id),
-    className: `px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === tab.id ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`
-  }, /*#__PURE__*/React.createElement("span", null, tab.icon), /*#__PURE__*/React.createElement("span", null, tab.label)))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 shrink-0"
+    className: `px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === tab.id ? 'atelier-btn-primary shadow-sm' : 'atelier-text-muted hover:opacity-100'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: tab.icon,
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, tab.label)))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 shrink-0"
   }, canInstall && !(typeof window !== 'undefined' && window.AndroidPOS) && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: handleInstallApp,
-    className: "px-2 py-1 rounded-xl text-xs font-bold bg-emerald-600 text-white",
+    className: "px-2.5 h-8 rounded-full text-xs font-semibold atelier-btn-cta flex items-center gap-1",
     title: t.installAppBtn
-  }, "📲"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "download",
+    size: 14
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: toggleTheme,
+    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center",
+    title: theme === 'dark' ? lang === 'uz' ? "Kunduzgi mavzu" : "Дневная тема" : lang === 'uz' ? "Tungi mavzu" : "Ночная тема"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: theme === 'dark' ? 'sun' : 'moon',
+    size: 15
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: toggleSound,
-    className: "w-8 h-8 rounded-xl text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center",
+    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center",
     title: lang === 'uz' ? "Tovush signallari" : "Звук"
-  }, soundEnabled ? '🔊' : '🔇'), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: soundEnabled ? 'soundOn' : 'soundOff',
+    size: 15
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSettingsModalOpen(true),
-    className: "px-2.5 h-8 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-1",
+    className: "px-3 h-8 rounded-full text-xs font-semibold atelier-btn-soft flex items-center gap-1.5",
     title: lang === "uz" ? "Sozlamalar" : "Настройки"
-  }, /*#__PURE__*/React.createElement("span", null, "⚙️"), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "settings",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
   }, lang === "uz" ? "Sozlash" : "Настройки"))))), /*#__PURE__*/React.createElement("main", {
-    className: "app-main-content flex-1 min-h-0 flex flex-col overflow-hidden max-w-7xl w-full mx-auto p-1.5 sm:p-3"
+    className: "app-main-content flex-1 min-h-0 flex flex-col overflow-hidden max-w-7xl w-full mx-auto p-2 sm:p-3"
   }, activeTab === 'pos' && /*#__PURE__*/React.createElement(PosScreen, {
     token: token,
     notify: notify,
@@ -2086,20 +2519,21 @@ function App() {
     t: t,
     lang: lang
   })), /*#__PURE__*/React.createElement("nav", {
-    className: "lg:hidden shrink-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 px-1 py-1"
+    className: "lg:hidden shrink-0 z-40 atelier-nav px-2 py-1.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-stretch justify-around gap-0.5"
+    className: "flex items-stretch justify-around gap-1"
   }, navTabs.map(tab => {
     const active = activeTab === tab.id;
     return /*#__PURE__*/React.createElement("button", {
       key: tab.id,
       type: "button",
       onClick: () => setActiveTab(tab.id),
-      className: `flex-1 min-w-0 py-1 px-0.5 rounded-xl flex flex-col items-center justify-center gap-0.5 transition ${active ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-base leading-none"
-    }, tab.icon), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-bold leading-tight truncate max-w-full"
+      className: `flex-1 min-w-0 py-1.5 px-1 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition ${active ? 'atelier-pill-active font-semibold' : 'atelier-text-muted'}`
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: tab.icon,
+      size: 18
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] leading-tight truncate max-w-full"
     }, tab.label));
   }))));
 }
@@ -2144,25 +2578,33 @@ function LoginScreen({
     }
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex items-center justify-center p-4 transition-colors duration-200"
+    className: "min-h-screen atelier-app flex items-center justify-center p-4 transition-colors duration-200"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl transition-colors duration-200"
+    className: "w-full max-w-md atelier-card rounded-[32px] p-6 sm:p-8 transition-colors duration-200"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between items-center mb-4"
+    className: "flex justify-between items-center mb-6"
   }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
     onClick: toggleLang,
-    className: "px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
-  }, lang === 'uz' ? "🇺🇿 O'zbek" : '🇷🇺 Русский'), /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-1.5 rounded-full text-xs font-semibold atelier-btn-soft"
+  }, lang === 'uz' ? "O'zbekcha" : 'Русский'), /*#__PURE__*/React.createElement("button", {
+    type: "button",
     onClick: toggleTheme,
-    className: "p-1.5 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-amber-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
-  }, theme === 'dark' ? '☀️' : '🌙')), /*#__PURE__*/React.createElement("div", {
-    className: "text-center mb-6"
+    className: "px-3 py-1.5 rounded-full text-xs font-semibold atelier-btn-soft flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: theme === 'dark' ? 'sun' : 'moon',
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, theme === 'dark' ? lang === 'uz' ? 'Kun' : 'День' : lang === 'uz' ? 'Tun' : 'Ночь'))), /*#__PURE__*/React.createElement("div", {
+    className: "text-center mb-7"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-5xl mb-2"
-  }, "🛒"), /*#__PURE__*/React.createElement("h1", {
-    className: "text-2xl font-black text-emerald-600 dark:text-emerald-400"
+    className: "w-14 h-14 rounded-2xl atelier-btn-primary mx-auto mb-3.5 flex items-center justify-center shadow-sm"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "bag",
+    size: 26
+  })), /*#__PURE__*/React.createElement("h1", {
+    className: "text-2xl font-bold tracking-tight"
   }, t.loginTitle), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1"
+    className: "text-xs sm:text-sm atelier-text-muted mt-1"
   }, t.loginSubtitle)), /*#__PURE__*/React.createElement("form", {
     onSubmit: e => {
       e.preventDefault();
@@ -2170,25 +2612,25 @@ function LoginScreen({
     },
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+    className: "block text-xs font-semibold atelier-text-muted mb-1.5"
   }, t.usernameLabel), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: username,
     onChange: e => setUsername(e.target.value),
-    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition text-sm",
+    className: "w-full atelier-input rounded-2xl px-4 py-3 text-sm font-medium",
     required: true
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+    className: "block text-xs font-semibold atelier-text-muted mb-1.5"
   }, t.passwordLabel), /*#__PURE__*/React.createElement("input", {
     type: "password",
     value: password,
     onChange: e => setPassword(e.target.value),
-    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition text-sm",
+    className: "w-full atelier-input rounded-2xl px-4 py-3 text-sm font-medium",
     required: true
   })), /*#__PURE__*/React.createElement("button", {
     type: "submit",
     disabled: loading,
-    className: "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm"
+    className: "w-full atelier-btn-cta font-bold py-3.5 rounded-2xl shadow-sm touch-target text-sm mt-2"
   }, loading ? t.loggingIn : t.loginBtn))));
 }
 
@@ -4511,142 +4953,178 @@ function CheckoutModal({
     }
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm"
+    className: "fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-2.5 sm:p-4 backdrop-blur-md"
   }, /*#__PURE__*/React.createElement("form", {
     onSubmit: handleSubmit,
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl text-slate-800 dark:text-slate-100 modal-mobile-safe"
+    className: "atelier-modal rounded-[28px] w-full max-w-lg p-4 sm:p-5 modal-mobile-safe"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-    className: "font-black text-base text-slate-900 dark:text-slate-100"
-  }, "💳 ", lang === 'uz' ? "To'lov" : "Оплата"), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-slate-500 font-mono font-bold"
+    className: "flex items-center justify-between pb-3 border-b atelier-border mb-3 shrink-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-9 h-9 rounded-2xl atelier-subtle flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "card",
+    size: 18
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-base"
+  }, lang === 'uz' ? "To'lov qabul qilish" : "Приём оплаты"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs atelier-text-muted font-nums font-semibold"
   }, discNum > 0 && /*#__PURE__*/React.createElement("span", {
     className: "line-through mr-1.5 opacity-60"
   }, formatMoney(total)), /*#__PURE__*/React.createElement("span", {
-    className: "text-emerald-600 dark:text-emerald-400 text-sm"
-  }, formatMoney(finalTotal)))), /*#__PURE__*/React.createElement("button", {
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "text-sm font-bold"
+  }, formatMoney(finalTotal))))), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onClose,
-    className: "text-slate-400 hover:text-slate-600 text-xl p-1"
-  }, "✕")), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1"
+    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "close",
+    size: 16
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto space-y-3 pr-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5"
+    className: "atelier-subtle p-3 rounded-2xl space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2 text-xs"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-slate-700 dark:text-slate-300"
-  }, "🏷️ ", lang === 'uz' ? "Chegirma / Yaxlitlash:" : "Скидка / Округление:"), /*#__PURE__*/React.createElement("input", {
+    className: "font-semibold flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "tag",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Chegirma / Yaxlitlash" : "Скидка / Округлить")), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
     max: total,
     value: discountAmount,
     onChange: e => applyDiscountVal(Number(e.target.value) || 0),
-    className: "w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-right font-mono font-bold text-xs text-rose-600"
+    style: {
+      color: 'var(--danger-fg)'
+    },
+    className: "w-28 atelier-input rounded-xl px-2.5 py-1 text-right font-nums font-bold text-xs"
   })), /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-wrap gap-1"
+    className: "flex flex-wrap gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => applyDiscountVal(0),
-    className: "px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold"
+    className: "px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold"
   }, "0"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: roundDownThousand,
-    className: "px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold"
-  }, lang === 'uz' ? 'Yaxlitlash (1000)' : 'Округлить'), /*#__PURE__*/React.createElement("button", {
+    className: "px-2.5 py-1 rounded-full atelier-pill-active text-[11px] font-semibold"
+  }, lang === 'uz' ? 'Yaxlitlash (1000)' : 'Округлить до 1000'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => applyDiscountVal(total * 0.05),
-    className: "px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold"
+    className: "px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold"
   }, "-5%"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => applyDiscountVal(total * 0.10),
-    className: "px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold"
+    className: "px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold"
   }, "-10%"))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5"
   }, [{
     id: 'CASH',
-    icon: '💵',
-    label: lang === 'uz' ? 'Naqd' : 'Нал'
+    icon: 'cash',
+    label: lang === 'uz' ? 'Naqd' : 'Наличные'
   }, {
     id: 'CARD',
-    icon: '💳',
-    label: lang === 'uz' ? 'Karta' : 'Карта'
+    icon: 'card',
+    label: lang === 'uz' ? 'Karta' : 'Картой'
   }, {
     id: 'DEBT',
-    icon: '📓',
+    icon: 'debts',
     label: lang === 'uz' ? 'Qarzga' : 'В долг'
   }, {
     id: 'MIXED',
-    icon: '🔀',
+    icon: 'split',
     label: lang === 'uz' ? 'Aralash' : 'Сплит'
   }].map(m => /*#__PURE__*/React.createElement("button", {
     key: m.id,
     type: "button",
     onClick: () => handleMethodSwitch(m.id),
-    className: `py-2 px-1.5 rounded-2xl text-xs font-bold border transition flex flex-col items-center gap-0.5 ${method === m.id ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'}`
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-base"
-  }, m.icon), /*#__PURE__*/React.createElement("span", null, m.label)))), (method === 'CASH' || method === 'MIXED') && /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2"
+    className: `py-2.5 px-1.5 rounded-2xl text-xs font-semibold transition flex flex-col items-center gap-1 ${method === m.id ? 'atelier-btn-primary shadow-sm' : 'atelier-btn-soft'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: m.icon,
+    size: 17
+  }), /*#__PURE__*/React.createElement("span", null, m.label)))), (method === 'CASH' || method === 'MIXED') && /*#__PURE__*/React.createElement("div", {
+    className: "atelier-subtle p-3 rounded-2xl space-y-2"
   }, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs font-bold text-slate-700 dark:text-slate-300"
-  }, "💵 ", lang === 'uz' ? "Olingan naqd pul (so'm):" : "Получено наличными (сум):"), /*#__PURE__*/React.createElement("input", {
+    className: "block text-xs font-semibold atelier-text-muted"
+  }, lang === 'uz' ? "Olingan naqd pul (so'm):" : "Получено наличными (сум):"), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
     step: "100",
     value: cashReceived,
     onChange: e => setCashReceived(e.target.value),
-    className: "w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-black text-lg text-emerald-600 dark:text-emerald-400"
+    className: "w-full atelier-input rounded-2xl px-3.5 py-2.5 font-nums font-bold text-lg"
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-1.5"
   }, [finalTotal, 10000, 20000, 50000, 100000, 200000].map((v, idx) => /*#__PURE__*/React.createElement("button", {
     key: idx,
     type: "button",
     onClick: () => setCashReceived(String(v)),
-    className: "px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold hover:border-emerald-500"
+    className: "px-2.5 py-1 rounded-full atelier-card text-xs font-nums font-semibold"
   }, idx === 0 ? lang === 'uz' ? 'Aniq' : 'Ровно' : formatMoney(v)))), changeAmount > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 rounded-xl p-2 flex justify-between items-center"
+    style: {
+      backgroundColor: 'var(--accent-soft)',
+      color: 'var(--accent-soft-fg)'
+    },
+    className: "rounded-xl px-3 py-2 flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold text-emerald-800 dark:text-emerald-300"
-  }, lang === 'uz' ? "Qaytim:" : "Сдача:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-base font-black font-mono text-emerald-700 dark:text-emerald-300"
+    className: "text-xs font-semibold"
+  }, lang === 'uz' ? "Qaytim:" : "Сдача покупателю:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-base font-bold font-nums"
   }, formatMoney(changeAmount)))), method === 'MIXED' && /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1"
-  }, "💳 ", lang === 'uz' ? "Karta:" : "Картой:"), /*#__PURE__*/React.createElement("input", {
+    className: "block text-xs font-semibold atelier-text-muted mb-1"
+  }, lang === 'uz' ? "Karta:" : "Картой:"), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
     value: cardAmount,
     onChange: e => setCardAmount(e.target.value),
-    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-sm"
+    className: "w-full atelier-input rounded-2xl px-3 py-2 font-nums font-bold text-sm"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1"
-  }, "📓 ", lang === 'uz' ? "Qarzga:" : "В долг:"), /*#__PURE__*/React.createElement("input", {
+    className: "block text-xs font-semibold atelier-text-muted mb-1"
+  }, lang === 'uz' ? "Qarzga:" : "В долг:"), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
     value: debtAmount,
     onChange: e => setDebtAmount(e.target.value),
-    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-sm text-amber-600"
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "w-full atelier-input rounded-2xl px-3 py-2 font-nums font-bold text-sm"
   }))), (method === 'DEBT' || method === 'MIXED' && debtNum > 0) && /*#__PURE__*/React.createElement("div", {
-    className: "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-3 space-y-2"
+    style: {
+      backgroundColor: 'var(--warm-bg)'
+    },
+    className: "rounded-2xl p-3 space-y-2 border atelier-border"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("label", {
-    className: "text-xs font-bold text-amber-900 dark:text-amber-300"
-  }, "👤 ", lang === 'uz' ? "Qarzdor mijoz *" : "Клиент *"), /*#__PURE__*/React.createElement("button", {
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "text-xs font-bold flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "user",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qarzdor mijoz *" : "Кому записываем долг *")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setShowNewDebtorForm(!showNewDebtorForm),
-    className: "text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
-  }, showNewDebtorForm ? lang === 'uz' ? 'Yopish' : 'Скрыть' : lang === 'uz' ? '+ Yangi' : '+ Новый')), showNewDebtorForm ? /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-amber-300 space-y-2"
+    className: "text-xs font-bold underline"
+  }, showNewDebtorForm ? lang === 'uz' ? 'Yopish' : 'Скрыть' : lang === 'uz' ? '+ Yangi mijoz' : '+ Новый клиент')), showNewDebtorForm ? /*#__PURE__*/React.createElement("div", {
+    className: "atelier-card p-2.5 rounded-xl space-y-2"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
     placeholder: lang === 'uz' ? "Mijoz ismi" : "Имя клиента",
     value: quickNewName,
     onChange: e => setQuickNewName(e.target.value),
-    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold"
+    className: "w-full atelier-input rounded-xl px-3 py-2 text-xs font-semibold"
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1.5"
   }, /*#__PURE__*/React.createElement("input", {
@@ -4654,22 +5132,22 @@ function CheckoutModal({
     placeholder: "+998 90 ...",
     value: quickNewPhone,
     onChange: e => setQuickNewPhone(e.target.value),
-    className: "flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono"
+    className: "flex-1 atelier-input rounded-xl px-3 py-2 text-xs font-nums"
   }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: handleCreateQuickDebtor,
     disabled: creatingDebtor,
-    className: "bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold"
-  }, creatingDebtor ? '...' : 'Saqlash'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("input", {
+    className: "atelier-btn-primary px-3 py-2 rounded-xl text-xs font-semibold"
+  }, creatingDebtor ? '...' : 'OK'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("input", {
     type: "text",
     placeholder: lang === 'uz' ? "Mijozni qidirish..." : "Поиск клиента...",
     value: debtorSearch,
     onChange: e => setDebtorSearch(e.target.value),
-    className: "w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs"
+    className: "w-full atelier-input rounded-xl px-3 py-2 text-xs"
   }), /*#__PURE__*/React.createElement("select", {
     value: selectedDebtorId,
     onChange: e => setSelectedDebtorId(e.target.value),
-    className: "w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold",
+    className: "w-full atelier-input rounded-xl px-3 py-2 text-xs font-semibold",
     required: true
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
@@ -4681,35 +5159,38 @@ function CheckoutModal({
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setQuickDue(1),
-    className: "px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold"
+    className: "px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold"
   }, "Ertaga"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setQuickDue(3),
-    className: "px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold"
+    className: "px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold"
   }, "3 kun"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setQuickDue(7),
-    className: "px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold"
+    className: "px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold"
   }, "1 hafta"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setQuickDue(30),
-    className: "px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold"
+    className: "px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold"
   }, "1 oy")), /*#__PURE__*/React.createElement("input", {
     type: "date",
     value: dueDate,
     onChange: e => setDueDate(e.target.value),
-    className: "w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs"
+    className: "w-full atelier-input rounded-xl px-3 py-1.5 text-xs"
   })))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 shrink-0"
+    className: "flex gap-2 pt-3 border-t atelier-border mt-3 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onClose,
-    className: "flex-1 py-2.5 rounded-2xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+    className: "flex-1 py-3 rounded-2xl text-xs font-semibold atelier-btn-soft"
   }, t.cancelBtn || 'Bekor qilish'), /*#__PURE__*/React.createElement("button", {
     type: "submit",
     disabled: loading,
-    className: "flex-1 py-2.5 rounded-2xl text-sm font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg disabled:opacity-40"
-  }, loading ? t.saving || '...' : lang === 'uz' ? '✅ Tasdiqlash' : '✅ Подтвердить'))));
+    className: "flex-1 py-3 rounded-2xl text-sm font-bold atelier-btn-cta shadow-sm disabled:opacity-40 flex items-center justify-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "check",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, loading ? t.saving || '...' : lang === 'uz' ? 'Tasdiqlash' : 'Подтвердить')))));
 }
 function ReceiptModal({
   receipt,
@@ -4719,32 +5200,32 @@ function ReceiptModal({
   if (!receipt) return null;
   const lang = typeof window !== 'undefined' && window.pos_lang || typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang') || 'uz';
   return /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm"
+    className: "fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-2.5 sm:p-3 backdrop-blur-md"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-4 sm:p-5 shadow-2xl text-slate-900 dark:text-slate-100 modal-mobile-safe"
+    className: "atelier-modal rounded-[28px] w-full max-w-sm p-4 sm:p-5 modal-mobile-safe"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto pr-1"
   }, /*#__PURE__*/React.createElement("div", {
     id: "printable-receipt",
-    className: "bg-white text-slate-900 p-4 rounded-2xl border border-dashed border-slate-300 font-mono text-xs space-y-2"
+    className: "bg-[#FDFCF9] text-[#181C19] p-4 rounded-2xl border border-dashed border-stone-300 font-mono text-xs space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-center border-b border-dashed border-slate-300 pb-2"
+    className: "text-center border-b border-dashed border-stone-300 pb-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-black text-sm"
-  }, "🛒 ", receipt.tax_profile?.legal_name || "GroceryStore POS"), receipt.tax_profile?.inn_stir && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-600"
+    className: "font-bold text-sm tracking-tight"
+  }, receipt.tax_profile?.legal_name || "GroceryStore POS"), receipt.tax_profile?.inn_stir && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-stone-600"
   }, "STIR/ИНН: ", receipt.tax_profile.inn_stir), receipt.tax_profile?.kkm_serial && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-500"
+    className: "text-[10px] text-stone-500"
   }, "KKM/FM: ", receipt.tax_profile.kkm_serial), receipt.tax_profile?.address && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-500"
+    className: "text-[10px] text-stone-500"
   }, receipt.tax_profile.address), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-600"
+    className: "text-[11px] text-stone-700 font-semibold mt-1"
   }, receipt.receipt_number, receipt.shift_id ? ` • Smena #${receipt.shift_id}` : ''), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-500"
+    className: "text-[10px] text-stone-500"
   }, new Date(receipt.created_at || Date.now()).toLocaleString()), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-500"
+    className: "text-[10px] text-stone-500"
   }, "Kassir: ", receipt.cashier_name || 'Kassir')), /*#__PURE__*/React.createElement("div", {
-    className: "divide-y divide-dashed divide-slate-200"
+    className: "divide-y divide-dashed divide-stone-200"
   }, safeArray(receipt.items).map((it, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
     className: "py-1.5 flex justify-between gap-2"
@@ -4752,22 +5233,22 @@ function ReceiptModal({
     className: "flex-1 min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-bold truncate"
-  }, it.is_tobacco ? '🚬 ' : it.marking_group === 'BEVERAGES' ? '🥤 ' : it.marking_group === 'BEER_ALCOHOL' ? '🍺 ' : '', it.product_name), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-500"
+  }, it.product_name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-stone-600"
   }, it.quantity, " ", it.unit || 'dona', " x ", formatMoney(it.unit_price), Number(it.vat_rate) > 0 ? ` • QQS ${it.vat_rate}% (${formatMoney(it.vat_amount)})` : ''), (it.ikpu_code || it.package_code || it.barcode) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-400"
+    className: "text-[9px] text-stone-400"
   }, it.ikpu_code ? `IKPU:${it.ikpu_code} ` : '', it.package_code ? `Qadoq:${it.package_code} ` : '', it.barcode ? `GTIN:${it.barcode}` : ''), (it.masked_marking_code || it.marking_code) && /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-emerald-700 font-bold"
   }, "DM: ", it.masked_marking_code || it.marking_code)), /*#__PURE__*/React.createElement("div", {
     className: "font-bold whitespace-nowrap"
   }, formatMoney(it.total_price))))), /*#__PURE__*/React.createElement("div", {
-    className: "border-t border-dashed border-slate-300 pt-2 space-y-1"
+    className: "border-t border-dashed border-stone-300 pt-2 space-y-1"
   }, Number(receipt.discount_amount) > 0 && /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[11px] text-rose-600 font-bold"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Chegirma:' : 'Скидка:'), /*#__PURE__*/React.createElement("span", null, "-", formatMoney(receipt.discount_amount))), Number(receipt.vat_amount) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] text-slate-500"
+    className: "flex justify-between text-[10px] text-stone-500"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'QQS (NDS):' : 'В т.ч. НДС:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.vat_amount))), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between font-black text-sm"
+    className: "flex justify-between font-bold text-sm"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'JAMI:' : 'ИТОГО:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.total_amount))), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[11px]"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "To'lov:" : 'Оплата:'), /*#__PURE__*/React.createElement("span", {
@@ -4779,28 +5260,31 @@ function ReceiptModal({
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Qaytim:' : 'Сдача:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.change_given))), receipt.debt_amount > 0 && /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[11px] font-bold text-amber-700"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Qarzga:' : 'В долг:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.debt_amount), " (", receipt.debtor_name, ")")), receipt.payment_method === 'DEBT' && /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-amber-700 bg-amber-50 p-1.5 rounded-lg leading-tight"
-  }, "🧾 ", lang === 'uz' ? "Nasiya cheki (to'lov vaqtida qarz so'ndirish cheki uriladi)" : "Чек отгрузки в долг / рассрочку (при оплате пробивается чек погашения)")), /*#__PURE__*/React.createElement("div", {
-    className: "text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-1"
+    className: "text-[9px] text-amber-800 bg-amber-50 p-1.5 rounded-lg leading-tight"
+  }, lang === 'uz' ? "Nasiya cheki (to'lov vaqtida qarz so'ndirish cheki uriladi)" : "Чек отгрузки в долг / рассрочку (при оплате пробивается чек погашения)")), /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[10px] text-stone-500 pt-2 border-t border-dashed border-stone-300 space-y-1"
   }, receipt.fiscal_qr_svg && /*#__PURE__*/React.createElement("img", {
     src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(receipt.fiscal_qr_svg)}`,
     alt: "Soliq QR",
-    className: "w-24 h-24 mx-auto border border-slate-200 rounded-lg p-1 bg-white"
+    className: "w-24 h-24 mx-auto border border-stone-200 rounded-lg p-1 bg-white"
   }), receipt.fiscal_sign && /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-600 font-bold"
+    className: "text-[9px] text-stone-600 font-bold"
   }, "FM belgi: ", receipt.fiscal_sign), /*#__PURE__*/React.createElement("div", null, lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-400"
+    className: "text-[9px] text-stone-400"
   }, receipt.fiscal_status === 'FISCALIZED' ? 'OFD / Soliq fiskal cheki' : lang === 'uz' ? 'Ichki hisob cheki (Fiskal modul / OFD ulanmagan)' : 'Внутренний учётный чек (Без ФМ / ОФД)')))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 shrink-0"
+    className: "flex gap-2 mt-3 pt-3 border-t atelier-border shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onClose,
-    className: "flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+    className: "flex-1 py-2.5 rounded-2xl text-xs font-semibold atelier-btn-soft"
   }, lang === 'uz' ? 'Yopish' : 'Закрыть'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => window.print(),
-    className: "flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow"
-  }, "🖨️ ", lang === 'uz' ? 'Chop etish' : 'Печать'))));
+    className: "flex-1 py-2.5 rounded-2xl text-xs font-bold atelier-btn-primary shadow-sm flex items-center justify-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "printer",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Chop etish' : 'Печать')))));
 }
 function PayDebtModal({
   token,
@@ -6775,77 +7259,116 @@ function PosScreen({
   const quickItemsList = safeArray(quickProducts).length > 0 ? safeArray(quickProducts) : safeArray(products).slice(0, 8);
   const showingCatalog = search.trim().length > 0 || showAllCatalog || selectedCategory !== null;
   return /*#__PURE__*/React.createElement("div", {
-    className: "h-full flex flex-col overflow-hidden gap-1.5 sm:gap-2.5"
+    className: "h-full flex flex-col overflow-hidden gap-2 sm:gap-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-sm space-y-1.5"
+    className: "shrink-0 atelier-card rounded-[24px] p-2.5 space-y-2"
+  }, /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleSearchOrBarcodeSubmit,
+    className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex items-center atelier-input rounded-2xl px-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "atelier-text-muted mr-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "search",
+    size: 16
+  })), /*#__PURE__*/React.createElement("input", {
+    ref: searchInputRef,
+    type: "text",
+    placeholder: lang === 'uz' ? "Shtrixkod yoki tovar nomi..." : "Найти товар или штрихкод...",
+    value: search,
+    onChange: e => setSearch(e.target.value),
+    className: "flex-1 bg-transparent py-2.5 text-xs font-medium focus:outline-none min-w-0"
+  }), search && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setSearch(''),
+    className: "atelier-text-muted px-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "close",
+    size: 15
+  }))), search.trim() && /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "px-3.5 py-2.5 atelier-btn-primary rounded-2xl text-xs font-semibold shrink-0"
+  }, "OK"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setScannerActive(true),
+    className: "px-4 py-2.5 atelier-btn-cta font-bold rounded-2xl text-xs flex items-center gap-1.5 shrink-0 shadow-sm"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "scan",
+    size: 17
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Skaner" : "Сканер"))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5 overflow-x-auto no-scrollbar"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setVoiceAssistantOpen(true),
-    className: "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 whitespace-nowrap shrink-0"
-  }, "🎙️ ", lang === 'uz' ? "Ovoz" : "Голос"), /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "mic",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Ovoz" : "Голос")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setPriceCheckOpen(true),
-    className: "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap shrink-0"
-  }, "🏷️ ", lang === 'uz' ? "Narx?" : "Цена?"), /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "tag",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Narx?" : "Цена?")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setRefundModalOpen(true),
-    className: "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap shrink-0"
-  }, "🧾 ", lang === 'uz' ? "Chek / Vozvrat" : "Чеки / Возврат"), /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "receipt",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Chek / Vozvrat" : "Чеки / Возврат")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: parkCurrentCart,
     disabled: cart.length === 0,
-    className: "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 disabled:opacity-40 whitespace-nowrap shrink-0"
-  }, "⏸️ ", lang === 'uz' ? "Saqlash" : "Отложить"), parkedCarts.length > 0 && /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft disabled:opacity-40 flex items-center gap-1 whitespace-nowrap shrink-0"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "pause",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Saqlash" : "Отложить")), parkedCarts.length > 0 && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setParkedModalOpen(true),
-    className: "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-600 text-white whitespace-nowrap shrink-0 animate-pulse"
-  }, "📂 ", parkedCarts.length), cart.length > 0 && /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-1 rounded-full text-[11px] font-bold atelier-btn-primary flex items-center gap-1 whitespace-nowrap shrink-0"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "folder",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, parkedCarts.length)), cart.length > 0 && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => clearCart(true),
-    className: "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200 dark:border-rose-800 whitespace-nowrap shrink-0 ml-auto"
-  }, "🗑️ ", lang === 'uz' ? "Tozalash" : "Очистить")), /*#__PURE__*/React.createElement("form", {
-    onSubmit: handleSearchOrBarcodeSubmit,
-    className: "flex items-center gap-1.5"
+    style: {
+      backgroundColor: 'var(--danger-bg)',
+      color: 'var(--danger-fg)'
+    },
+    className: "px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 ml-auto"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "trash",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Tozalash" : "Очистить")))), successToast && /*#__PURE__*/React.createElement("div", {
+    style: {
+      backgroundColor: 'var(--accent)',
+      color: 'var(--accent-fg)'
+    },
+    className: "shrink-0 rounded-2xl px-3.5 py-2.5 shadow-md flex items-center justify-between gap-2 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 focus-within:border-emerald-500"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs mr-1.5"
-  }, "🔍"), /*#__PURE__*/React.createElement("input", {
-    ref: searchInputRef,
-    type: "text",
-    placeholder: lang === 'uz' ? "Shtrixkod yoki tovar nomi..." : "Штрихкод или название...",
-    value: search,
-    onChange: e => setSearch(e.target.value),
-    className: "flex-1 bg-transparent py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none min-w-0"
-  }), search && /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setSearch(''),
-    className: "text-slate-400 hover:text-slate-600 px-1 text-xs font-bold"
-  }, "✕")), search.trim() && /*#__PURE__*/React.createElement("button", {
-    type: "submit",
-    className: "px-3 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-black shrink-0"
-  }, "↵"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setScannerActive(true),
-    className: "px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black rounded-xl text-xs shadow-md active:scale-95 transition flex items-center gap-1 shrink-0"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-sm"
-  }, "📷"), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Skaner" : "Сканер")))), successToast && /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 bg-emerald-600 text-white rounded-xl px-3 py-2 shadow-lg flex items-center justify-between gap-2 text-xs"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "truncate font-bold"
-  }, "✅ #", successToast.receiptNumber, " • ", formatMoney(successToast.total), successToast.change > 0 && /*#__PURE__*/React.createElement("span", {
-    className: "ml-1.5 text-amber-200 font-black"
+    className: "truncate font-semibold flex items-center gap-2 font-nums"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "check",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, "#", successToast.receiptNumber, " • ", formatMoney(successToast.total)), successToast.change > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "opacity-85"
   }, "(", lang === 'uz' ? 'Qaytim:' : 'Сдача:', " ", formatMoney(successToast.change), ")")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setLastReceipt(successToast.data),
-    className: "bg-white text-emerald-800 px-2.5 py-1 rounded-lg font-bold shrink-0"
-  }, "🖨️ ", lang === 'uz' ? 'Chek' : 'Чек')), /*#__PURE__*/React.createElement("div", {
+    className: "atelier-btn-cta px-3 py-1 rounded-full font-bold shrink-0 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "printer",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Chek' : 'Чек'))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 lg:gap-3 overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 lg:col-span-7 xl:col-span-8 flex flex-col gap-1.5 overflow-hidden"
+    className: "flex-1 min-h-0 lg:col-span-7 xl:col-span-8 flex flex-col gap-2 overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5"
   }, /*#__PURE__*/React.createElement("button", {
@@ -6859,31 +7382,37 @@ function PosScreen({
         setShowAllCatalog(true);
       }
     },
-    className: `px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold whitespace-nowrap border shrink-0 transition ${showingCatalog ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200'}`
-  }, showingCatalog ? lang === 'uz' ? `🧾 Savat (${cart.length})` : `🧾 Чек (${cart.length})` : lang === 'uz' ? '📂 Katalog' : '📂 Каталог'), quickItemsList.map(item => /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition flex items-center gap-1.5 ${showingCatalog ? 'atelier-btn-primary' : 'atelier-card'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: showingCatalog ? 'receipt' : 'box',
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, showingCatalog ? lang === 'uz' ? `Chek (${cart.length})` : `Чек (${cart.length})` : lang === 'uz' ? 'Katalog' : 'Все товары')), quickItemsList.map(item => /*#__PURE__*/React.createElement("button", {
     key: item.id,
     type: "button",
     onClick: () => addQuickItem(item),
-    className: "px-2.5 py-1.5 rounded-xl bg-emerald-50/90 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-emerald-200 dark:border-slate-700 text-left shrink-0 flex items-center gap-1.5 transition"
+    className: "px-3 py-1.5 rounded-full atelier-card hover:opacity-90 text-left shrink-0 flex items-center gap-2 transition active:scale-95"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] font-bold text-slate-900 dark:text-slate-100 max-w-[110px] truncate"
+    className: "text-xs font-semibold max-w-[115px] truncate"
   }, item.name), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black font-mono text-emerald-600 dark:text-emerald-400"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "text-[11px] font-bold font-nums"
   }, Math.round((item.sale_price || item.price) / 1000), "k")))), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col"
+    className: "flex-1 min-h-0 atelier-card rounded-[24px] overflow-hidden flex flex-col"
   }, showingCatalog ? /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 flex flex-col overflow-hidden p-2 space-y-2"
+    className: "flex-1 min-h-0 flex flex-col overflow-hidden p-2.5 space-y-2.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5"
+    className: "shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSelectedCategory(null),
-    className: `px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap ${selectedCategory === null ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`
+    className: `px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${selectedCategory === null ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
   }, lang === 'uz' ? 'Hammasi' : 'Все'), safeArray(categories).map(cat => /*#__PURE__*/React.createElement("button", {
     key: cat.id,
     type: "button",
     onClick: () => setSelectedCategory(cat.id === selectedCategory ? null : cat.id),
-    className: `px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap ${selectedCategory === cat.id ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`
+    className: `px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${selectedCategory === cat.id ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
   }, cat.name ? cat.name.split('/')[0].trim() : cat.name)), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
@@ -6891,17 +7420,23 @@ function PosScreen({
       setSelectedCategory(null);
       setShowAllCatalog(false);
     },
-    className: "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 whitespace-nowrap ml-auto"
-  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center ml-auto shrink-0"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "close",
+    size: 14
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto pr-0.5"
   }, products.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "py-8 text-center space-y-2 text-xs text-slate-400"
+    className: "py-10 text-center space-y-3 text-xs atelier-text-muted"
   }, /*#__PURE__*/React.createElement("div", null, lang === 'uz' ? 'Tovar topilmadi' : 'Товары не найдены'), isOwner && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateProductOpen(true),
-    className: "px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold"
-  }, "➕ ", lang === 'uz' ? "Yangi tovar qo'shish" : "Добавить товар")) : /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5"
+    className: "px-4 py-2 rounded-full atelier-btn-cta font-semibold inline-flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Yangi tovar qo'shish" : "Добавить товар"))) : /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
   }, safeArray(products).map(p => /*#__PURE__*/React.createElement("button", {
     key: p.id,
     type: "button",
@@ -6910,42 +7445,54 @@ function PosScreen({
       playAudioCue('add');
       notify(`${p.name} (+1)`);
     },
-    className: "bg-slate-50 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-left transition flex flex-col justify-between gap-1"
+    className: "atelier-subtle hover:opacity-90 rounded-2xl p-3 text-left transition flex flex-col justify-between gap-2 active:scale-95"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight"
+    className: "font-semibold text-xs line-clamp-2 leading-snug"
   }, p.name), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between w-full pt-1 border-t border-slate-200/70 dark:border-slate-700"
+    className: "flex items-center justify-between w-full pt-1.5 border-t atelier-border"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] font-black font-mono text-emerald-600 dark:text-emerald-400"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "text-xs font-bold font-nums"
   }, formatMoney(p.sale_price)), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-slate-400 font-mono"
+    className: "text-[11px] atelier-text-muted font-nums"
   }, p.stock_quantity, " ", p.unit))))))) :
   /*#__PURE__*/
-  /* Active Cart Header + Items */
+  /* Active Cart Container */
   React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs"
+    className: "shrink-0 flex items-center justify-between px-3.5 py-2 border-b atelier-border text-xs"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold flex items-center gap-1.5"
-  }, /*#__PURE__*/React.createElement("span", null, "🧾 ", lang === 'uz' ? "Savdo cheki" : "Чек"), /*#__PURE__*/React.createElement("span", {
-    className: "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-mono text-[11px] font-bold"
+    className: "font-semibold flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "receipt",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Savdo cheki" : "Текущий чек"), /*#__PURE__*/React.createElement("span", {
+    className: "atelier-pill-active px-2 py-0.5 rounded-full font-nums text-[11px] font-bold"
   }, cart.length, " ", lang === 'uz' ? "poz" : "поз")), /*#__PURE__*/React.createElement("span", {
-    className: "hidden md:inline text-[10px] text-slate-400 font-mono"
-  }, "F2 • F3 • F5 Naqd • F6 Karta • F7 Qarz")), /*#__PURE__*/React.createElement("div", {
+    className: "hidden md:inline text-[11px] atelier-text-muted font-nums"
+  }, "F2 Поиск • F5 Нал • F6 Карта • F7 Долг")), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto"
   }, cart.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "h-full flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs gap-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-3xl opacity-60"
-  }, "🛒"), /*#__PURE__*/React.createElement("p", {
-    className: "font-semibold text-slate-600 dark:text-slate-400 max-w-xs"
-  }, safeArray(products).length === 0 ? lang === 'uz' ? "Do'kon bazasi toza. Birinchi tovarni skanerlab qo'shish uchun pastdagi tugmani bosing." : "База чистая. Отсканируйте первый товар, чтобы добавить его в магазин и начать продажу." : lang === 'uz' ? "Chek bo'sh. Skanerlang yoki tezkor tovarni bosing." : "Чек пуст. Отсканируйте товар или выберите сверху."), /*#__PURE__*/React.createElement("button", {
+    className: "h-full flex flex-col items-center justify-center text-center p-5 gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-14 h-14 rounded-2xl atelier-subtle flex items-center justify-center atelier-text-muted"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "bag",
+    size: 26
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs sm:text-sm font-medium atelier-text-muted max-w-xs leading-relaxed"
+  }, safeArray(products).length === 0 ? lang === 'uz' ? "Baza toza. Kamerani shtrixkodga tutib birinchi tovarni qo'shing." : "База чистая. Отсканируйте первый товар, чтобы начать работу." : lang === 'uz' ? "Kamerani tovarga tuting yoki yuqoridan tanlang." : "Наведите камеру на товар или выберите быструю позицию сверху."), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setScannerActive(true),
-    className: "px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm"
-  }, "📷 ", lang === 'uz' ? "Skaner bilan qo'shish" : "Сканировать товар")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "md:hidden divide-y divide-slate-100 dark:divide-slate-800"
+    className: "px-5 py-2.5 rounded-full atelier-btn-cta font-bold text-xs shadow-sm flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "scan",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Tovarni skanerlash" : "Сканировать товар"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "md:hidden divide-y atelier-border"
   }, safeArray(cart).map(item => {
     const cKey = getCartKey(item);
     const itemTotal = item.product.sale_price * item.quantity;
@@ -6953,157 +7500,210 @@ function PosScreen({
     const needsDM = Boolean(item.product.is_tobacco || item.product.requires_marking);
     return /*#__PURE__*/React.createElement("div", {
       key: cKey,
-      className: "p-2.5 space-y-1.5"
+      className: "p-3 space-y-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-start justify-between gap-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "min-w-0 flex-1"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "font-bold text-xs text-slate-900 dark:text-slate-100 truncate"
-    }, needsDM ? '🚬 ' : '', item.product.name), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-slate-400 font-mono flex items-center gap-1.5 flex-wrap"
+      className: "font-semibold text-xs truncate"
+    }, item.product.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] atelier-text-muted font-nums flex items-center gap-1.5 flex-wrap mt-0.5"
     }, /*#__PURE__*/React.createElement("span", null, formatMoney(item.product.sale_price), " / ", item.product.unit || 'dona'), item.marking_code && /*#__PURE__*/React.createElement("span", {
-      className: "px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold"
+      style: {
+        backgroundColor: 'var(--accent-soft)',
+        color: 'var(--accent-soft-fg)'
+      },
+      className: "px-2 py-0.5 rounded-full text-[10px] font-bold"
     }, "DM ✓"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-1.5 shrink-0"
+      className: "flex items-center gap-2 shrink-0"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "font-mono font-black text-xs text-emerald-600 dark:text-emerald-400"
+      style: {
+        color: 'var(--accent)'
+      },
+      className: "font-nums font-bold text-sm"
     }, formatMoney(itemTotal)), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => removeFromCart(cKey),
-      className: "w-6 h-6 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 text-xs font-bold flex items-center justify-center"
-    }, "✕"))), /*#__PURE__*/React.createElement("div", {
+      className: "w-7 h-7 rounded-full atelier-btn-soft atelier-text-muted flex items-center justify-center"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "close",
+      size: 13
+    })))), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-2"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-1"
+      className: "flex items-center gap-1.5"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => updateQuantity(cKey, -1),
-      className: "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black text-sm border border-slate-200 dark:border-slate-700"
-    }, "-"), /*#__PURE__*/React.createElement("input", {
+      className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "minus",
+      size: 14
+    })), /*#__PURE__*/React.createElement("input", {
       type: "number",
       step: "any",
       value: item.quantity,
       onChange: e => setItemExactQty(cKey, e.target.value),
-      className: "w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1"
+      className: "w-14 atelier-input rounded-xl text-center font-bold font-nums text-xs py-1.5"
     }), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => updateQuantity(cKey, 1),
-      className: "w-8 h-8 rounded-lg bg-emerald-600 text-white font-black text-sm"
-    }, "+")), needsDM && !item.marking_code && /*#__PURE__*/React.createElement("button", {
+      className: "w-8 h-8 rounded-full atelier-btn-primary flex items-center justify-center"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 14
+    }))), needsDM && !item.marking_code && /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => setMarkingScanKey(cKey),
-      className: "px-2 py-1 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] font-bold border border-amber-300"
-    }, "📷 DataMatrix"), isWeight && /*#__PURE__*/React.createElement("div", {
+      style: {
+        backgroundColor: 'var(--warm-bg)',
+        color: 'var(--warm-fg)'
+      },
+      className: "px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "scan",
+      size: 12
+    }), /*#__PURE__*/React.createElement("span", null, "DataMatrix")), isWeight && /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-1"
     }, [0.25, 0.5, 1, 2].map(w => /*#__PURE__*/React.createElement("button", {
       key: w,
       type: "button",
       onClick: () => setItemExactQty(cKey, w),
-      className: "px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700"
+      className: "px-2 py-1 rounded-full atelier-btn-soft text-[11px] font-nums font-semibold"
     }, w)))));
   })), /*#__PURE__*/React.createElement("table", {
     className: "hidden md:table w-full text-left text-xs"
   }, /*#__PURE__*/React.createElement("thead", {
-    className: "bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10"
+    className: "atelier-subtle atelier-text-muted font-semibold border-b atelier-border sticky top-0 z-10"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2 w-8"
+    className: "px-3.5 py-2.5 w-8"
   }, "#"), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2"
+    className: "px-3.5 py-2.5"
   }, lang === 'uz' ? "Mahsulot" : "Товар"), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2 text-right"
+    className: "px-3.5 py-2.5 text-right"
   }, lang === 'uz' ? "Narx" : "Цена"), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2 text-center w-40"
+    className: "px-3.5 py-2.5 text-center w-40"
   }, lang === 'uz' ? "Miqdor" : "Кол-во"), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2 text-right"
+    className: "px-3.5 py-2.5 text-right"
   }, lang === 'uz' ? "Jami" : "Сумма"), /*#__PURE__*/React.createElement("th", {
-    className: "px-2 py-2 w-10"
+    className: "px-2 py-2.5 w-10"
   }))), /*#__PURE__*/React.createElement("tbody", {
-    className: "divide-y divide-slate-100 dark:divide-slate-800"
+    className: "divide-y atelier-border"
   }, safeArray(cart).map((item, idx) => {
     const cKey = getCartKey(item);
     const needsDM = Boolean(item.product.is_tobacco || item.product.requires_marking);
     return /*#__PURE__*/React.createElement("tr", {
-      key: cKey,
-      className: "hover:bg-slate-50 dark:hover:bg-slate-800/40"
+      key: cKey
     }, /*#__PURE__*/React.createElement("td", {
-      className: "px-3 py-2 text-[11px] text-slate-400 font-mono"
+      className: "px-3.5 py-2.5 text-[11px] atelier-text-muted font-nums"
     }, idx + 1), /*#__PURE__*/React.createElement("td", {
-      className: "px-3 py-2"
+      className: "px-3.5 py-2.5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "font-bold truncate max-w-xs"
-    }, needsDM ? '🚬 ' : '', item.product.name), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-slate-400 font-mono flex items-center gap-2"
+      className: "font-semibold truncate max-w-xs"
+    }, item.product.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] atelier-text-muted font-nums flex items-center gap-2 mt-0.5"
     }, /*#__PURE__*/React.createElement("span", null, item.product.barcode), item.marking_code && /*#__PURE__*/React.createElement("span", {
-      className: "text-emerald-600 font-bold"
+      style: {
+        color: 'var(--accent)'
+      },
+      className: "font-bold"
     }, "DM ✓"), needsDM && !item.marking_code && /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => setMarkingScanKey(cKey),
-      className: "px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold"
-    }, "📷 DataMatrix"))), /*#__PURE__*/React.createElement("td", {
-      className: "px-3 py-2 text-right font-mono whitespace-nowrap"
+      style: {
+        backgroundColor: 'var(--warm-bg)',
+        color: 'var(--warm-fg)'
+      },
+      className: "px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "scan",
+      size: 11
+    }), /*#__PURE__*/React.createElement("span", null, "DataMatrix")))), /*#__PURE__*/React.createElement("td", {
+      className: "px-3.5 py-2.5 text-right font-nums whitespace-nowrap"
     }, formatMoney(item.product.sale_price)), /*#__PURE__*/React.createElement("td", {
-      className: "px-3 py-2"
+      className: "px-3.5 py-2.5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-center gap-1"
+      className: "flex items-center justify-center gap-1.5"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => updateQuantity(cKey, -1),
-      className: "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black"
-    }, "-"), /*#__PURE__*/React.createElement("input", {
+      className: "w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "minus",
+      size: 13
+    })), /*#__PURE__*/React.createElement("input", {
       type: "number",
       step: "any",
       value: item.quantity,
       onChange: e => setItemExactQty(cKey, e.target.value),
-      className: "w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1"
+      className: "w-14 atelier-input rounded-xl text-center font-bold font-nums text-xs py-1"
     }), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => updateQuantity(cKey, 1),
-      className: "w-8 h-8 rounded-lg bg-emerald-600 text-white font-black"
-    }, "+"))), /*#__PURE__*/React.createElement("td", {
-      className: "px-3 py-2 text-right font-mono font-black text-emerald-600 whitespace-nowrap"
+      className: "w-7 h-7 rounded-full atelier-btn-primary flex items-center justify-center"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 13
+    })))), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: 'var(--accent)'
+      },
+      className: "px-3.5 py-2.5 text-right font-nums font-bold whitespace-nowrap"
     }, formatMoney(item.product.sale_price * item.quantity)), /*#__PURE__*/React.createElement("td", {
-      className: "px-2 py-2 text-center"
+      className: "px-2 py-2.5 text-center"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => removeFromCart(cKey),
-      className: "text-slate-400 hover:text-rose-500 font-bold"
-    }, "✕")));
+      className: "atelier-text-muted hover:opacity-100"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "close",
+      size: 14
+    }))));
   })))))))), /*#__PURE__*/React.createElement("div", {
-    className: "hidden lg:flex lg:col-span-5 xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex-col justify-between gap-3 overflow-y-auto"
+    className: "hidden lg:flex lg:col-span-5 xl:col-span-4 atelier-card rounded-[28px] p-4 flex-col justify-between gap-3 overflow-y-auto"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
+    className: "space-y-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center"
+    className: "atelier-subtle rounded-2xl p-4 text-center"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold uppercase text-slate-500 block"
+    className: "text-xs font-semibold atelier-text-muted block"
   }, lang === 'uz' ? "Jami to'lov" : "Итого к оплате"), /*#__PURE__*/React.createElement("div", {
-    className: "text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1"
+    className: "text-3xl font-bold font-nums mt-1 tracking-tight"
   }, formatMoney(cartTotal)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-400 mt-1"
+    className: "text-xs atelier-text-muted mt-1"
   }, cart.length, " ", lang === 'uz' ? "ta mahsulot" : "поз.")), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-1.5"
+    className: "space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between text-xs font-bold"
-  }, /*#__PURE__*/React.createElement("span", null, "💵 ", lang === 'uz' ? "Olingan naqd:" : "Наличными:"), /*#__PURE__*/React.createElement("button", {
+    className: "flex items-center justify-between text-xs font-semibold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "atelier-text-muted"
+  }, lang === 'uz' ? "Olingan naqd:" : "Наличными:"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSelectedCashReceived(cartTotal),
-    className: "text-emerald-600 hover:underline text-[11px]"
-  }, lang === 'uz' ? "Aniq" : "Ровно")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "hover:underline text-xs font-semibold"
+  }, lang === 'uz' ? "Aniq summa" : "Ровно")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5"
   }, [10000, 20000, 50000, 100000, 200000].map(note => /*#__PURE__*/React.createElement("button", {
     key: note,
     type: "button",
     onClick: () => setSelectedCashReceived(note),
-    className: `py-2 rounded-xl text-xs font-mono font-bold border ${selectedCashReceived === note ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`
+    className: `py-2 rounded-xl text-xs font-nums font-semibold ${selectedCashReceived === note ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
   }, formatMoney(note))), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSelectedCashReceived(cartTotal),
-    className: `py-2 rounded-xl text-xs font-mono font-bold border ${selectedCashReceived === cartTotal ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-emerald-600'}`
+    className: `py-2 rounded-xl text-xs font-semibold ${selectedCashReceived === cartTotal ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
   }, lang === 'uz' ? "Aniq" : "Ровно")), cart.length > 0 && selectedCashReceived !== null && /*#__PURE__*/React.createElement("div", {
-    className: "bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 rounded-xl p-2 flex justify-between text-xs font-bold"
+    style: {
+      backgroundColor: 'var(--accent-soft)',
+      color: 'var(--accent-soft-fg)'
+    },
+    className: "rounded-xl p-2.5 flex justify-between text-xs font-semibold"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qaytim:" : "Сдача:"), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono text-emerald-700 dark:text-emerald-300"
+    className: "font-nums font-bold"
   }, formatMoney(cashChange))))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
@@ -7112,37 +7712,52 @@ function PosScreen({
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('CASH'),
-    className: "bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow text-xs"
-  }, "💵 ", lang === 'uz' ? "Naqd (F5)" : "Нал (F5)"), /*#__PURE__*/React.createElement("button", {
+    className: "atelier-btn-cta disabled:opacity-40 font-bold py-3.5 rounded-2xl shadow-sm text-xs flex items-center justify-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "cash",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Naqd (F5)" : "Наличные")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('CARD'),
-    className: "bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow text-xs"
-  }, "💳 ", lang === 'uz' ? "Karta (F6)" : "Карта (F6)"), /*#__PURE__*/React.createElement("button", {
+    className: "atelier-btn-primary disabled:opacity-40 font-bold py-3.5 rounded-2xl shadow-sm text-xs flex items-center justify-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "card",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Karta (F6)" : "Картой")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('DEBT'),
-    className: "bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-extrabold py-2.5 rounded-2xl shadow text-xs"
-  }, "📓 ", lang === 'uz' ? "Qarz (F7)" : "В долг (F7)"), /*#__PURE__*/React.createElement("button", {
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "atelier-btn-soft disabled:opacity-40 font-semibold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "debts",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qarzga (F7)" : "В долг")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: cart.length === 0,
     onClick: () => {
       setCheckoutInitialMethod('MIXED');
       setCheckoutModalOpen(true);
     },
-    className: "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 disabled:opacity-40 font-extrabold py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-700"
-  }, "🔀 ", lang === 'uz' ? "Split / Skidka" : "Сплит / Скидка"))))), /*#__PURE__*/React.createElement("div", {
-    className: "lg:hidden shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-lg space-y-1.5"
+    className: "atelier-btn-soft disabled:opacity-40 font-semibold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "split",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Split / Chegirma" : "Сплит / Скидка")))))), /*#__PURE__*/React.createElement("div", {
+    className: "lg:hidden shrink-0 atelier-card rounded-[24px] p-2.5 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2 px-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-baseline gap-1.5 min-w-0"
+    className: "flex items-baseline gap-2 min-w-0"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] font-bold text-slate-500"
+    className: "text-xs font-medium atelier-text-muted"
   }, lang === 'uz' ? 'Jami:' : 'Итого:'), /*#__PURE__*/React.createElement("span", {
-    className: "text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 truncate"
+    className: "text-xl font-bold font-nums truncate"
   }, formatMoney(cartTotal)), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-slate-400 font-mono"
+    className: "text-xs atelier-text-muted font-nums"
   }, "(", cart.length, ")")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: cart.length === 0,
@@ -7150,71 +7765,93 @@ function PosScreen({
       setCheckoutInitialMethod('CASH');
       setCheckoutModalOpen(true);
     },
-    className: "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 shrink-0"
-  }, "🏷️ ", lang === 'uz' ? 'Chegirma / Qaytim' : 'Скидка / Сдача')), /*#__PURE__*/React.createElement("div", {
+    className: "px-3 py-1 rounded-full text-xs font-semibold atelier-btn-soft disabled:opacity-40 shrink-0 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "tag",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Chegirma / Qaytim' : 'Скидка'))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('CASH'),
-    className: "py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm"
-  }, /*#__PURE__*/React.createElement("span", null, "💵"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px]"
-  }, lang === 'uz' ? "Naqd" : "Нал")), /*#__PURE__*/React.createElement("button", {
+    className: "py-2.5 rounded-2xl atelier-btn-cta disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5 shadow-sm"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "cash",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Naqd" : "Нал")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('CARD'),
-    className: "py-2 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm"
-  }, /*#__PURE__*/React.createElement("span", null, "💳"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px]"
-  }, lang === 'uz' ? "Karta" : "Карта")), /*#__PURE__*/React.createElement("button", {
+    className: "py-2.5 rounded-2xl atelier-btn-primary disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "card",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Karta" : "Карта")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('DEBT'),
-    className: "py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm"
-  }, /*#__PURE__*/React.createElement("span", null, "📓"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px]"
-  }, lang === 'uz' ? "Qarz" : "Долг")), /*#__PURE__*/React.createElement("button", {
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "py-2.5 rounded-2xl atelier-btn-soft disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "debts",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qarz" : "В долг")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: cart.length === 0 || directLoading,
     onClick: () => handleDirectCheckout('MIXED'),
-    className: "py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm"
-  }, /*#__PURE__*/React.createElement("span", null, "🔀"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px]"
-  }, lang === 'uz' ? "Split" : "Сплит")))), parkedModalOpen && /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm"
+    className: "py-2.5 rounded-2xl atelier-btn-soft disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "split",
+    size: 16
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Split" : "Сплит")))), parkedModalOpen && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-2.5 sm:p-3 backdrop-blur-md"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-4 sm:p-5 shadow-2xl modal-mobile-safe text-slate-800 dark:text-slate-100"
+    className: "atelier-modal rounded-[28px] w-full max-w-md p-4 sm:p-5 modal-mobile-safe"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0"
+    className: "flex items-center justify-between pb-3 border-b atelier-border mb-3 shrink-0"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-bold text-base"
-  }, "📂 ", lang === 'uz' ? "Saqlangan cheklar" : "Отложенные чеки"), /*#__PURE__*/React.createElement("button", {
+    className: "font-bold text-base flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "folder",
+    size: 18
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Saqlangan cheklar" : "Отложенные чеки")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setParkedModalOpen(false),
-    className: "text-slate-400 text-lg"
-  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "close",
+    size: 15
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 space-y-2 overflow-y-auto pr-1"
   }, safeArray(parkedCarts).map(h => /*#__PURE__*/React.createElement("div", {
     key: h.id,
-    className: "bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between gap-2"
+    className: "atelier-subtle rounded-2xl p-3 flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-xs"
+    className: "font-semibold text-xs"
   }, "#", h.id, " (", h.timestamp, ")"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 font-mono"
+    className: "text-[11px] atelier-text-muted font-nums"
   }, h.itemCount, " poz • ", /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-emerald-600"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "font-bold"
   }, formatMoney(h.total)))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => resumeParkedCart(h.id),
-    className: "bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs"
+    className: "atelier-btn-cta font-bold px-3.5 py-1.5 rounded-full text-xs"
   }, lang === 'uz' ? "Tiklash" : "Открыть"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => removeParkedCart(h.id),
-    className: "text-slate-400 hover:text-rose-500 px-2 py-1.5 text-xs"
-  }, "✕"))))))), priceCheckOpen && /*#__PURE__*/React.createElement(PriceCheckModal, {
+    className: "w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "close",
+    size: 13
+  })))))))), priceCheckOpen && /*#__PURE__*/React.createElement(PriceCheckModal, {
     token: token,
     onClose: () => setPriceCheckOpen(false),
     onAddToCart: (prod, qty) => {
@@ -7399,59 +8036,76 @@ function DebtsScreen({
     return list;
   }, [debtors, sortBy, lang]);
   return /*#__PURE__*/React.createElement("div", {
-    className: "h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3"
+    className: "h-full flex flex-col overflow-hidden gap-2 sm:gap-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2"
+    className: "shrink-0 atelier-card rounded-[24px] p-3 space-y-2.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-500 font-semibold truncate"
+    className: "text-[11px] atelier-text-muted font-medium truncate"
   }, t.totalOutstandingDebt, " (", summary ? `${summary.active_debtors_with_debt}/${summary.debtors_count}` : '0/0', ")"), /*#__PURE__*/React.createElement("div", {
-    className: "text-lg sm:text-xl font-black text-rose-600 dark:text-rose-400 font-mono leading-tight"
+    style: {
+      color: 'var(--danger-fg)'
+    },
+    className: "text-xl sm:text-2xl font-bold font-nums leading-tight mt-0.5"
   }, "-", summary ? formatMoney(summary.total_outstanding_debt) : "0 so'm")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 shrink-0"
+    className: "flex items-center gap-1.5 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateDebtorModalOpen(true),
-    className: "px-2.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-sm"
-  }, "➕ ", /*#__PURE__*/React.createElement("span", {
-    className: "hidden sm:inline"
-  }, lang === 'uz' ? "Yangi" : "Новый")), /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-2 atelier-btn-cta font-bold rounded-2xl text-xs shadow-sm flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Yangi" : "Новый")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setVoiceDebtOpen(true),
-    className: "px-2.5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs shadow-sm",
+    className: "px-2.5 py-2 atelier-btn-soft font-semibold rounded-2xl text-xs flex items-center gap-1",
     title: t.voiceDebtBtn
-  }, "🎙️ ", /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "mic",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
   }, lang === 'uz' ? "Ovoz" : "Голос")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setOcrDebtOpen(true),
-    className: "px-2.5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-sm",
+    className: "px-2.5 py-2 atelier-btn-soft font-semibold rounded-2xl text-xs flex items-center gap-1",
     title: t.scanPaperNotebookBtn
-  }, "📸 ", /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "camera",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
   }, "OCR")))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5"
-  }, /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex items-center atelier-input rounded-2xl px-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "atelier-text-muted mr-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "search",
+    size: 14
+  })), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: lang === 'uz' ? "🔍 Ism yoki telefon..." : "🔍 Имя или телефон...",
+    placeholder: lang === 'uz' ? "Ism yoki telefon..." : "Имя или телефон...",
     value: search,
     onChange: e => setSearch(e.target.value),
-    className: "flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
-  }), /*#__PURE__*/React.createElement("button", {
+    className: "flex-1 min-w-0 bg-transparent py-2 text-xs focus:outline-none"
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setOnlyWithDebt(!onlyWithDebt),
-    className: `px-2.5 py-1.5 rounded-xl text-[11px] font-bold border whitespace-nowrap shrink-0 ${onlyWithDebt ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 text-amber-800 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`
+    className: `px-3 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${onlyWithDebt ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
   }, lang === 'uz' ? "Qarzdorlar" : "С долгом")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 overflow-x-auto no-scrollbar"
+    className: "flex items-center gap-1.5 overflow-x-auto no-scrollbar"
   }, [{
     id: 'overdue',
     label: lang === 'uz' ? "Muddati o'tgan" : "Просрочка"
   }, {
     id: 'max_debt',
-    label: lang === 'uz' ? "Katta" : "Сумма"
+    label: lang === 'uz' ? "Katta" : "Крупные"
   }, {
     id: 'recent',
     label: lang === 'uz' ? "Yangi" : "Свежие"
@@ -7462,83 +8116,113 @@ function DebtsScreen({
     key: s.id,
     type: "button",
     onClick: () => setSortBy(s.id),
-    className: `px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap border shrink-0 ${sortBy === s.id ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`
-  }, s.label, " (", sortedDebtors.length && s.id === sortBy ? sortedDebtors.length : '', s.id !== sortBy ? '' : '', ")")))), /*#__PURE__*/React.createElement("div", {
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 transition ${sortBy === s.id ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`
+  }, s.label, sortBy === s.id ? ` (${sortedDebtors.length})` : '')))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto pr-0.5"
   }, sortedDebtors.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "text-center py-12 text-xs text-slate-400"
+    className: "text-center py-12 text-xs atelier-text-muted"
   }, lang === 'uz' ? "Mijozlar topilmadi" : "Клиенты не найдены") : /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-2"
+    className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pb-2"
   }, sortedDebtors.map(debtor => {
     const overdue = checkOverdueStatus(debtor.due_date, debtor.balance, lang);
     const hasDebt = Number(debtor.balance) > 0;
     return /*#__PURE__*/React.createElement("div", {
       key: debtor.id,
-      className: `bg-white dark:bg-slate-900 border rounded-2xl p-3 shadow-sm flex flex-col justify-between gap-2 ${overdue?.isOverdue ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10' : 'border-slate-200 dark:border-slate-800'}`
+      style: overdue?.isOverdue ? {
+        borderColor: 'var(--danger-fg)'
+      } : {},
+      className: "atelier-card rounded-[24px] p-3.5 flex flex-col justify-between gap-2.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-start justify-between gap-2"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 min-w-0"
+      className: "flex items-center gap-2.5 min-w-0"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 font-extrabold flex items-center justify-center text-xs font-mono shrink-0"
+      className: "w-10 h-10 rounded-full atelier-subtle font-bold flex items-center justify-center text-xs font-nums shrink-0"
     }, getInitials(debtor.full_name)), /*#__PURE__*/React.createElement("div", {
       className: "min-w-0"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-1"
+      className: "flex items-center gap-1.5"
     }, /*#__PURE__*/React.createElement("h4", {
-      className: "font-bold text-xs text-slate-900 dark:text-slate-100 truncate"
+      className: "font-bold text-xs truncate"
     }, debtor.full_name), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => {
         setSelectedDebtor(debtor);
         setEditModalOpen(true);
       },
-      className: "text-[11px] opacity-60 hover:opacity-100",
+      className: "atelier-text-muted hover:opacity-100",
       title: "Edit"
-    }, "✏️")), debtor.phone && /*#__PURE__*/React.createElement("a", {
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "edit",
+      size: 12
+    }))), debtor.phone && /*#__PURE__*/React.createElement("a", {
       href: `tel:${debtor.phone}`,
-      className: "text-[11px] text-emerald-600 dark:text-emerald-400 font-mono hover:underline"
-    }, "📞 ", debtor.phone))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        color: 'var(--accent)'
+      },
+      className: "text-[11px] font-nums inline-flex items-center gap-1 hover:underline mt-0.5"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "phone",
+      size: 11
+    }), /*#__PURE__*/React.createElement("span", null, debtor.phone)))), /*#__PURE__*/React.createElement("div", {
       className: "text-right shrink-0"
     }, /*#__PURE__*/React.createElement("div", {
-      className: `text-sm font-black font-mono ${hasDebt ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`
+      style: {
+        color: hasDebt ? 'var(--danger-fg)' : 'var(--accent)'
+      },
+      className: "text-sm font-bold font-nums"
     }, hasDebt ? '-' : '', formatMoney(debtor.balance)), overdue ? /*#__PURE__*/React.createElement("span", {
-      className: `px-1.5 py-0.5 rounded-full text-[9px] font-bold border ${overdue.color}`
+      className: `px-2 py-0.5 rounded-full text-[10px] font-semibold border ${overdue.color}`
     }, overdue.badge) : debtor.due_date ? /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] text-slate-400"
-    }, "⏳ ", debtor.due_date) : null)), debtor.note && /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-2 py-1 rounded-lg truncate italic"
+      className: "text-[11px] atelier-text-muted"
+    }, debtor.due_date) : null)), debtor.note && /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] atelier-text-muted atelier-subtle px-2.5 py-1.5 rounded-xl truncate italic"
     }, "\"", debtor.note, "\""), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-1 pt-1 border-t border-slate-100 dark:border-slate-800"
+      className: "grid grid-cols-4 gap-1.5 pt-2 border-t atelier-border"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => {
         setSelectedDebtor(debtor);
         setPayModalOpen(true);
       },
-      className: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-1.5 rounded-xl text-[11px] font-bold text-center"
-    }, "💵 ", lang === 'uz' ? "To'lash" : "Оплата"), /*#__PURE__*/React.createElement("button", {
+      className: "atelier-btn-cta py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 col-span-1"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "check",
+      size: 12
+    }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "To'lash" : "Принять")), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => {
         setSelectedDebtor(debtor);
         setAddDebtModalOpen(true);
       },
-      className: "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 py-1.5 rounded-xl text-[11px] font-bold text-center"
-    }, "➕ ", lang === 'uz' ? "Qarz" : "Долг"), /*#__PURE__*/React.createElement("button", {
+      style: {
+        color: 'var(--warm-fg)'
+      },
+      className: "atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "plus",
+      size: 12
+    }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qarz" : "Долг")), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => {
         setSelectedDebtor(debtor);
         setRemindModalOpen(true);
       },
-      className: "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 py-1.5 rounded-xl text-[11px] font-bold text-center"
-    }, "📩 ", lang === 'uz' ? "Eslat" : "Напом."), /*#__PURE__*/React.createElement("button", {
+      className: "atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "bell",
+      size: 12
+    }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Eslat" : "Напом.")), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => {
         setSelectedDebtor(debtor);
         setHistoryModalOpen(true);
       },
-      className: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-1.5 rounded-xl text-[11px] font-bold text-center"
-    }, "📜 ", lang === 'uz' ? "Tarix" : "Ист.")));
+      className: "atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1"
+    }, /*#__PURE__*/React.createElement(Icon, {
+      name: "history",
+      size: 12
+    }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Tarix" : "Ист."))));
   }))), payModalOpen && selectedDebtor && /*#__PURE__*/React.createElement(PayDebtModal, {
     token: token,
     lang: lang,
@@ -8009,38 +8693,53 @@ function CatalogScreen({
     return activeAct.items.filter(it => (it.product_name || '').toLowerCase().includes(q) || (it.barcode || '').includes(q));
   }, [activeAct, actSearch]);
   return /*#__PURE__*/React.createElement("div", {
-    className: "h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3"
+    className: "h-full flex flex-col overflow-hidden gap-2 sm:gap-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2"
+    className: "shrink-0 atelier-card rounded-[24px] p-2.5 sm:p-3 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar"
+    className: "flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubTab('products'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'products' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "📦 ", lang === 'uz' ? 'Tovarlar' : 'Товары', " (", total, ")"), isOwner && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'products' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "box",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Tovarlar' : 'Товары', " (", total, ")")), isOwner && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubTab('revision'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'revision' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "📋 ", lang === 'uz' ? 'Reviziya' : 'Ревизия'), /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'revision' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "check",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Reviziya' : 'Ревизия')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubTab('movements'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'movements' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "📜 ", lang === 'uz' ? 'Harakat' : 'Движ.'))), subTab === 'products' && isOwner && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 shrink-0"
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'movements' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "history",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Harakat' : 'Движение')))), subTab === 'products' && isOwner && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: exportCsv,
-    className: "px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold",
+    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center",
     title: "Export CSV"
-  }, "⬇️"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "download",
+    size: 14
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => csvInputRef.current?.click(),
-    className: "px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold",
+    className: "w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center",
     title: "Import CSV"
-  }, "⬆️"), /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "upload",
+    size: 14
+  })), /*#__PURE__*/React.createElement("input", {
     ref: csvInputRef,
     type: "file",
     accept: ".csv",
@@ -8052,23 +8751,39 @@ function CatalogScreen({
       barcode: '',
       autoScan: true
     }),
-    className: "px-2 py-1.5 rounded-xl bg-indigo-600 text-white text-[11px] font-bold",
+    className: "px-2.5 h-8 rounded-full atelier-btn-soft text-xs font-semibold flex items-center gap-1",
     title: lang === 'uz' ? 'Skanerlab kiritish' : 'Поточный скан'
-  }, "🔄 📷"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "scan",
+    size: 14
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateProductOpen(true),
-    className: "px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm"
-  }, "➕ ", /*#__PURE__*/React.createElement("span", {
+    className: "px-3 h-8 rounded-full atelier-btn-cta text-xs font-bold shadow-sm flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
-  }, lang === 'uz' ? 'Yangi' : 'Новый'))), subTab === 'revision' && isOwner && /*#__PURE__*/React.createElement("button", {
+  }, lang === 'uz' ? 'Yangi' : 'Добавить'))), subTab === 'revision' && isOwner && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: createAct,
-    className: "px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shrink-0"
-  }, "➕ ", lang === 'uz' ? 'Yangi akt' : 'Новый акт')), subTab === 'products' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "px-3 py-1.5 rounded-full atelier-btn-cta text-xs font-bold shrink-0 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Yangi akt' : 'Новый акт'))), subTab === 'products' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5"
-  }, /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex items-center atelier-input rounded-2xl px-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "atelier-text-muted mr-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "search",
+    size: 14
+  })), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: t.searchProductPlaceholder,
+    placeholder: lang === 'uz' ? "Nom yoki shtrixkod..." : "Поиск товара или штрихкода...",
     value: search,
     onChange: e => {
       setSearch(e.target.value);
@@ -8080,47 +8795,44 @@ function CatalogScreen({
         handleCatalogBarcode(search.trim());
       }
     },
-    className: "flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
-  }), /*#__PURE__*/React.createElement("button", {
+    className: "flex-1 min-w-0 bg-transparent py-2 text-xs focus:outline-none"
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setFilterScannerOpen(true),
-    className: "px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shrink-0"
-  }, "📷"), /*#__PURE__*/React.createElement("button", {
+    className: "w-9 h-9 rounded-2xl atelier-btn-primary flex items-center justify-center shrink-0"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "scan",
+    size: 16
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setLowStockOnly(!lowStockOnly);
       setSkip(0);
     },
-    className: `px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${lowStockOnly ? 'bg-rose-100 border-rose-300 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`
-  }, "⚠️ ", /*#__PURE__*/React.createElement("span", {
-    className: "hidden sm:inline"
-  }, lang === 'uz' ? 'Kam' : 'Мало')), /*#__PURE__*/React.createElement("button", {
+    className: `px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${lowStockOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
+  }, lang === 'uz' ? 'Kam' : 'Мало'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setExpiringOnly(!expiringOnly);
       setSkip(0);
     },
-    className: `px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${expiringOnly ? 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`
-  }, "⏰ ", /*#__PURE__*/React.createElement("span", {
-    className: "hidden sm:inline"
-  }, lang === 'uz' ? 'Muddat' : 'Срок')), /*#__PURE__*/React.createElement("button", {
+    className: `px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${expiringOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
+  }, lang === 'uz' ? 'Muddat' : 'Срок'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setTobaccoOnly(!tobaccoOnly);
       setSkip(0);
     },
-    className: `px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${tobaccoOnly ? 'bg-indigo-100 border-indigo-300 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`
-  }, "🚬 ", /*#__PURE__*/React.createElement("span", {
-    className: "hidden sm:inline"
-  }, lang === 'uz' ? 'Tamaki' : 'Табак'))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 overflow-x-auto no-scrollbar"
+    className: `px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${tobaccoOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`
+  }, lang === 'uz' ? 'Marka' : 'Марка')), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 overflow-x-auto no-scrollbar"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setSelectedCategory(null);
       setSkip(0);
     },
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${selectedCategory === null ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${selectedCategory === null ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`
   }, lang === 'uz' ? 'Hammasi' : 'Все'), safeArray(categories).map(cat => /*#__PURE__*/React.createElement("button", {
     key: cat.id,
     type: "button",
@@ -8128,18 +8840,21 @@ function CatalogScreen({
       setSelectedCategory(cat.id === selectedCategory ? null : cat.id);
       setSkip(0);
     },
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${selectedCategory === cat.id ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${selectedCategory === cat.id ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`
   }, cat.name ? cat.name.split('/')[0].trim() : cat.name))))), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col"
+    className: "flex-1 min-h-0 atelier-card rounded-[24px] overflow-hidden flex flex-col"
   }, subTab === 'products' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto"
   }, safeArray(products).length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-4xl"
-  }, "📦"), /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-sm text-slate-800 dark:text-slate-100"
-  }, search || selectedCategory || lowStockOnly || expiringOnly ? lang === 'uz' ? "Bunday tovar topilmadi" : "Товары по фильтру не найдены" : lang === 'uz' ? "Katalog bo'sh — do'kon tovarlarini qo'shishni boshlang" : "Каталог чист — начните добавлять товары магазина"), isOwner && /*#__PURE__*/React.createElement("div", {
+    className: "w-14 h-14 rounded-2xl atelier-subtle flex items-center justify-center atelier-text-muted"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "box",
+    size: 26
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "font-semibold text-sm max-w-xs"
+  }, search || selectedCategory || lowStockOnly || expiringOnly ? lang === 'uz' ? "Bunday tovar topilmadi" : "Товары по фильтру не найдены" : lang === 'uz' ? "Katalog bo'sh — do'kon tovarlarini qo'shishni boshlang" : "Каталог чист — добавьте первые товары магазина"), isOwner && /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap justify-center gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -8147,194 +8862,268 @@ function CatalogScreen({
       barcode: '',
       autoScan: true
     }),
-    className: "px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold shadow"
-  }, "📷 ", lang === 'uz' ? "Skanerlab kiritish" : "Сканировать товары"), /*#__PURE__*/React.createElement("button", {
+    className: "px-4 py-2.5 rounded-full atelier-btn-cta font-bold shadow-sm flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "scan",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Skanerlab kiritish" : "Сканировать товары")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateProductOpen({
       barcode: search.trim(),
       autoScan: false
     }),
-    className: "px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold shadow"
-  }, "➕ ", lang === 'uz' ? "Qo'lda qo'shish" : "Добавить вручную"), /*#__PURE__*/React.createElement("button", {
+    className: "px-4 py-2.5 rounded-full atelier-btn-primary font-semibold flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qo'lda qo'shish" : "Добавить вручную")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => csvInputRef.current?.click(),
-    className: "px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold"
-  }, "⬆️ CSV"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "block md:hidden divide-y divide-slate-100 dark:divide-slate-800"
+    className: "px-4 py-2.5 rounded-full atelier-btn-soft font-semibold flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "upload",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, "CSV")))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "block md:hidden divide-y atelier-border"
   }, safeArray(products).map(p => /*#__PURE__*/React.createElement("div", {
     key: p.id,
-    className: "p-2.5 space-y-1.5"
+    className: "p-3 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1"
+    className: "font-semibold text-xs flex items-center gap-1.5"
   }, isOwner && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => toggleQuickStar(p),
-    className: `text-sm ${p.is_quick ? 'opacity-100' : 'opacity-30'}`,
+    style: {
+      color: p.is_quick ? 'var(--accent)' : 'var(--text-muted)'
+    },
+    className: p.is_quick ? 'opacity-100' : 'opacity-35',
     title: "Tezkor kassa"
-  }, "⚡"), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "bolt",
+    size: 14
+  })), /*#__PURE__*/React.createElement("span", {
     className: "truncate"
   }, p.name)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-mono text-slate-500 mt-0.5 truncate"
+    className: "text-[11px] font-nums atelier-text-muted mt-0.5 truncate"
   }, p.barcode, " • ", p.category_name?.split('/')[0]?.trim())), /*#__PURE__*/React.createElement("div", {
     className: "text-right shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-mono font-black text-xs text-emerald-600 dark:text-emerald-400"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "font-nums font-bold text-xs"
   }, formatMoney(p.sale_price)), /*#__PURE__*/React.createElement("div", {
-    className: `font-mono text-[11px] font-bold ${p.is_low_stock ? 'text-rose-500' : 'text-slate-500'}`
+    style: {
+      color: p.is_low_stock ? 'var(--danger-fg)' : 'var(--text-muted)'
+    },
+    className: "font-nums text-[11px] font-semibold"
   }, p.stock_quantity, " ", p.unit))), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px]"
+    className: "flex items-center justify-between gap-1.5 pt-1.5 border-t atelier-border text-[10px]"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 flex-wrap"
   }, isOwner && p.purchase_price !== null && /*#__PURE__*/React.createElement("span", {
-    className: "font-mono text-slate-400"
+    className: "font-nums atelier-text-muted"
   }, lang === 'uz' ? 'Kirim:' : 'Зак:', " ", formatMoney(p.purchase_price)), (p.is_tobacco || p.requires_marking) && /*#__PURE__*/React.createElement("span", {
-    className: "px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold"
-  }, "🚬 DM"), /*#__PURE__*/React.createElement("span", {
-    className: `px-1.5 py-0.5 rounded font-mono font-bold ${p.ikpu_valid ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`
-  }, p.ikpu_valid ? 'IKPU ✓' : 'IKPU !'), p.expiry_date && /*#__PURE__*/React.createElement("span", {
-    className: `px-1.5 py-0.5 rounded font-bold ${p.is_expired ? 'bg-rose-100 text-rose-700' : p.is_expiring_soon ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`
-  }, "⏰ ", p.expiry_date)), isOwner && /*#__PURE__*/React.createElement("div", {
+    style: {
+      backgroundColor: 'var(--warm-bg)',
+      color: 'var(--warm-fg)'
+    },
+    className: "px-2 py-0.5 rounded-full font-semibold"
+  }, "DataMatrix"), /*#__PURE__*/React.createElement("span", {
+    style: p.ikpu_valid ? {
+      backgroundColor: 'var(--accent-soft)',
+      color: 'var(--accent-soft-fg)'
+    } : {},
+    className: `px-2 py-0.5 rounded-full font-nums font-semibold ${p.ikpu_valid ? '' : 'atelier-subtle atelier-text-muted'}`
+  }, p.ikpu_valid ? 'ИКПУ ✓' : 'Без ИКПУ'), p.expiry_date && /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded-full font-semibold atelier-subtle"
+  }, p.expiry_date)), isOwner && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setPriceTagProduct(p),
-    className: "px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs"
-  }, "🏷️"), /*#__PURE__*/React.createElement("button", {
+    className: "w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "tag",
+    size: 13
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setEditingProduct(p),
-    className: "px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs"
-  }, "✏️"), /*#__PURE__*/React.createElement("button", {
+    className: "w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "edit",
+    size: 13
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => deleteProduct(p),
-    className: "px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 text-xs"
-  }, "🗑️")))))), /*#__PURE__*/React.createElement("table", {
+    style: {
+      backgroundColor: 'var(--danger-bg)',
+      color: 'var(--danger-fg)'
+    },
+    className: "w-7 h-7 rounded-full flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "trash",
+    size: 13
+  }))))))), /*#__PURE__*/React.createElement("table", {
     className: "hidden md:table w-full text-left text-xs"
   }, /*#__PURE__*/React.createElement("thead", {
-    className: "bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10"
+    className: "atelier-subtle atelier-text-muted font-semibold border-b atelier-border sticky top-0 z-10"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2.5"
-  }, "⚡"), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2.5"
+    className: "px-3.5 py-2.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "bolt",
+    size: 13
+  })), /*#__PURE__*/React.createElement("th", {
+    className: "px-3.5 py-2.5"
   }, t.colBarcode), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2.5"
+    className: "px-3.5 py-2.5"
   }, t.colName), isOwner && /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2.5 text-right"
+    className: "px-3.5 py-2.5 text-right"
   }, t.colPurchasePrice), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2.5 text-right"
+    className: "px-3.5 py-2.5 text-right"
   }, t.colSalePrice), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2.5 text-right"
+    className: "px-3.5 py-2.5 text-right"
   }, t.colStock), /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2.5 text-center"
+    className: "px-3.5 py-2.5 text-center"
   }, lang === 'uz' ? 'Muddat' : 'Срок'), isOwner && /*#__PURE__*/React.createElement("th", {
-    className: "px-3 py-2.5 text-center"
+    className: "px-3.5 py-2.5 text-center"
   }, t.colActions))), /*#__PURE__*/React.createElement("tbody", {
-    className: "divide-y divide-slate-200 dark:divide-slate-800"
+    className: "divide-y atelier-border"
   }, safeArray(products).map(p => /*#__PURE__*/React.createElement("tr", {
-    key: p.id,
-    className: "hover:bg-slate-50 dark:hover:bg-slate-800/40"
+    key: p.id
   }, /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2"
+    className: "px-3.5 py-2.5"
   }, isOwner && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => toggleQuickStar(p),
-    className: p.is_quick ? 'opacity-100' : 'opacity-25'
-  }, "⚡")), /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 font-mono text-[11px] text-slate-500"
+    style: {
+      color: p.is_quick ? 'var(--accent)' : 'var(--text-muted)'
+    },
+    className: p.is_quick ? 'opacity-100' : 'opacity-30'
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "bolt",
+    size: 14
+  }))), /*#__PURE__*/React.createElement("td", {
+    className: "px-3.5 py-2.5 font-nums text-[11px] atelier-text-muted"
   }, p.barcode), /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 font-medium"
+    className: "px-3.5 py-2.5 font-semibold"
   }, p.name), isOwner && /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 text-right font-mono text-slate-500"
+    className: "px-3.5 py-2.5 text-right font-nums atelier-text-muted"
   }, formatMoney(p.purchase_price)), /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 text-right font-bold text-emerald-600 font-mono"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "px-3.5 py-2.5 text-right font-bold font-nums"
   }, formatMoney(p.sale_price)), /*#__PURE__*/React.createElement("td", {
-    className: `px-3 py-2 text-right font-mono font-bold ${p.is_low_stock ? 'text-rose-500' : ''}`
+    style: {
+      color: p.is_low_stock ? 'var(--danger-fg)' : 'var(--text-main)'
+    },
+    className: "px-3.5 py-2.5 text-right font-nums font-bold"
   }, p.stock_quantity, " ", p.unit), /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 text-center text-[11px]"
+    className: "px-3.5 py-2.5 text-center text-[11px]"
   }, p.expiry_date ? /*#__PURE__*/React.createElement("span", {
-    className: `px-1.5 py-0.5 rounded font-bold ${p.is_expired ? 'bg-rose-100 text-rose-700' : p.is_expiring_soon ? 'bg-amber-100 text-amber-800' : ''}`
+    className: "px-2 py-0.5 rounded-full font-semibold atelier-subtle"
   }, p.expiry_date) : '—'), isOwner && /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 text-center"
+    className: "px-3.5 py-2.5 text-center"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-center gap-1"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setPriceTagProduct(p),
-    className: "p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
-  }, "🏷️"), /*#__PURE__*/React.createElement("button", {
+    className: "w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "tag",
+    size: 13
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setEditingProduct(p),
-    className: "p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
-  }, "✏️"), /*#__PURE__*/React.createElement("button", {
+    className: "w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "edit",
+    size: 13
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => deleteProduct(p),
-    className: "p-1.5 hover:bg-rose-100 rounded-lg text-rose-600"
-  }, "🗑️"))))))))), /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 px-3 py-1.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/40"
+    style: {
+      color: 'var(--danger-fg)'
+    },
+    className: "w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "trash",
+    size: 13
+  })))))))))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 px-3.5 py-2 border-t atelier-border flex items-center justify-between text-xs atelier-text-muted"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "font-mono text-[11px]"
+    className: "font-nums text-[11px]"
   }, skip + 1, "–", Math.min(skip + limit, total), " / ", total), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: skip === 0,
     onClick: () => setSkip(Math.max(0, skip - limit)),
-    className: "px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 font-bold"
+    className: "px-3 py-1 rounded-full atelier-btn-soft disabled:opacity-40 font-bold"
   }, "←"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: skip + limit >= total,
     onClick: () => setSkip(skip + limit),
-    className: "px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 font-bold"
+    className: "px-3 py-1 rounded-full atelier-btn-soft disabled:opacity-40 font-bold"
   }, "→")))), subTab === 'revision' && /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 flex flex-col overflow-hidden p-2.5 space-y-2"
+    className: "flex-1 min-h-0 flex flex-col overflow-hidden p-3 space-y-2"
   }, !activeAct ? /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto space-y-2"
   }, acts.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "text-center py-10 text-xs text-slate-400"
+    className: "text-center py-10 text-xs atelier-text-muted"
   }, lang === 'uz' ? "Hozircha reviziya aktlari yo'q. Yangi akt oching." : "Актов ревизии пока нет.") : acts.map(a => /*#__PURE__*/React.createElement("div", {
     key: a.id,
     onClick: () => openAct(a.id),
-    className: "p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between cursor-pointer hover:border-emerald-500"
+    className: "p-3 rounded-2xl atelier-subtle flex items-center justify-between cursor-pointer hover:opacity-90"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-xs"
+    className: "font-semibold text-xs"
   }, a.name, " (", a.act_number, ")"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-400"
+    className: "text-[11px] atelier-text-muted font-nums"
   }, a.total_products, " SKU • +", a.surpluses, " / -", a.deficits)), /*#__PURE__*/React.createElement("span", {
-    className: `px-2 py-0.5 rounded text-[10px] font-bold ${a.status === 'APPLIED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`
+    className: "px-2.5 py-0.5 rounded-full text-[10px] font-semibold atelier-pill-active"
   }, a.status)))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 flex items-center justify-between gap-2 pb-1 border-b border-slate-200 dark:border-slate-800"
+    className: "shrink-0 flex items-center justify-between gap-2 pb-2 border-b atelier-border"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setActiveAct(null),
-    className: "px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold"
+    className: "px-3 py-1.5 rounded-full atelier-btn-soft text-xs font-semibold"
   }, "← ", lang === 'uz' ? 'Orqaga' : 'Назад'), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: "🔍 Shtrixkod / nom...",
+    placeholder: "Shtrixkod / nom...",
     value: actSearch,
     onChange: e => setActSearch(e.target.value),
-    className: "flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1 text-xs"
+    className: "flex-1 min-w-0 atelier-input rounded-2xl px-3 py-1.5 text-xs"
   }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setActScannerOpen(true),
-    className: "px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-xs font-bold"
-  }, "📷"), activeAct.status !== 'APPLIED' && /*#__PURE__*/React.createElement("button", {
+    className: "w-8 h-8 atelier-btn-primary rounded-full flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "scan",
+    size: 14
+  })), activeAct.status !== 'APPLIED' && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: applyAct,
-    className: "px-2.5 py-1 bg-indigo-600 text-white rounded-xl text-xs font-bold"
-  }, "✅ ", lang === 'uz' ? "Qo'llash" : "Применить")), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800"
+    className: "px-3 py-1.5 atelier-btn-cta rounded-full text-xs font-bold flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "check",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Qo'llash" : "Применить"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto divide-y atelier-border"
   }, filteredActItems.slice(0, 80).map(it => /*#__PURE__*/React.createElement("div", {
     key: it.product_id,
     className: "py-2 flex items-center justify-between gap-2 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold truncate"
+    className: "font-semibold truncate"
   }, it.product_name), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-mono text-slate-400"
+    className: "text-[10px] font-nums atelier-text-muted"
   }, lang === 'uz' ? 'Hisobda:' : 'Учет:', " ", it.recorded_quantity, " ", it.unit, " ", it.difference !== 0 && `(${it.difference > 0 ? '+' : ''}${it.difference})`)), /*#__PURE__*/React.createElement("input", {
     type: "number",
     step: "any",
@@ -8343,26 +9132,29 @@ function CatalogScreen({
     onBlur: e => {
       if (Number(e.target.value) !== Number(it.actual_quantity)) scanActQty(it.product_id, e.target.value);
     },
-    className: "w-20 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold"
+    className: "w-20 atelier-input rounded-xl px-2 py-1 text-center font-nums font-bold"
   })))))), subTab === 'movements' && /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2"
+    className: "flex-1 min-h-0 overflow-y-auto divide-y atelier-border p-3"
   }, movements.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "text-center py-10 text-xs text-slate-400"
+    className: "text-center py-10 text-xs atelier-text-muted"
   }, lang === 'uz' ? "Harakatlar tarixi bo'sh" : "История движений пуста") : movements.map(m => /*#__PURE__*/React.createElement("div", {
     key: m.id,
     className: "py-2 flex items-center justify-between gap-2 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold truncate"
+    className: "font-semibold truncate"
   }, m.product_name), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400"
+    className: "text-[10px] atelier-text-muted"
   }, m.movement_type, " • ", m.reference_id || '', " • ", new Date(m.created_at).toLocaleString())), /*#__PURE__*/React.createElement("div", {
-    className: "text-right font-mono shrink-0"
+    className: "text-right font-nums shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: `font-black ${m.quantity_delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`
+    style: {
+      color: m.quantity_delta >= 0 ? 'var(--accent)' : 'var(--danger-fg)'
+    },
+    className: "font-bold"
   }, m.quantity_delta >= 0 ? '+' : '', m.quantity_delta), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400"
+    className: "text-[10px] atelier-text-muted"
   }, m.previous_stock, " → ", m.new_stock)))))), createProductOpen && /*#__PURE__*/React.createElement(CreateProductModal, {
     token: token,
     initialBarcode: typeof createProductOpen === 'object' ? createProductOpen.barcode || '' : '',
@@ -8465,126 +9257,182 @@ function OperationsHubScreen({
     return (s.name || '').toLowerCase().includes(q) || (s.phone || '').includes(q);
   });
   return /*#__PURE__*/React.createElement("div", {
-    className: "h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3"
+    className: "h-full flex flex-col overflow-hidden gap-2 sm:gap-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2"
+    className: "shrink-0 atelier-card rounded-[24px] p-2.5 sm:p-3 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar"
+    className: "flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSection('suppliers'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'suppliers' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "🏢 ", lang === 'uz' ? "Ta'minotchi" : 'Поставщики', " (", suppliers.length, ")"), /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${section === 'suppliers' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "truck",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Ta'minotchi" : 'Поставщики', " (", suppliers.length, ")")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSection('invoices'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'invoices' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "📦 ", lang === 'uz' ? 'Faktura' : 'Накладные', " (", invoices.length, ")"), /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${section === 'invoices' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "box",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Faktura' : 'Накладные', " (", invoices.length, ")")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSection('expenses'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'expenses' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "💸 ", lang === 'uz' ? 'Xarajat' : 'Расходы', " (", expenses.length, ")"))), /*#__PURE__*/React.createElement("div", {
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${section === 'expenses' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "receipt",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Xarajat' : 'Расходы', " (", expenses.length, ")")))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-1.5"
-  }, section === 'suppliers' && /*#__PURE__*/React.createElement("input", {
+  }, section === 'suppliers' && /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex items-center atelier-input rounded-2xl px-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "atelier-text-muted mr-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "search",
+    size: 14
+  })), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    placeholder: lang === 'uz' ? "🔍 Qidiruv..." : "🔍 Поиск...",
+    placeholder: lang === 'uz' ? "Qidiruv..." : "Поиск...",
     value: searchSupplier,
     onChange: e => setSearchSupplier(e.target.value),
-    className: "flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs"
-  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0 bg-transparent py-2 text-xs focus:outline-none"
+  })), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5 ml-auto shrink-0"
   }, section !== 'expenses' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateSupplierModalOpen(true),
-    className: "px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold"
-  }, "+🏢"), /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-2 rounded-full atelier-btn-soft text-xs font-semibold flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Ta'minotchi" : "Поставщик")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setOcrInvoiceOpen(true),
-    className: "px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold"
-  }, "📸 OCR"), /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-2 rounded-full atelier-btn-soft text-xs font-semibold flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "camera",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, "OCR")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateInvoiceModalOpen(true),
-    className: "px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold"
-  }, "➕ ", lang === 'uz' ? 'Faktura' : 'Приход')) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    className: "px-3.5 py-2 rounded-full atelier-btn-cta text-xs font-bold flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Faktura' : 'Приход'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setIsSpoilageMode(true);
       setCreateExpenseOpen(true);
     },
-    className: "px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 text-xs font-bold"
-  }, "⚠️ ", lang === 'uz' ? 'Spisanie' : 'Списание'), /*#__PURE__*/React.createElement("button", {
+    style: {
+      backgroundColor: 'var(--danger-bg)',
+      color: 'var(--danger-fg)'
+    },
+    className: "px-3 py-2 rounded-full text-xs font-semibold flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "alert",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Spisanie' : 'Списание')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setIsSpoilageMode(false);
       setCreateExpenseOpen(true);
     },
-    className: "px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold"
-  }, "➕ ", lang === 'uz' ? 'Xarajat' : 'Расход'))))), /*#__PURE__*/React.createElement("div", {
+    className: "px-3.5 py-2 rounded-full atelier-btn-cta text-xs font-bold flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Xarajat' : 'Расход')))))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto pr-0.5"
   }, section === 'suppliers' && /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-2"
+    className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pb-2"
   }, filteredSuppliers.map(s => /*#__PURE__*/React.createElement("div", {
     key: s.id,
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col justify-between gap-2"
+    className: "atelier-card rounded-[24px] p-3.5 flex flex-col justify-between gap-2.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-bold text-xs text-slate-900 dark:text-slate-100 truncate"
+    className: "font-bold text-xs truncate"
   }, s.name), s.phone && /*#__PURE__*/React.createElement("a", {
     href: `tel:${s.phone}`,
-    className: "text-[11px] text-emerald-600 font-mono"
-  }, "📞 ", s.phone)), /*#__PURE__*/React.createElement("span", {
-    className: `text-xs font-black font-mono ${s.current_debt > 0 ? 'text-amber-600' : 'text-emerald-600'}`
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "text-[11px] font-nums inline-flex items-center gap-1 mt-0.5 hover:underline"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "phone",
+    size: 11
+  }), /*#__PURE__*/React.createElement("span", null, s.phone))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: s.current_debt > 0 ? 'var(--warm-fg)' : 'var(--accent)'
+    },
+    className: "text-xs font-bold font-nums"
   }, formatMoney(s.current_debt || 0))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800"
+    className: "flex gap-1.5 pt-2 border-t atelier-border"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setReconciliationSupplier(s),
-    className: "flex-1 bg-slate-100 dark:bg-slate-800 py-1.5 rounded-xl text-[11px] font-bold"
-  }, "🧾 ", lang === 'uz' ? 'Sverka' : 'Сверка'), /*#__PURE__*/React.createElement("button", {
+    className: "flex-1 atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "receipt",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Sverka' : 'Сверка')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreateInvoiceModalOpen(true),
-    className: "bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-[11px] font-bold"
-  }, "➕ ", lang === 'uz' ? 'Kirim' : 'Приход'))))), section === 'invoices' && /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800"
+    className: "atelier-btn-cta px-3.5 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "plus",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Kirim' : 'Приход')))))), section === 'invoices' && /*#__PURE__*/React.createElement("div", {
+    className: "atelier-card rounded-[24px] overflow-hidden divide-y atelier-border"
   }, safeArray(invoices).map(inv => /*#__PURE__*/React.createElement("div", {
     key: inv.id,
-    className: "p-3 flex items-center justify-between gap-2 text-xs"
+    className: "p-3.5 flex items-center justify-between gap-2 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold truncate"
-  }, "📦 № ", inv.invoice_number, " • ", inv.supplier_name), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-mono text-slate-500"
+    className: "font-semibold truncate"
+  }, "№ ", inv.invoice_number, " • ", inv.supplier_name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-nums atelier-text-muted mt-0.5"
   }, lang === 'uz' ? 'Jami:' : 'Сумма:', " ", formatMoney(inv.total_amount), " • ", lang === 'uz' ? 'Qarz:' : 'Долг:', " ", /*#__PURE__*/React.createElement("span", {
-    className: inv.debt_to_supplier > 0 ? 'text-amber-600 font-bold' : 'text-emerald-600'
+    style: {
+      color: inv.debt_to_supplier > 0 ? 'var(--warm-fg)' : 'var(--accent)'
+    },
+    className: "font-bold"
   }, formatMoney(inv.debt_to_supplier)))), inv.debt_to_supplier > 0 && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => {
       setSelectedInvoice(inv);
       setPayInvoiceModalOpen(true);
     },
-    className: "px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] shrink-0"
-  }, "💵 ", lang === 'uz' ? "To'lash" : 'Оплата')))), section === 'expenses' && /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800"
+    className: "px-3.5 py-1.5 rounded-full atelier-btn-cta font-bold text-[11px] shrink-0"
+  }, lang === 'uz' ? "To'lash" : 'Оплатить')))), section === 'expenses' && /*#__PURE__*/React.createElement("div", {
+    className: "atelier-card rounded-[24px] overflow-hidden divide-y atelier-border"
   }, safeArray(expenses).map(exp => /*#__PURE__*/React.createElement("div", {
     key: exp.id,
-    className: "p-3 flex items-center justify-between gap-2 text-xs"
+    className: "p-3.5 flex items-center justify-between gap-2 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold flex items-center gap-1.5"
+    className: "font-semibold flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800"
+    className: "px-2 py-0.5 rounded-full text-[10px] atelier-subtle"
   }, expenseCategoryName(exp.category, lang)), /*#__PURE__*/React.createElement("span", {
     className: "truncate"
   }, exp.description)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400 font-mono"
+    className: "text-[11px] atelier-text-muted font-nums mt-0.5"
   }, new Date(exp.expense_date).toLocaleDateString(), " ", exp.product_name ? `• ${exp.product_name} (${exp.spoilage_quantity})` : '')), /*#__PURE__*/React.createElement("div", {
-    className: "font-mono font-bold text-rose-600 shrink-0"
+    style: {
+      color: 'var(--danger-fg)'
+    },
+    className: "font-nums font-bold shrink-0"
   }, "-", formatMoney(exp.amount)))))), createSupplierModalOpen && /*#__PURE__*/React.createElement(CreateSupplierModal, {
     token: token,
     lang: lang,
@@ -8953,53 +9801,71 @@ function AnalyticsScreen({
     }
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3"
+    className: "h-full flex flex-col overflow-hidden gap-2 sm:gap-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2"
+    className: "shrink-0 atelier-card rounded-[24px] p-2.5 sm:p-3 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar"
+    className: "flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubView('finance'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'finance' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "💰 ", lang === 'uz' ? 'Moliya' : 'Финансы'), /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subView === 'finance' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "chart",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Moliya' : 'Финансы')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubView('insights'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'insights' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "🧠 ", lang === 'uz' ? 'AI' : 'AI'), /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subView === 'insights' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "sparkles",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, "AI")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubView('tax'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'tax' ? 'bg-white dark:bg-slate-900 shadow-sm text-indigo-600' : 'text-slate-500'}`
-  }, "🏛️ ", lang === 'uz' ? 'Soliq' : 'Налог'), /*#__PURE__*/React.createElement("button", {
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subView === 'tax' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "shield",
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Soliq' : 'Налог')), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubView('telegram'),
-    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'telegram' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "🤖 TG")), subView === 'tax' && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 shrink-0"
+    className: `px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subView === 'telegram' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`
+  }, /*#__PURE__*/React.createElement("span", null, "TG"))), subView === 'tax' && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: downloadTaxCsv,
-    className: "px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold"
-  }, "📥 CSV"), /*#__PURE__*/React.createElement("button", {
+    className: "px-3 py-1.5 rounded-full atelier-btn-soft text-[11px] font-semibold flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "download",
+    size: 12
+  }), /*#__PURE__*/React.createElement("span", null, "CSV")), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: tgSending,
     onClick: sendTaxToTelegram,
-    className: "px-2 py-1 rounded-xl bg-indigo-600 text-white text-[11px] font-bold"
-  }, "🤖")), subView === 'finance' && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl px-2 py-1 shrink-0"
+    className: "px-3 py-1.5 rounded-full atelier-btn-primary text-[11px] font-semibold"
+  }, "TG")), subView === 'finance' && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 atelier-input rounded-2xl px-2.5 py-1 shrink-0"
   }, /*#__PURE__*/React.createElement("input", {
     type: "date",
     value: selectedDate,
     onChange: e => setSelectedDate(e.target.value),
-    className: "bg-transparent text-[11px] font-bold outline-none"
+    className: "bg-transparent text-[11px] font-semibold outline-none"
   }), selectedDate && /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSelectedDate(''),
-    className: "text-rose-500 text-xs font-bold"
-  }, "✕"))), subView !== 'telegram' && /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1 overflow-x-auto no-scrollbar"
+    style: {
+      color: 'var(--danger-fg)'
+    },
+    className: "text-xs font-bold"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "close",
+    size: 12
+  })))), subView !== 'telegram' && /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5 overflow-x-auto no-scrollbar"
   }, [{
     id: 'today',
     label: t.periodToday
@@ -9022,277 +9888,364 @@ function AnalyticsScreen({
       setSelectedDate('');
       setPeriod(item.id);
     },
-    className: `px-2.5 py-1 rounded-xl text-[11px] font-bold border whitespace-nowrap ${period === item.id && !selectedDate ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`
+    className: `px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition ${period === item.id && !selectedDate ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`
   }, item.label)))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto pr-0.5 space-y-2.5 pb-2"
   }, subView === 'finance' && (loading || !data ? /*#__PURE__*/React.createElement("div", {
-    className: "py-16 text-center text-xs text-slate-400"
+    className: "py-16 text-center text-xs atelier-text-muted"
   }, t.processing) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 lg:grid-cols-4 gap-2"
+    className: "grid grid-cols-2 lg:grid-cols-4 gap-2.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm"
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 font-semibold"
+    className: "text-[11px] atelier-text-muted font-medium"
   }, t.kpiRevenue), /*#__PURE__*/React.createElement("div", {
-    className: "text-lg sm:text-xl font-black text-emerald-600 font-mono mt-0.5"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "text-lg sm:text-xl font-bold font-nums mt-0.5"
   }, formatMoney(data.revenue)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400"
+    className: "text-[11px] atelier-text-muted font-nums mt-0.5"
   }, data.sales_count, " ", t.kpiReceiptsCount, " • ", formatMoney(data.average_receipt))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm"
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 font-semibold"
+    className: "text-[11px] atelier-text-muted font-medium"
   }, t.kpiNetProfit), /*#__PURE__*/React.createElement("div", {
-    className: `text-lg sm:text-xl font-black font-mono mt-0.5 ${data.net_profit >= 0 ? 'text-emerald-600' : 'text-rose-500'}`
+    style: {
+      color: data.net_profit >= 0 ? 'var(--accent)' : 'var(--danger-fg)'
+    },
+    className: "text-lg sm:text-xl font-bold font-nums mt-0.5"
   }, formatMoney(data.net_profit)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400"
+    className: "text-[11px] atelier-text-muted font-nums mt-0.5"
   }, t.kpiMarginPct, " ", data.margin_percentage, "%")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm"
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 font-semibold"
+    className: "text-[11px] atelier-text-muted font-medium"
   }, t.kpiCogs), /*#__PURE__*/React.createElement("div", {
-    className: "text-base sm:text-lg font-black font-mono mt-0.5"
+    className: "text-base sm:text-lg font-bold font-nums mt-0.5"
   }, formatMoney(data.cogs)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-cyan-600 font-bold"
+    className: "text-[11px] atelier-text-muted font-nums mt-0.5"
   }, t.kpiGrossMargin, ": ", formatMoney(data.gross_margin))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm"
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 font-semibold"
+    className: "text-[11px] atelier-text-muted font-medium"
   }, t.kpiCustomerDebt), /*#__PURE__*/React.createElement("div", {
-    className: "text-base sm:text-lg font-black text-amber-600 font-mono mt-0.5"
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "text-base sm:text-lg font-bold font-nums mt-0.5"
   }, formatMoney(data.customer_debt_outstanding)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-rose-500 font-bold"
-  }, "⚠️ ", data.low_stock_count, " ", lang === 'uz' ? 'kam tovar' : 'мало на скл.'))), !selectedDate && (period === 'week' || period === 'month') && data.daily_breakdown?.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm"
+    style: {
+      color: 'var(--danger-fg)'
+    },
+    className: "text-[11px] font-semibold mt-0.5"
+  }, data.low_stock_count, " ", lang === 'uz' ? 'kam tovar' : 'мало на складе'))), !selectedDate && (period === 'week' || period === 'month') && data.daily_breakdown?.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-bold text-xs mb-2"
-  }, "📅 ", lang === 'uz' ? 'Kunlik hisobot (bosing)' : 'По дням'), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1.5 overflow-x-auto no-scrollbar pb-1"
+  }, lang === 'uz' ? 'Kunlik hisobot (bosing)' : 'По дням (нажмите для деталей)'), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 overflow-x-auto no-scrollbar pb-1"
   }, safeArray(data.daily_breakdown).map(day => /*#__PURE__*/React.createElement("button", {
     key: day.date,
     type: "button",
     onClick: () => setViewingDayDetails(day.date),
-    className: "shrink-0 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-left min-w-[105px]"
+    className: "shrink-0 p-2.5 rounded-2xl atelier-subtle text-left min-w-[110px] hover:opacity-90"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-bold text-slate-500"
+    className: "text-[11px] font-semibold atelier-text-muted font-nums"
   }, day.date.slice(5), " (", day.sales_count, ")"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs font-black font-mono text-emerald-600"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "text-xs font-bold font-nums mt-0.5"
   }, formatMoney(day.revenue)))))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-2 gap-2"
+    className: "grid grid-cols-1 md:grid-cols-2 gap-2.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5 text-xs"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2 text-xs"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-bold"
   }, t.paymentsBreakdownTitle), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"
-  }, /*#__PURE__*/React.createElement("span", null, "💵 ", t.methodCash), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono font-bold text-emerald-600"
+    className: "flex justify-between p-2.5 rounded-2xl atelier-subtle"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "cash",
+    size: 14
+  }), t.methodCash), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "font-nums font-bold"
   }, formatMoney(data.cash_total))), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"
-  }, /*#__PURE__*/React.createElement("span", null, "💳 ", t.methodCard), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono font-bold text-cyan-600"
+    className: "flex justify-between p-2.5 rounded-2xl atelier-subtle"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "card",
+    size: 14
+  }), t.methodCard), /*#__PURE__*/React.createElement("span", {
+    className: "font-nums font-bold"
   }, formatMoney(data.card_total))), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"
-  }, /*#__PURE__*/React.createElement("span", null, "📓 ", t.methodDebt), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono font-bold text-amber-600"
+    className: "flex justify-between p-2.5 rounded-2xl atelier-subtle"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "debts",
+    size: 14
+  }), t.methodDebt), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "font-nums font-bold"
   }, formatMoney(data.debt_total)))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5 text-xs"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2 text-xs"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-bold"
   }, t.topSellingTitle), safeArray(data?.top_selling_products).length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "text-slate-400 py-3 text-center"
+    className: "atelier-text-muted py-4 text-center"
   }, lang === 'uz' ? "Savdolar yo'q" : 'Нет продаж') : safeArray(data?.top_selling_products).map((item, idx) => /*#__PURE__*/React.createElement("div", {
     key: item.product_id,
-    className: "flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"
+    className: "flex justify-between p-2.5 rounded-2xl atelier-subtle"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-medium truncate pr-2"
   }, idx + 1, ". ", item.name), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono font-bold text-emerald-600 shrink-0"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "font-nums font-bold shrink-0"
   }, item.quantity_sold, " • ", formatMoney(item.revenue)))))))), subView === 'insights' && (loading || !insights ? /*#__PURE__*/React.createElement("div", {
-    className: "py-16 text-center text-xs text-slate-400"
+    className: "py-16 text-center text-xs atelier-text-muted"
   }, t.processing) : /*#__PURE__*/React.createElement("div", {
     className: "space-y-2.5 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-bold"
-  }, "🧠 ", lang === 'uz' ? "Do'kon egasiga AI tavsiyalar" : 'AI Рекомендации владельцу'), safeArray(insights.owner_recommendations).map((rec, i) => /*#__PURE__*/React.createElement("div", {
+    className: "font-bold flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "sparkles",
+    size: 15
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? "Do'kon egasiga AI tavsiyalar" : 'Рекомендации по магазину')), safeArray(insights.owner_recommendations).map((rec, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
-    className: "p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800"
+    className: "p-3 rounded-2xl atelier-subtle"
   }, rec))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-2 gap-2"
+    className: "grid grid-cols-1 md:grid-cols-2 gap-2.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-bold text-rose-600"
-  }, "⚠️ ", lang === 'uz' ? 'Tez tugayotgan (Zakaz)' : 'Срочный закуп', " (", safeArray(insights.low_stock_items).length, ")"), safeArray(insights.low_stock_items).slice(0, 8).map(it => /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: 'var(--danger-fg)'
+    },
+    className: "font-bold"
+  }, lang === 'uz' ? 'Tez tugayotgan (Zakaz)' : 'Срочный закуп', " (", safeArray(insights.low_stock_items).length, ")"), safeArray(insights.low_stock_items).slice(0, 8).map(it => /*#__PURE__*/React.createElement("div", {
     key: it.id,
-    className: "flex justify-between p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40"
+    className: "flex justify-between p-2 rounded-xl atelier-subtle"
   }, /*#__PURE__*/React.createElement("span", {
     className: "truncate"
   }, it.name), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono font-bold text-rose-500"
+    style: {
+      color: 'var(--danger-fg)'
+    },
+    className: "font-nums font-bold"
   }, it.stock_quantity, " ", it.unit)))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-bold text-amber-600"
-  }, "🐢 ", lang === 'uz' ? 'Sekin aylanayotgan tovarlar' : 'Неликвид / Медленный сбыт', " (", safeArray(insights.slow_turnover_items).length, ")"), safeArray(insights.slow_turnover_items).slice(0, 8).map(it => /*#__PURE__*/React.createElement("div", {
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "font-bold"
+  }, lang === 'uz' ? 'Sekin aylanayotgan tovarlar' : 'Медленный сбыт', " (", safeArray(insights.slow_turnover_items).length, ")"), safeArray(insights.slow_turnover_items).slice(0, 8).map(it => /*#__PURE__*/React.createElement("div", {
     key: it.id,
-    className: "flex justify-between p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40"
+    className: "flex justify-between p-2 rounded-xl atelier-subtle"
   }, /*#__PURE__*/React.createElement("span", {
     className: "truncate"
   }, it.name), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono text-slate-500"
+    className: "font-nums atelier-text-muted"
   }, it.stock_quantity, " ", it.unit))))))), subView === 'tax' && (loading || !taxReport ? /*#__PURE__*/React.createElement("div", {
-    className: "py-16 text-center text-xs text-slate-400"
+    className: "py-16 text-center text-xs atelier-text-muted"
   }, t.processing) : /*#__PURE__*/React.createElement("div", {
     className: "space-y-2.5 text-xs"
   }, safeArray(taxReport.compliance_checklist).length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5"
+    className: "atelier-card rounded-[24px] p-3"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5"
-  }, "🛡️ ", lang === 'uz' ? 'Soliq va Asl Belgisi tayyorlik tekshiruvi (100%)' : 'Чек-лист соответствия закону РУз (ПКМ №943 / №631)'), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-semibold atelier-text-muted mb-2 flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "shield",
+    size: 14
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Soliq va Asl Belgisi tayyorlik tekshiruvi' : 'Чек-лист соответствия закону РУз (ПКМ №943 / №631)')), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5"
   }, safeArray(taxReport.compliance_checklist).map(chk => /*#__PURE__*/React.createElement("div", {
     key: chk.key,
-    className: `flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border text-[11px] ${chk.ok ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'}`
+    style: {
+      backgroundColor: chk.ok ? 'var(--accent-soft)' : 'var(--warm-bg)',
+      color: chk.ok ? 'var(--accent-soft-fg)' : 'var(--warm-fg)'
+    },
+    className: "flex items-center justify-between gap-2 px-3 py-2 rounded-2xl text-[11px]"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold truncate"
-  }, chk.ok ? '✅' : '⚠️', " ", lang === 'uz' ? chk.label_uz : chk.label_ru), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono text-[10px] shrink-0 opacity-85"
+    className: "font-semibold truncate flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: chk.ok ? 'check' : 'alert',
+    size: 13
+  }), /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? chk.label_uz : chk.label_ru)), /*#__PURE__*/React.createElement("span", {
+    className: "font-nums text-[10px] shrink-0 opacity-85"
   }, chk.detail))))), safeArray(taxReport.warnings).length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "space-y-1.5"
   }, safeArray(taxReport.warnings).map((w, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
-    className: `p-2.5 rounded-2xl border ${w.level === 'danger' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 text-rose-800 dark:text-rose-200' : w.level === 'warn' ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 text-amber-900 dark:text-amber-200' : 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 text-indigo-900 dark:text-indigo-200'}`
+    style: {
+      backgroundColor: w.level === 'danger' ? 'var(--danger-bg)' : w.level === 'warn' ? 'var(--warm-bg)' : 'var(--accent-soft)',
+      color: w.level === 'danger' ? 'var(--danger-fg)' : w.level === 'warn' ? 'var(--warm-fg)' : 'var(--accent-soft-fg)'
+    },
+    className: "p-3 rounded-2xl border atelier-border"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-bold"
   }, lang === 'uz' ? w.title_uz : w.title_ru), /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] opacity-90 mt-0.5"
   }, lang === 'uz' ? w.detail_uz : w.detail_ru)))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 lg:grid-cols-4 gap-2"
+    className: "grid grid-cols-2 lg:grid-cols-4 gap-2.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3"
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 font-semibold"
+    className: "text-[11px] atelier-text-muted font-medium"
   }, lang === 'uz' ? 'Soliq bazasi (Sof savdo)' : 'Налоговая база'), /*#__PURE__*/React.createElement("div", {
-    className: "text-base sm:text-lg font-black font-mono text-emerald-600 mt-0.5"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "text-base sm:text-lg font-bold font-nums mt-0.5"
   }, formatMoney(taxReport.summary.net_taxable_revenue)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400"
+    className: "text-[11px] atelier-text-muted font-nums"
   }, taxReport.summary.receipts_count, " ", lang === 'uz' ? 'chek' : 'чеков', " • -", formatMoney(taxReport.summary.refunds_total), " ", lang === 'uz' ? 'qaytarish' : 'возвр.')), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3"
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-indigo-600 dark:text-indigo-400 font-bold"
-  }, "💰 ", lang === 'uz' ? 'Hisoblangan soliq' : 'К уплате налог', " (", taxReport.summary.tax_rate_percent, "%)"), /*#__PURE__*/React.createElement("div", {
-    className: "text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-0.5"
+    className: "text-[11px] atelier-text-muted font-medium"
+  }, lang === 'uz' ? 'Hisoblangan soliq' : 'К уплате налог', " (", taxReport.summary.tax_rate_percent, "%)"), /*#__PURE__*/React.createElement("div", {
+    className: "text-base sm:text-lg font-bold font-nums mt-0.5"
   }, formatMoney(taxReport.summary.estimated_tax_due)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400"
-  }, lang === 'uz' ? `Topshirish: oyning ${taxReport.summary.filing_deadline_day}-sanasi` : `Срок сдачи: до ${taxReport.summary.filing_deadline_day}-го`)), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3"
+    className: "text-[11px] atelier-text-muted"
+  }, lang === 'uz' ? `Topshirish: ${taxReport.summary.filing_deadline_day}-sanagacha` : `Срок сдачи: до ${taxReport.summary.filing_deadline_day}-го`)), /*#__PURE__*/React.createElement("div", {
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 font-semibold"
-  }, "🏛️ IKPU & ", lang === 'uz' ? 'Qadoq' : 'Упаковка'), /*#__PURE__*/React.createElement("div", {
-    className: "text-base sm:text-lg font-black font-mono mt-0.5"
+    className: "text-[11px] atelier-text-muted font-medium"
+  }, "IKPU & ", lang === 'uz' ? 'Qadoq' : 'Упаковка'), /*#__PURE__*/React.createElement("div", {
+    className: "text-base sm:text-lg font-bold font-nums mt-0.5"
   }, taxReport.catalog_compliance.with_valid_ikpu, " / ", taxReport.catalog_compliance.total_active_sku), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-amber-600 font-bold"
-  }, taxReport.catalog_compliance.missing_ikpu_count, " ", lang === 'uz' ? 'IKPUsiz' : 'без ИКПУ', " • 📦 ", taxReport.catalog_compliance.with_package_code ?? 0)), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3"
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "text-[11px] font-semibold"
+  }, taxReport.catalog_compliance.missing_ikpu_count, " ", lang === 'uz' ? 'IKPUsiz' : 'без ИКПУ', " • Qadoq ", taxReport.catalog_compliance.with_package_code ?? 0)), /*#__PURE__*/React.createElement("div", {
+    className: "atelier-card rounded-[24px] p-3.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-500 font-semibold"
-  }, "🏷️ ", lang === 'uz' ? 'Markirovka (Asl Belgisi)' : 'Маркировка (DataMatrix)'), /*#__PURE__*/React.createElement("div", {
-    className: "text-base sm:text-lg font-black font-mono mt-0.5"
+    className: "text-[11px] atelier-text-muted font-medium"
+  }, lang === 'uz' ? 'Markirovka (Asl Belgisi)' : 'Маркировка (DataMatrix)'), /*#__PURE__*/React.createElement("div", {
+    className: "text-base sm:text-lg font-bold font-nums mt-0.5"
   }, taxReport.tobacco_and_marking.tobacco_units_sold, " ", lang === 'uz' ? 'dona' : 'шт/пач'), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-bold text-emerald-600"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "text-[11px] font-semibold font-nums"
   }, taxReport.tobacco_and_marking.datamatrix_coverage_pct, "% DM • ", formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)))), safeArray(taxReport.catalog_compliance.missing_ikpu_sample).length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-2xl p-2.5 space-y-1"
+    className: "atelier-card rounded-[24px] p-3 space-y-1.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-bold text-amber-800 dark:text-amber-300"
-  }, "⚠️ ", lang === 'uz' ? "IKPU (17 raqam) kiritilmagan tovarlar (223-modda 1% jarima xavfi):" : "Товары без 17-значного ИКПУ (риск штрафа 1% по ст. 223 НК):"), /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-wrap gap-1"
+    style: {
+      color: 'var(--warm-fg)'
+    },
+    className: "text-[11px] font-semibold"
+  }, lang === 'uz' ? "IKPU (17 raqam) kiritilmagan tovarlar (223-modda 1% jarima xavfi):" : "Товары без 17-значного ИКПУ (риск штрафа 1% по ст. 223 НК):"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
   }, safeArray(taxReport.catalog_compliance.missing_ikpu_sample).map(p => /*#__PURE__*/React.createElement("span", {
     key: p.id,
-    className: "px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[10px] font-medium"
+    className: "px-2.5 py-1 rounded-full atelier-subtle text-[10px] font-medium"
   }, p.name, " (", p.barcode, ")")))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-bold"
-  }, "🏷️ ", lang === 'uz' ? 'Asl Belgisi DataMatrix (Tamaki • Suv • Ichimlik • Pivo)' : 'Маркировка Asl Belgisi (Табак • Вода • Напитки • Пиво)'), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-mono text-slate-400"
+  }, lang === 'uz' ? 'Asl Belgisi DataMatrix (Tamaki • Suv • Ichimlik • Pivo)' : 'Маркировка Asl Belgisi (Табак • Вода • Напитки • Пиво)'), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-nums atelier-text-muted"
   }, "DM ✓ ", taxReport.tobacco_and_marking.marked_with_datamatrix_count, " / ✗ ", taxReport.tobacco_and_marking.missing_datamatrix_count)), safeArray(taxReport.tobacco_and_marking.marking_ledger).length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "text-center py-4 text-slate-400"
+    className: "text-center py-4 atelier-text-muted"
   }, lang === 'uz' ? "Tanlangan davrda markirovkali tovar sotuvi yo'q" : 'За период продаж маркированных товаров нет') : /*#__PURE__*/React.createElement("div", {
-    className: "divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto"
+    className: "divide-y atelier-border max-h-60 overflow-y-auto"
   }, safeArray(taxReport.tobacco_and_marking.marking_ledger).slice(0, 50).map((m, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
-    className: "py-1.5 flex items-center justify-between gap-2"
+    className: "py-2 flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold truncate"
-  }, m.product_name, " ", m.is_returned ? '↩️' : '', m.marking_group_label && /*#__PURE__*/React.createElement("span", {
-    className: "ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"
+    className: "font-semibold truncate"
+  }, m.product_name, " ", m.is_returned ? '↩' : '', m.marking_group_label && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1.5 text-[10px] px-2 py-0.5 rounded-full atelier-subtle font-semibold"
   }, m.marking_group_label)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-mono text-slate-400 truncate"
-  }, m.sold_at, " • ", m.receipt_number, " • ", m.has_datamatrix ? `DM: ${m.masked_code}` : '⚠️ БЕЗ DATAMATRIX')), /*#__PURE__*/React.createElement("div", {
-    className: "text-right font-mono shrink-0"
+    className: "text-[11px] font-nums atelier-text-muted truncate"
+  }, m.sold_at, " • ", m.receipt_number, " • ", m.has_datamatrix ? `DM: ${m.masked_code}` : 'БЕЗ DATAMATRIX')), /*#__PURE__*/React.createElement("div", {
+    className: "text-right font-nums shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-emerald-600"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "font-bold"
   }, formatMoney(m.total_price)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400"
+    className: "text-[10px] atelier-text-muted"
   }, m.quantity, " sht")))))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-bold"
-  }, "🧾 ", lang === 'uz' ? 'IKPU (MXIK) bo‘yicha sotuvlar' : 'Продажи в разрезе ИКПУ (MXIK)'), safeArray(taxReport.ikpu_breakdown).length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "text-center py-4 text-slate-400"
+  }, lang === 'uz' ? 'IKPU (MXIK) bo‘yicha sotuvlar' : 'Продажи в разрезе ИКПУ (MXIK)'), safeArray(taxReport.ikpu_breakdown).length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-4 atelier-text-muted"
   }, lang === 'uz' ? "Sotuvlar yo'q" : 'Продаж за период нет') : /*#__PURE__*/React.createElement("div", {
-    className: "divide-y divide-slate-100 dark:divide-slate-800 max-h-56 overflow-y-auto"
+    className: "divide-y atelier-border max-h-56 overflow-y-auto"
   }, safeArray(taxReport.ikpu_breakdown).map((row, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
-    className: "py-1.5 flex items-center justify-between gap-2"
+    className: "py-2 flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-mono font-bold text-[11px]"
-  }, row.ikpu_code || '⚠️ BEZ IKPU', " ", row.is_tobacco ? '🚬' : ''), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-500 truncate"
+    className: "font-nums font-bold text-[11px]"
+  }, row.ikpu_code || 'BEZ IKPU'), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] atelier-text-muted truncate"
   }, row.sample_name, " (", row.quantity_sold, " poz)")), /*#__PURE__*/React.createElement("div", {
-    className: "text-right font-mono shrink-0"
+    className: "text-right font-nums shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold text-emerald-600"
+    style: {
+      color: 'var(--accent)'
+    },
+    className: "font-bold"
   }, formatMoney(row.net_revenue)), row.vat_amount > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400"
+    className: "text-[10px] atelier-text-muted"
   }, "QQS: ", formatMoney(row.vat_amount))))))))), subView === 'telegram' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-2.5 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-bold"
-  }, "🤖 Telegram Bot Hisobotlar"), /*#__PURE__*/React.createElement("span", {
-    className: `px-2 py-0.5 rounded-full text-[10px] font-bold ${tgStatus?.configured ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`
-  }, tgStatus?.configured ? '🟢 Ulangan' : '🟡 Sozlanmagan')), /*#__PURE__*/React.createElement("div", {
+  }, "Telegram Bot Hisobotlar"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      backgroundColor: tgStatus?.configured ? 'var(--accent-soft)' : 'var(--warm-bg)',
+      color: tgStatus?.configured ? 'var(--accent-soft-fg)' : 'var(--warm-fg)'
+    },
+    className: "px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+  }, tgStatus?.configured ? lang === 'uz' ? 'Ulangan' : 'Подключён' : lang === 'uz' ? 'Sozlanmagan' : 'Не настроен')), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 sm:grid-cols-3 gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: tgSending,
     onClick: () => triggerTgAction('test-send'),
-    className: "py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold"
-  }, "🧪 Test xabar"), /*#__PURE__*/React.createElement("button", {
+    className: "py-2.5 rounded-2xl atelier-btn-soft font-semibold"
+  }, "Test xabar"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: tgSending,
     onClick: () => triggerTgAction('z-report'),
-    className: "py-2.5 rounded-xl bg-emerald-600 text-white font-bold"
-  }, "📊 Z-Hisobot yuborish"), /*#__PURE__*/React.createElement("button", {
+    className: "py-2.5 rounded-2xl atelier-btn-cta font-bold"
+  }, "Z-Hisobot yuborish"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: tgSending,
     onClick: () => triggerTgAction('alert-low-stock'),
-    className: "py-2.5 rounded-xl bg-amber-600 text-white font-bold"
-  }, "⚠️ Kam qoldiq alert"))), /*#__PURE__*/React.createElement("form", {
+    className: "py-2.5 rounded-2xl atelier-btn-primary font-semibold"
+  }, "Kam qoldiq alert"))), /*#__PURE__*/React.createElement("form", {
     onSubmit: saveTgSettings,
-    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"
+    className: "atelier-card rounded-[24px] p-3.5 space-y-2.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-bold"
   }, lang === 'uz' ? 'Bot sozlamalarini ulash:' : 'Настройка Telegram бота:'), /*#__PURE__*/React.createElement("input", {
@@ -9301,7 +10254,7 @@ function AnalyticsScreen({
     placeholder: "Bot Token (123456:ABC...)",
     value: tgToken,
     onChange: e => setTgToken(e.target.value),
-    className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs"
+    className: "w-full atelier-input rounded-2xl px-3.5 py-2.5 font-nums text-xs"
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("input", {
@@ -9310,11 +10263,11 @@ function AnalyticsScreen({
     placeholder: "Owner Chat ID (masalan: 123456789)",
     value: tgChatId,
     onChange: e => setTgChatId(e.target.value),
-    className: "flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs"
+    className: "flex-1 atelier-input rounded-2xl px-3.5 py-2.5 font-nums text-xs"
   }), /*#__PURE__*/React.createElement("button", {
     type: "submit",
     disabled: tgSending,
-    className: "px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold"
+    className: "px-5 py-2.5 rounded-2xl atelier-btn-primary font-semibold"
   }, tgSending ? '...' : 'Saqlash'))))), viewingDayDetails && /*#__PURE__*/React.createElement(DayDetailsModal, {
     dateStr: viewingDayDetails,
     token: token,

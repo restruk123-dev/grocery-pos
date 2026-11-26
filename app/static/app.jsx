@@ -642,6 +642,64 @@ function checkOverdueStatus(dueDateStr, balance, lang = "uz") {
   return null;
 }
 
+// ------------------- MINIMAL VECTOR ICON SET -------------------
+function Icon({ name, size = 16, className = "" }) {
+  const s = size;
+  const props = {
+    width: s,
+    height: s,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.9,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    className: `shrink-0 ${className}`
+  };
+  switch (name) {
+    case 'bag': return <svg {...props}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>;
+    case 'pos': return <svg {...props}><rect width="18" height="14" x="3" y="5" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+    case 'debts': return <svg {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+    case 'box': return <svg {...props}><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>;
+    case 'truck': return <svg {...props}><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>;
+    case 'chart': return <svg {...props}><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>;
+    case 'scan': return <svg {...props}><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>;
+    case 'search': return <svg {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
+    case 'mic': return <svg {...props}><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>;
+    case 'tag': return <svg {...props}><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>;
+    case 'receipt': return <svg {...props}><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17V7"/></svg>;
+    case 'pause': return <svg {...props}><rect width="4" height="14" x="6" y="5" rx="1"/><rect width="4" height="14" x="14" y="5" rx="1"/></svg>;
+    case 'folder': return <svg {...props}><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>;
+    case 'trash': return <svg {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>;
+    case 'settings': return <svg {...props}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>;
+    case 'sun': return <svg {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>;
+    case 'moon': return <svg {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>;
+    case 'soundOn': return <svg {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>;
+    case 'soundOff': return <svg {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>;
+    case 'cash': return <svg {...props}><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>;
+    case 'split': return <svg {...props}><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg>;
+    case 'plus': return <svg {...props}><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
+    case 'minus': return <svg {...props}><path d="M5 12h14"/></svg>;
+    case 'close': return <svg {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+    case 'check': return <svg {...props}><path d="M20 6 9 17l-5-5"/></svg>;
+    case 'arrowRight': return <svg {...props}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
+    case 'user': return <svg {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+    case 'camera': return <svg {...props}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>;
+    case 'printer': return <svg {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>;
+    case 'shield': return <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>;
+    case 'phone': return <svg {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>;
+    case 'edit': return <svg {...props}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>;
+    case 'bell': return <svg {...props}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
+    case 'history': return <svg {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>;
+    case 'download': return <svg {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+    case 'upload': return <svg {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+    case 'alert': return <svg {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+    case 'bolt': return <svg {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+    case 'sparkles': return <svg {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>;
+    default: return <svg {...props}><circle cx="12" cy="12" r="9"/></svg>;
+  }
+}
+
 // ------------------- UNIFIED SETTINGS MODAL -------------------
 function SettingsModal({
   token,
@@ -844,40 +902,48 @@ function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl text-slate-800 dark:text-slate-100 modal-mobile-safe">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">⚙️</span>
+    <div className="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-2.5 sm:p-4 backdrop-blur-md">
+      <div className="atelier-modal rounded-[28px] w-full max-w-lg p-4 sm:p-5 modal-mobile-safe">
+        <div className="flex items-center justify-between pb-3 border-b atelier-border mb-3 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl atelier-subtle flex items-center justify-center">
+              <Icon name="settings" size={18} />
+            </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-                {lang === "uz" ? "Tizim sozlamalari" : "Настройки системы"}
+              <h3 className="font-bold text-base">
+                {lang === "uz" ? "Tizim sozlamalari" : "Настройки"}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs atelier-text-muted">
                 {user?.full_name || user?.username} ({user?.role === 'owner' ? t.ownerRole : t.cashierRole})
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg p-1">✕</button>
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="close" size={16} /></button>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 text-xs">
           {/* Language & Theme + Sound */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-2">🌐 {lang === "uz" ? "Til" : "Язык"}</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="p-3 atelier-subtle rounded-2xl">
+              <label className="font-semibold atelier-text-muted block mb-2">{lang === "uz" ? "Til / Язык" : "Язык интерфейса"}</label>
               <div className="grid grid-cols-2 gap-1.5">
-                <button type="button" onClick={() => onLangChange("uz")} className={`py-2 rounded-xl font-bold transition ${lang === "uz" ? "bg-emerald-600 text-white shadow-sm" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`}>🇺🇿 O'zbek</button>
-                <button type="button" onClick={() => onLangChange("ru")} className={`py-2 rounded-xl font-bold transition ${lang === "ru" ? "bg-emerald-600 text-white shadow-sm" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`}>🇷🇺 Русский</button>
+                <button type="button" onClick={() => onLangChange("uz")} className={`py-2 rounded-xl font-semibold transition ${lang === "uz" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`}>O'zbekcha</button>
+                <button type="button" onClick={() => onLangChange("ru")} className={`py-2 rounded-xl font-semibold transition ${lang === "ru" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`}>Русский</button>
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-2">🌓 {lang === "uz" ? "Mavzu va Ovoz" : "Тема и Звук"}</label>
+            <div className="p-3 atelier-subtle rounded-2xl">
+              <label className="font-semibold atelier-text-muted block mb-2">{lang === "uz" ? "Mavzu va Ovoz" : "Оформление и звук"}</label>
               <div className="grid grid-cols-3 gap-1.5">
-                <button type="button" onClick={() => onToggleTheme("light")} className={`py-2 rounded-xl font-bold transition ${theme === "light" ? "bg-amber-500 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`}>☀️</button>
-                <button type="button" onClick={() => onToggleTheme("dark")} className={`py-2 rounded-xl font-bold transition ${theme === "dark" ? "bg-indigo-600 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"}`}>🌙</button>
-                <button type="button" onClick={onToggleSound} className={`py-2 rounded-xl font-bold transition ${soundEnabled ? "bg-emerald-600 text-white" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400"}`} title={lang === "uz" ? "Tovush signallari" : "Звуковые сигналы"}>{soundEnabled ? '🔊' : '🔇'}</button>
+                <button type="button" onClick={() => onToggleTheme("light")} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "light" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`} title="Alabaster (День)">
+                  <Icon name="sun" size={14} /><span>{lang === "uz" ? "Kun" : "День"}</span>
+                </button>
+                <button type="button" onClick={() => onToggleTheme("dark")} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center gap-1 ${theme === "dark" ? "atelier-btn-primary shadow-sm" : "atelier-card"}`} title="Espresso (Ночь)">
+                  <Icon name="moon" size={14} /><span>{lang === "uz" ? "Tun" : "Ночь"}</span>
+                </button>
+                <button type="button" onClick={onToggleSound} className={`py-2 rounded-xl font-semibold transition flex items-center justify-center ${soundEnabled ? "atelier-btn-cta" : "atelier-card atelier-text-muted"}`} title={lang === "uz" ? "Tovush signallari" : "Звуковые сигналы"}>
+                  <Icon name={soundEnabled ? 'soundOn' : 'soundOff'} size={15} />
+                </button>
               </div>
             </div>
           </div>
@@ -1682,12 +1748,15 @@ function App() {
 
   useEffect(() => {
     const root = document.documentElement;
+    const meta = document.getElementById('meta-theme-color');
     if (theme === 'light') {
       root.classList.remove('dark');
       root.classList.add('light');
+      if (meta) meta.setAttribute('content', '#F6F4EF');
     } else {
       root.classList.remove('light');
       root.classList.add('dark');
+      if (meta) meta.setAttribute('content', '#11100E');
     }
     localStorage.setItem('pos_theme', theme);
   }, [theme]);
@@ -1742,27 +1811,30 @@ function App() {
 
   const isOwner = user.role === 'owner';
   const navTabs = [
-    { id: 'pos', icon: '🛒', label: lang === 'uz' ? 'Kassa' : 'Касса' },
-    { id: 'debts', icon: '📓', label: lang === 'uz' ? 'Qarzlar' : 'Долги' },
-    { id: 'catalog', icon: '📦', label: lang === 'uz' ? 'Tovarlar' : 'Склад' },
+    { id: 'pos', icon: 'pos', label: lang === 'uz' ? 'Kassa' : 'Касса' },
+    { id: 'debts', icon: 'debts', label: lang === 'uz' ? 'Qarzlar' : 'Долги' },
+    { id: 'catalog', icon: 'box', label: lang === 'uz' ? 'Tovarlar' : 'Товары' },
     ...(isOwner ? [
-      { id: 'suppliers', icon: '🚚', label: lang === 'uz' ? 'Kirim' : 'Приход' },
-      { id: 'analytics', icon: '📊', label: lang === 'uz' ? 'Hisobot' : 'Отчет' },
+      { id: 'suppliers', icon: 'truck', label: lang === 'uz' ? 'Kirim' : 'Приход' },
+      { id: 'analytics', icon: 'chart', label: lang === 'uz' ? 'Hisobot' : 'Отчёты' },
     ] : []),
   ];
 
   return (
-    <div className="app-viewport bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
+    <div className="app-viewport atelier-app transition-colors duration-200">
       {/* Toast Notification */}
       {notification && (
         <div
-          className={`fixed top-12 right-3 left-3 sm:left-auto sm:max-w-sm z-50 px-3.5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2 border text-xs font-semibold ${
-            notification.type === 'error'
-              ? 'bg-rose-100 border-rose-300 text-rose-800 dark:bg-rose-950/95 dark:border-rose-600 dark:text-rose-200'
-              : 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/95 dark:border-emerald-600 dark:text-emerald-200'
-          }`}
+          style={{
+            backgroundColor: notification.type === 'error' ? 'var(--danger-bg)' : 'var(--bg-card)',
+            color: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--text-main)',
+            borderColor: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--border-strong)'
+          }}
+          className="fixed top-14 right-3 left-3 sm:left-auto sm:max-w-sm z-50 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 border text-xs font-semibold"
         >
-          <span>{notification.type === 'error' ? '⚠️' : '✅'}</span>
+          <span style={{ color: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--cta)' }}>
+            <Icon name={notification.type === 'error' ? 'alert' : 'check'} size={16} />
+          </span>
           <span className="truncate">{notification.message}</span>
         </div>
       )}
@@ -1821,80 +1893,98 @@ function App() {
         />
       )}
 
-      {/* Compact Single-Line Header (Fits Smartphone Top Bar Cleanly) */}
-      <header className="shrink-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-2.5 py-1.5">
+      {/* Minimalist Tactile Top Bar */}
+      <header className="shrink-0 z-40 atelier-header px-3 py-2">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-lg shrink-0">🛒</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-xl atelier-btn-primary flex items-center justify-center shrink-0">
+              <Icon name="bag" size={16} />
+            </div>
             <button
               type="button"
               onClick={() => setCashierSwitchOpen(true)}
-              className="text-[11px] font-bold px-2 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 flex items-center gap-1 truncate max-w-[125px] sm:max-w-none"
-              title={lang === 'uz' ? "Smenani almashtirish" : "Смена кассира"}
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-full atelier-btn-soft flex items-center gap-1.5 truncate max-w-[125px] sm:max-w-none"
+              title={lang === 'uz' ? "Kassirni almashtirish" : "Смена кассира"}
             >
-              <span className="truncate">👤 {user ? user.full_name.split(' ')[0] : 'Kassir'}</span>
-              <span className="text-[10px]">🔄</span>
+              <Icon name="user" size={13} />
+              <span className="truncate">{user ? user.full_name.split(' ')[0] : 'Kassir'}</span>
             </button>
             <button
               type="button"
               onClick={() => setShiftModalOpen(true)}
-              className={`text-[11px] font-bold px-2 py-1 rounded-xl border flex items-center gap-1 shrink-0 ${
-                currentShift?.is_open
-                  ? 'bg-emerald-500/10 border-emerald-400/50 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-rose-500/10 border-rose-400/50 text-rose-700 dark:text-rose-300'
-              }`}
+              style={{
+                backgroundColor: currentShift?.is_open ? 'var(--accent-soft)' : 'var(--warm-bg)',
+                color: currentShift?.is_open ? 'var(--accent-soft-fg)' : 'var(--warm-fg)',
+                borderColor: 'var(--border-hair)'
+              }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-full border flex items-center gap-1.5 shrink-0"
               title={lang === 'uz' ? "Kassa smenasi va Z-hisobot" : "Кассовая смена"}
             >
-              <span>{currentShift?.is_open ? '🟢' : '🔴'}</span>
-              <span className="font-mono">{currentShift?.is_open ? formatMoney(currentShift.shift?.expected_cash || 0) : (lang === 'uz' ? 'Smena' : 'Смена')}</span>
+              <span
+                style={{ backgroundColor: currentShift?.is_open ? 'var(--cta)' : 'var(--warm-fg)' }}
+                className="w-2 h-2 rounded-full shrink-0"
+              />
+              <span className="font-nums">
+                {currentShift?.is_open
+                  ? formatMoney(currentShift.shift?.expected_cash || 0)
+                  : (lang === 'uz' ? 'Smena yopiq' : 'Открыть смену')}
+              </span>
             </button>
           </div>
 
-          {/* Desktop inline tabs (hidden on phones - mobile uses Thumb Bottom Bar) */}
-          <nav className="hidden lg:flex items-center gap-1">
+          {/* Desktop Tab Switcher */}
+          <nav className="hidden lg:flex items-center gap-1 p-1 rounded-2xl atelier-subtle">
             {navTabs.map(tab => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
+                    ? 'atelier-btn-primary shadow-sm'
+                    : 'atelier-text-muted hover:opacity-100'
                 }`}
               >
-                <span>{tab.icon}</span>
+                <Icon name={tab.icon} size={15} />
                 <span>{tab.label}</span>
               </button>
             ))}
           </nav>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {canInstall && !(typeof window !== 'undefined' && window.AndroidPOS) && (
               <button
                 type="button"
                 onClick={handleInstallApp}
-                className="px-2 py-1 rounded-xl text-xs font-bold bg-emerald-600 text-white"
+                className="px-2.5 h-8 rounded-full text-xs font-semibold atelier-btn-cta flex items-center gap-1"
                 title={t.installAppBtn}
               >
-                📲
+                <Icon name="download" size={14} />
               </button>
             )}
             <button
               type="button"
+              onClick={toggleTheme}
+              className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"
+              title={theme === 'dark' ? (lang === 'uz' ? "Kunduzgi mavzu" : "Дневная тема") : (lang === 'uz' ? "Tungi mavzu" : "Ночная тема")}
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
+            </button>
+            <button
+              type="button"
               onClick={toggleSound}
-              className="w-8 h-8 rounded-xl text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center"
+              className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"
               title={lang === 'uz' ? "Tovush signallari" : "Звук"}
             >
-              {soundEnabled ? '🔊' : '🔇'}
+              <Icon name={soundEnabled ? 'soundOn' : 'soundOff'} size={15} />
             </button>
             <button
               type="button"
               onClick={() => setSettingsModalOpen(true)}
-              className="px-2.5 h-8 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-1"
+              className="px-3 h-8 rounded-full text-xs font-semibold atelier-btn-soft flex items-center gap-1.5"
               title={lang === "uz" ? "Sozlamalar" : "Настройки"}
             >
-              <span>⚙️</span>
+              <Icon name="settings" size={15} />
               <span className="hidden sm:inline">{lang === "uz" ? "Sozlash" : "Настройки"}</span>
             </button>
           </div>
@@ -1902,7 +1992,7 @@ function App() {
       </header>
 
       {/* Main Content Area: Viewport-Locked Flex Shell */}
-      <main className="app-main-content flex-1 min-h-0 flex flex-col overflow-hidden max-w-7xl w-full mx-auto p-1.5 sm:p-3">
+      <main className="app-main-content flex-1 min-h-0 flex flex-col overflow-hidden max-w-7xl w-full mx-auto p-2 sm:p-3">
         {activeTab === 'pos' && (
           <PosScreen
             token={token}
@@ -1924,9 +2014,9 @@ function App() {
         {activeTab === 'analytics' && isOwner && <AnalyticsScreen token={token} notify={notify} t={t} lang={lang} />}
       </main>
 
-      {/* Mobile Bottom Thumb Navigation Bar (1 Row, Zero Wrapping) */}
-      <nav className="lg:hidden shrink-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 px-1 py-1">
-        <div className="flex items-stretch justify-around gap-0.5">
+      {/* Clean Minimalist Bottom Navigation Bar */}
+      <nav className="lg:hidden shrink-0 z-40 atelier-nav px-2 py-1.5">
+        <div className="flex items-stretch justify-around gap-1">
           {navTabs.map(tab => {
             const active = activeTab === tab.id;
             return (
@@ -1934,14 +2024,14 @@ function App() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 min-w-0 py-1 px-0.5 rounded-xl flex flex-col items-center justify-center gap-0.5 transition ${
+                className={`flex-1 min-w-0 py-1.5 px-1 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition ${
                   active
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'atelier-pill-active font-semibold'
+                    : 'atelier-text-muted'
                 }`}
               >
-                <span className="text-base leading-none">{tab.icon}</span>
-                <span className="text-[10px] font-bold leading-tight truncate max-w-full">{tab.label}</span>
+                <Icon name={tab.icon} size={18} />
+                <span className="text-[11px] leading-tight truncate max-w-full">{tab.label}</span>
               </button>
             );
           })}
@@ -1980,64 +2070,68 @@ function LoginScreen({ onLogin, notify, t, theme, toggleTheme, lang, toggleLang 
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex items-center justify-center p-4 transition-colors duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl transition-colors duration-200">
-        {/* Top Controls: Language and Theme */}
-        <div className="flex justify-between items-center mb-4">
+    <div className="min-h-screen atelier-app flex items-center justify-center p-4 transition-colors duration-200">
+      <div className="w-full max-w-md atelier-card rounded-[32px] p-6 sm:p-8 transition-colors duration-200">
+        {/* Top Pill Controls */}
+        <div className="flex justify-between items-center mb-6">
           <button
+            type="button"
             onClick={toggleLang}
-            className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+            className="px-3 py-1.5 rounded-full text-xs font-semibold atelier-btn-soft"
           >
-            {lang === 'uz' ? "🇺🇿 O'zbek" : '🇷🇺 Русский'}
+            {lang === 'uz' ? "O'zbekcha" : 'Русский'}
           </button>
           <button
+            type="button"
             onClick={toggleTheme}
-            className="p-1.5 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-amber-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+            className="px-3 py-1.5 rounded-full text-xs font-semibold atelier-btn-soft flex items-center gap-1.5"
           >
-            {theme === 'dark' ? '☀️' : '🌙'}
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={14} />
+            <span>{theme === 'dark' ? (lang === 'uz' ? 'Kun' : 'День') : (lang === 'uz' ? 'Tun' : 'Ночь')}</span>
           </button>
         </div>
 
-        <div className="text-center mb-6">
-          <div className="text-5xl mb-2">🛒</div>
-          <h1 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{t.loginTitle}</h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">{t.loginSubtitle}</p>
+        <div className="text-center mb-7">
+          <div className="w-14 h-14 rounded-2xl atelier-btn-primary mx-auto mb-3.5 flex items-center justify-center shadow-sm">
+            <Icon name="bag" size={26} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">{t.loginTitle}</h1>
+          <p className="text-xs sm:text-sm atelier-text-muted mt-1">{t.loginSubtitle}</p>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold atelier-text-muted mb-1.5">
               {t.usernameLabel}
             </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition text-sm"
+              className="w-full atelier-input rounded-2xl px-4 py-3 text-sm font-medium"
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold atelier-text-muted mb-1.5">
               {t.passwordLabel}
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition text-sm"
+              className="w-full atelier-input rounded-2xl px-4 py-3 text-sm font-medium"
               required
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-600/30 transition touch-target text-sm"
+            className="w-full atelier-btn-cta font-bold py-3.5 rounded-2xl shadow-sm touch-target text-sm mt-2"
           >
             {loading ? t.loggingIn : t.loginBtn}
           </button>
         </form>
-
       </div>
     </div>
   );
@@ -4420,73 +4514,82 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg p-4 sm:p-5 shadow-2xl text-slate-800 dark:text-slate-100 modal-mobile-safe">
-        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
-          <div>
-            <h3 className="font-black text-base text-slate-900 dark:text-slate-100">
-              💳 {lang === 'uz' ? "To'lov" : "Оплата"}
-            </h3>
-            <p className="text-xs text-slate-500 font-mono font-bold">
-              {discNum > 0 && <span className="line-through mr-1.5 opacity-60">{formatMoney(total)}</span>}
-              <span className="text-emerald-600 dark:text-emerald-400 text-sm">{formatMoney(finalTotal)}</span>
-            </p>
+    <div className="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-2.5 sm:p-4 backdrop-blur-md">
+      <form onSubmit={handleSubmit} className="atelier-modal rounded-[28px] w-full max-w-lg p-4 sm:p-5 modal-mobile-safe">
+        <div className="flex items-center justify-between pb-3 border-b atelier-border mb-3 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl atelier-subtle flex items-center justify-center">
+              <Icon name="card" size={18} />
+            </div>
+            <div>
+              <h3 className="font-bold text-base">
+                {lang === 'uz' ? "To'lov qabul qilish" : "Приём оплаты"}
+              </h3>
+              <p className="text-xs atelier-text-muted font-nums font-semibold">
+                {discNum > 0 && <span className="line-through mr-1.5 opacity-60">{formatMoney(total)}</span>}
+                <span style={{ color: 'var(--accent)' }} className="text-sm font-bold">{formatMoney(finalTotal)}</span>
+              </p>
+            </div>
           </div>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl p-1">✕</button>
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="close" size={16} /></button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
           {/* Quick Discount / Rounding Bar */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+          <div className="atelier-subtle p-3 rounded-2xl space-y-2">
             <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="font-bold text-slate-700 dark:text-slate-300">🏷️ {lang === 'uz' ? "Chegirma / Yaxlitlash:" : "Скидка / Округление:"}</span>
+              <span className="font-semibold flex items-center gap-1.5">
+                <Icon name="tag" size={14} />
+                <span>{lang === 'uz' ? "Chegirma / Yaxlitlash" : "Скидка / Округлить"}</span>
+              </span>
               <input
                 type="number"
                 min="0"
                 max={total}
                 value={discountAmount}
                 onChange={(e) => applyDiscountVal(Number(e.target.value) || 0)}
-                className="w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-right font-mono font-bold text-xs text-rose-600"
+                style={{ color: 'var(--danger-fg)' }}
+                className="w-28 atelier-input rounded-xl px-2.5 py-1 text-right font-nums font-bold text-xs"
               />
             </div>
-            <div className="flex flex-wrap gap-1">
-              <button type="button" onClick={() => applyDiscountVal(0)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold">0</button>
-              <button type="button" onClick={roundDownThousand} className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold">
-                {lang === 'uz' ? 'Yaxlitlash (1000)' : 'Округлить'}
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => applyDiscountVal(0)} className="px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold">0</button>
+              <button type="button" onClick={roundDownThousand} className="px-2.5 py-1 rounded-full atelier-pill-active text-[11px] font-semibold">
+                {lang === 'uz' ? 'Yaxlitlash (1000)' : 'Округлить до 1000'}
               </button>
-              <button type="button" onClick={() => applyDiscountVal(total * 0.05)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold">-5%</button>
-              <button type="button" onClick={() => applyDiscountVal(total * 0.10)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] font-bold">-10%</button>
+              <button type="button" onClick={() => applyDiscountVal(total * 0.05)} className="px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold">-5%</button>
+              <button type="button" onClick={() => applyDiscountVal(total * 0.10)} className="px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold">-10%</button>
             </div>
           </div>
 
           {/* Payment method tabs */}
           <div className="grid grid-cols-4 gap-1.5">
             {[
-              { id: 'CASH', icon: '💵', label: lang === 'uz' ? 'Naqd' : 'Нал' },
-              { id: 'CARD', icon: '💳', label: lang === 'uz' ? 'Karta' : 'Карта' },
-              { id: 'DEBT', icon: '📓', label: lang === 'uz' ? 'Qarzga' : 'В долг' },
-              { id: 'MIXED', icon: '🔀', label: lang === 'uz' ? 'Aralash' : 'Сплит' }
+              { id: 'CASH', icon: 'cash', label: lang === 'uz' ? 'Naqd' : 'Наличные' },
+              { id: 'CARD', icon: 'card', label: lang === 'uz' ? 'Karta' : 'Картой' },
+              { id: 'DEBT', icon: 'debts', label: lang === 'uz' ? 'Qarzga' : 'В долг' },
+              { id: 'MIXED', icon: 'split', label: lang === 'uz' ? 'Aralash' : 'Сплит' }
             ].map((m) => (
               <button
                 key={m.id}
                 type="button"
                 onClick={() => handleMethodSwitch(m.id)}
-                className={`py-2 px-1.5 rounded-2xl text-xs font-bold border transition flex flex-col items-center gap-0.5 ${
+                className={`py-2.5 px-1.5 rounded-2xl text-xs font-semibold transition flex flex-col items-center gap-1 ${
                   method === m.id
-                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
-                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                    ? 'atelier-btn-primary shadow-sm'
+                    : 'atelier-btn-soft'
                 }`}
               >
-                <span className="text-base">{m.icon}</span>
+                <Icon name={m.icon} size={17} />
                 <span>{m.label}</span>
               </button>
             ))}
           </div>
 
           {(method === 'CASH' || method === 'MIXED') && (
-            <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                💵 {lang === 'uz' ? "Olingan naqd pul (so'm):" : "Получено наличными (сум):"}
+            <div className="atelier-subtle p-3 rounded-2xl space-y-2">
+              <label className="block text-xs font-semibold atelier-text-muted">
+                {lang === 'uz' ? "Olingan naqd pul (so'm):" : "Получено наличными (сум):"}
               </label>
               <input
                 type="number"
@@ -4494,7 +4597,7 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
                 step="100"
                 value={cashReceived}
                 onChange={(e) => setCashReceived(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-black text-lg text-emerald-600 dark:text-emerald-400"
+                className="w-full atelier-input rounded-2xl px-3.5 py-2.5 font-nums font-bold text-lg"
               />
               <div className="flex flex-wrap gap-1.5">
                 {[finalTotal, 10000, 20000, 50000, 100000, 200000].map((v, idx) => (
@@ -4502,16 +4605,16 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
                     key={idx}
                     type="button"
                     onClick={() => setCashReceived(String(v))}
-                    className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold hover:border-emerald-500"
+                    className="px-2.5 py-1 rounded-full atelier-card text-xs font-nums font-semibold"
                   >
                     {idx === 0 ? (lang === 'uz' ? 'Aniq' : 'Ровно') : formatMoney(v)}
                   </button>
                 ))}
               </div>
               {changeAmount > 0 && (
-                <div className="bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 rounded-xl p-2 flex justify-between items-center">
-                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">{lang === 'uz' ? "Qaytim:" : "Сдача:"}</span>
-                  <span className="text-base font-black font-mono text-emerald-700 dark:text-emerald-300">{formatMoney(changeAmount)}</span>
+                <div style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent-soft-fg)' }} className="rounded-xl px-3 py-2 flex justify-between items-center">
+                  <span className="text-xs font-semibold">{lang === 'uz' ? "Qaytim:" : "Сдача покупателю:"}</span>
+                  <span className="text-base font-bold font-nums">{formatMoney(changeAmount)}</span>
                 </div>
               )}
             </div>
@@ -4520,37 +4623,40 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
           {method === 'MIXED' && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">💳 {lang === 'uz' ? "Karta:" : "Картой:"}</label>
-                <input type="number" min="0" value={cardAmount} onChange={(e) => setCardAmount(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-sm" />
+                <label className="block text-xs font-semibold atelier-text-muted mb-1">{lang === 'uz' ? "Karta:" : "Картой:"}</label>
+                <input type="number" min="0" value={cardAmount} onChange={(e) => setCardAmount(e.target.value)} className="w-full atelier-input rounded-2xl px-3 py-2 font-nums font-bold text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">📓 {lang === 'uz' ? "Qarzga:" : "В долг:"}</label>
-                <input type="number" min="0" value={debtAmount} onChange={(e) => setDebtAmount(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-sm text-amber-600" />
+                <label className="block text-xs font-semibold atelier-text-muted mb-1">{lang === 'uz' ? "Qarzga:" : "В долг:"}</label>
+                <input type="number" min="0" value={debtAmount} onChange={(e) => setDebtAmount(e.target.value)} style={{ color: 'var(--warm-fg)' }} className="w-full atelier-input rounded-2xl px-3 py-2 font-nums font-bold text-sm" />
               </div>
             </div>
           )}
 
           {(method === 'DEBT' || (method === 'MIXED' && debtNum > 0)) && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-3 space-y-2">
+            <div style={{ backgroundColor: 'var(--warm-bg)' }} className="rounded-2xl p-3 space-y-2 border atelier-border">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-amber-900 dark:text-amber-300">👤 {lang === 'uz' ? "Qarzdor mijoz *" : "Клиент *"}</label>
-                <button type="button" onClick={() => setShowNewDebtorForm(!showNewDebtorForm)} className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline">
-                  {showNewDebtorForm ? (lang === 'uz' ? 'Yopish' : 'Скрыть') : (lang === 'uz' ? '+ Yangi' : '+ Новый')}
+                <label style={{ color: 'var(--warm-fg)' }} className="text-xs font-bold flex items-center gap-1.5">
+                  <Icon name="user" size={14} />
+                  <span>{lang === 'uz' ? "Qarzdor mijoz *" : "Кому записываем долг *"}</span>
+                </label>
+                <button type="button" onClick={() => setShowNewDebtorForm(!showNewDebtorForm)} className="text-xs font-bold underline">
+                  {showNewDebtorForm ? (lang === 'uz' ? 'Yopish' : 'Скрыть') : (lang === 'uz' ? '+ Yangi mijoz' : '+ Новый клиент')}
                 </button>
               </div>
 
               {showNewDebtorForm ? (
-                <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-amber-300 space-y-2">
-                  <input type="text" placeholder={lang === 'uz' ? "Mijoz ismi" : "Имя клиента"} value={quickNewName} onChange={(e) => setQuickNewName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold" />
+                <div className="atelier-card p-2.5 rounded-xl space-y-2">
+                  <input type="text" placeholder={lang === 'uz' ? "Mijoz ismi" : "Имя клиента"} value={quickNewName} onChange={(e) => setQuickNewName(e.target.value)} className="w-full atelier-input rounded-xl px-3 py-2 text-xs font-semibold" />
                   <div className="flex gap-1.5">
-                    <input type="text" placeholder="+998 90 ..." value={quickNewPhone} onChange={(e) => setQuickNewPhone(e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono" />
-                    <button type="button" onClick={handleCreateQuickDebtor} disabled={creatingDebtor} className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold">{creatingDebtor ? '...' : 'Saqlash'}</button>
+                    <input type="text" placeholder="+998 90 ..." value={quickNewPhone} onChange={(e) => setQuickNewPhone(e.target.value)} className="flex-1 atelier-input rounded-xl px-3 py-2 text-xs font-nums" />
+                    <button type="button" onClick={handleCreateQuickDebtor} disabled={creatingDebtor} className="atelier-btn-primary px-3 py-2 rounded-xl text-xs font-semibold">{creatingDebtor ? '...' : 'OK'}</button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <input type="text" placeholder={lang === 'uz' ? "Mijozni qidirish..." : "Поиск клиента..."} value={debtorSearch} onChange={(e) => setDebtorSearch(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs" />
-                  <select value={selectedDebtorId} onChange={(e) => setSelectedDebtorId(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-bold" required>
+                  <input type="text" placeholder={lang === 'uz' ? "Mijozni qidirish..." : "Поиск клиента..."} value={debtorSearch} onChange={(e) => setDebtorSearch(e.target.value)} className="w-full atelier-input rounded-xl px-3 py-2 text-xs" />
+                  <select value={selectedDebtorId} onChange={(e) => setSelectedDebtorId(e.target.value)} className="w-full atelier-input rounded-xl px-3 py-2 text-xs font-semibold" required>
                     <option value="">{lang === 'uz' ? "-- Mijozni tanlang --" : "-- Выберите клиента --"}</option>
                     {safeArray(debtors).map((d) => (
                       <option key={d.id} value={d.id}>{d.full_name} {d.phone ? `(${d.phone})` : ''} — {formatMoney(d.balance)}</option>
@@ -4561,23 +4667,24 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
 
               <div>
                 <div className="flex flex-wrap gap-1.5 mb-1.5">
-                  <button type="button" onClick={() => setQuickDue(1)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold">Ertaga</button>
-                  <button type="button" onClick={() => setQuickDue(3)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold">3 kun</button>
-                  <button type="button" onClick={() => setQuickDue(7)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold">1 hafta</button>
-                  <button type="button" onClick={() => setQuickDue(30)} className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 text-[11px] font-bold">1 oy</button>
+                  <button type="button" onClick={() => setQuickDue(1)} className="px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold">Ertaga</button>
+                  <button type="button" onClick={() => setQuickDue(3)} className="px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold">3 kun</button>
+                  <button type="button" onClick={() => setQuickDue(7)} className="px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold">1 hafta</button>
+                  <button type="button" onClick={() => setQuickDue(30)} className="px-2.5 py-1 rounded-full atelier-card text-[11px] font-semibold">1 oy</button>
                 </div>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs" />
+                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full atelier-input rounded-xl px-3 py-1.5 text-xs" />
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 shrink-0">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-2xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+        <div className="flex gap-2 pt-3 border-t atelier-border mt-3 shrink-0">
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl text-xs font-semibold atelier-btn-soft">
             {t.cancelBtn || 'Bekor qilish'}
           </button>
-          <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-2xl text-sm font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg disabled:opacity-40">
-            {loading ? (t.saving || '...') : (lang === 'uz' ? '✅ Tasdiqlash' : '✅ Подтвердить')}
+          <button type="submit" disabled={loading} className="flex-1 py-3 rounded-2xl text-sm font-bold atelier-btn-cta shadow-sm disabled:opacity-40 flex items-center justify-center gap-1.5">
+            <Icon name="check" size={16} />
+            <span>{loading ? (t.saving || '...') : (lang === 'uz' ? 'Tasdiqlash' : 'Подтвердить')}</span>
           </button>
         </div>
       </form>
@@ -4589,44 +4696,43 @@ function ReceiptModal({ receipt, onClose, t }) {
   if (!receipt) return null;
   const lang = (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-4 sm:p-5 shadow-2xl text-slate-900 dark:text-slate-100 modal-mobile-safe">
+    <div className="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-2.5 sm:p-3 backdrop-blur-md">
+      <div className="atelier-modal rounded-[28px] w-full max-w-sm p-4 sm:p-5 modal-mobile-safe">
         <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-          <div id="printable-receipt" className="bg-white text-slate-900 p-4 rounded-2xl border border-dashed border-slate-300 font-mono text-xs space-y-2">
-            <div className="text-center border-b border-dashed border-slate-300 pb-2">
-              <div className="font-black text-sm">
-                🛒 {receipt.tax_profile?.legal_name || "GroceryStore POS"}
+          <div id="printable-receipt" className="bg-[#FDFCF9] text-[#181C19] p-4 rounded-2xl border border-dashed border-stone-300 font-mono text-xs space-y-2">
+            <div className="text-center border-b border-dashed border-stone-300 pb-2">
+              <div className="font-bold text-sm tracking-tight">
+                {receipt.tax_profile?.legal_name || "GroceryStore POS"}
               </div>
               {receipt.tax_profile?.inn_stir && (
-                <div className="text-[10px] text-slate-600">STIR/ИНН: {receipt.tax_profile.inn_stir}</div>
+                <div className="text-[10px] text-stone-600">STIR/ИНН: {receipt.tax_profile.inn_stir}</div>
               )}
               {receipt.tax_profile?.kkm_serial && (
-                <div className="text-[10px] text-slate-500">KKM/FM: {receipt.tax_profile.kkm_serial}</div>
+                <div className="text-[10px] text-stone-500">KKM/FM: {receipt.tax_profile.kkm_serial}</div>
               )}
               {receipt.tax_profile?.address && (
-                <div className="text-[10px] text-slate-500">{receipt.tax_profile.address}</div>
+                <div className="text-[10px] text-stone-500">{receipt.tax_profile.address}</div>
               )}
-              <div className="text-[11px] text-slate-600">
+              <div className="text-[11px] text-stone-700 font-semibold mt-1">
                 {receipt.receipt_number}{receipt.shift_id ? ` • Smena #${receipt.shift_id}` : ''}
               </div>
-              <div className="text-[10px] text-slate-500">{new Date(receipt.created_at || Date.now()).toLocaleString()}</div>
-              <div className="text-[10px] text-slate-500">Kassir: {receipt.cashier_name || 'Kassir'}</div>
+              <div className="text-[10px] text-stone-500">{new Date(receipt.created_at || Date.now()).toLocaleString()}</div>
+              <div className="text-[10px] text-stone-500">Kassir: {receipt.cashier_name || 'Kassir'}</div>
             </div>
 
-            <div className="divide-y divide-dashed divide-slate-200">
+            <div className="divide-y divide-dashed divide-stone-200">
               {safeArray(receipt.items).map((it, idx) => (
                 <div key={idx} className="py-1.5 flex justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="font-bold truncate">
-                      {it.is_tobacco ? '🚬 ' : (it.marking_group === 'BEVERAGES' ? '🥤 ' : (it.marking_group === 'BEER_ALCOHOL' ? '🍺 ' : ''))}
                       {it.product_name}
                     </div>
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-[10px] text-stone-600">
                       {it.quantity} {it.unit || 'dona'} x {formatMoney(it.unit_price)}
                       {Number(it.vat_rate) > 0 ? ` • QQS ${it.vat_rate}% (${formatMoney(it.vat_amount)})` : ''}
                     </div>
                     {(it.ikpu_code || it.package_code || it.barcode) && (
-                      <div className="text-[9px] text-slate-400">
+                      <div className="text-[9px] text-stone-400">
                         {it.ikpu_code ? `IKPU:${it.ikpu_code} ` : ''}
                         {it.package_code ? `Qadoq:${it.package_code} ` : ''}
                         {it.barcode ? `GTIN:${it.barcode}` : ''}
@@ -4641,7 +4747,7 @@ function ReceiptModal({ receipt, onClose, t }) {
               ))}
             </div>
 
-            <div className="border-t border-dashed border-slate-300 pt-2 space-y-1">
+            <div className="border-t border-dashed border-stone-300 pt-2 space-y-1">
               {Number(receipt.discount_amount) > 0 && (
                 <div className="flex justify-between text-[11px] text-rose-600 font-bold">
                   <span>{lang === 'uz' ? 'Chegirma:' : 'Скидка:'}</span>
@@ -4649,12 +4755,12 @@ function ReceiptModal({ receipt, onClose, t }) {
                 </div>
               )}
               {Number(receipt.vat_amount) > 0 && (
-                <div className="flex justify-between text-[10px] text-slate-500">
+                <div className="flex justify-between text-[10px] text-stone-500">
                   <span>{lang === 'uz' ? 'QQS (NDS):' : 'В т.ч. НДС:'}</span>
                   <span>{formatMoney(receipt.vat_amount)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-black text-sm">
+              <div className="flex justify-between font-bold text-sm">
                 <span>{lang === 'uz' ? 'JAMI:' : 'ИТОГО:'}</span>
                 <span>{formatMoney(receipt.total_amount)}</span>
               </div>
@@ -4681,24 +4787,24 @@ function ReceiptModal({ receipt, onClose, t }) {
                 </div>
               )}
               {receipt.payment_method === 'DEBT' && (
-                <div className="text-[9px] text-amber-700 bg-amber-50 p-1.5 rounded-lg leading-tight">
-                  🧾 {lang === 'uz' ? "Nasiya cheki (to'lov vaqtida qarz so'ndirish cheki uriladi)" : "Чек отгрузки в долг / рассрочку (при оплате пробивается чек погашения)"}
+                <div className="text-[9px] text-amber-800 bg-amber-50 p-1.5 rounded-lg leading-tight">
+                  {lang === 'uz' ? "Nasiya cheki (to'lov vaqtida qarz so'ndirish cheki uriladi)" : "Чек отгрузки в долг / рассрочку (при оплате пробивается чек погашения)"}
                 </div>
               )}
             </div>
-            <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-1">
+            <div className="text-center text-[10px] text-stone-500 pt-2 border-t border-dashed border-stone-300 space-y-1">
               {receipt.fiscal_qr_svg && (
                 <img
                   src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(receipt.fiscal_qr_svg)}`}
                   alt="Soliq QR"
-                  className="w-24 h-24 mx-auto border border-slate-200 rounded-lg p-1 bg-white"
+                  className="w-24 h-24 mx-auto border border-stone-200 rounded-lg p-1 bg-white"
                 />
               )}
               {receipt.fiscal_sign && (
-                <div className="text-[9px] text-slate-600 font-bold">FM belgi: {receipt.fiscal_sign}</div>
+                <div className="text-[9px] text-stone-600 font-bold">FM belgi: {receipt.fiscal_sign}</div>
               )}
               <div>{lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"}</div>
-              <div className="text-[9px] text-slate-400">
+              <div className="text-[9px] text-stone-400">
                 {receipt.fiscal_status === 'FISCALIZED'
                   ? 'OFD / Soliq fiskal cheki'
                   : (lang === 'uz' ? 'Ichki hisob cheki (Fiskal modul / OFD ulanmagan)' : 'Внутренний учётный чек (Без ФМ / ОФД)')}
@@ -4707,12 +4813,13 @@ function ReceiptModal({ receipt, onClose, t }) {
           </div>
         </div>
 
-        <div className="flex gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
-          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+        <div className="flex gap-2 mt-3 pt-3 border-t atelier-border shrink-0">
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-2xl text-xs font-semibold atelier-btn-soft">
             {lang === 'uz' ? 'Yopish' : 'Закрыть'}
           </button>
-          <button type="button" onClick={() => window.print()} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow">
-            🖨️ {lang === 'uz' ? 'Chop etish' : 'Печать'}
+          <button type="button" onClick={() => window.print()} className="flex-1 py-2.5 rounded-2xl text-xs font-bold atelier-btn-primary shadow-sm flex items-center justify-center gap-1.5">
+            <Icon name="printer" size={15} />
+            <span>{lang === 'uz' ? 'Chop etish' : 'Печать'}</span>
           </button>
         </div>
       </div>
@@ -6376,83 +6483,92 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const showingCatalog = search.trim().length > 0 || showAllCatalog || selectedCategory !== null;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-2.5">
-      {/* Pinned Compact POS Control & Search Strip (Always Visible Without Scrolling) */}
-      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-sm space-y-1.5">
-        {/* Compact Tool Strip */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <button type="button" onClick={() => setVoiceAssistantOpen(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 whitespace-nowrap shrink-0">
-            🎙️ {lang === 'uz' ? "Ovoz" : "Голос"}
-          </button>
-          <button type="button" onClick={() => setPriceCheckOpen(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap shrink-0">
-            🏷️ {lang === 'uz' ? "Narx?" : "Цена?"}
-          </button>
-          <button type="button" onClick={() => setRefundModalOpen(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap shrink-0">
-            🧾 {lang === 'uz' ? "Chek / Vozvrat" : "Чеки / Возврат"}
-          </button>
-          <button type="button" onClick={parkCurrentCart} disabled={cart.length === 0} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 disabled:opacity-40 whitespace-nowrap shrink-0">
-            ⏸️ {lang === 'uz' ? "Saqlash" : "Отложить"}
-          </button>
-          {parkedCarts.length > 0 && (
-            <button type="button" onClick={() => setParkedModalOpen(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-600 text-white whitespace-nowrap shrink-0 animate-pulse">
-              📂 {parkedCarts.length}
-            </button>
-          )}
-          {cart.length > 0 && (
-            <button type="button" onClick={() => clearCart(true)} className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200 dark:border-rose-800 whitespace-nowrap shrink-0 ml-auto">
-              🗑️ {lang === 'uz' ? "Tozalash" : "Очистить"}
-            </button>
-          )}
-        </div>
-
-        {/* Unified Search / Barcode Input + Prominent Camera Scanner */}
-        <form onSubmit={handleSearchOrBarcodeSubmit} className="flex items-center gap-1.5">
-          <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 focus-within:border-emerald-500">
-            <span className="text-xs mr-1.5">🔍</span>
+    <div className="h-full flex flex-col overflow-hidden gap-2 sm:gap-3">
+      {/* Clean Tactile Top Search & Scan Card */}
+      <div className="shrink-0 atelier-card rounded-[24px] p-2.5 space-y-2">
+        {/* Main Action Row: Search Input + Prominent Scan Button */}
+        <form onSubmit={handleSearchOrBarcodeSubmit} className="flex items-center gap-2">
+          <div className="flex-1 flex items-center atelier-input rounded-2xl px-3">
+            <span className="atelier-text-muted mr-2"><Icon name="search" size={16} /></span>
             <input
               ref={searchInputRef}
               type="text"
-              placeholder={lang === 'uz' ? "Shtrixkod yoki tovar nomi..." : "Штрихкод или название..."}
+              placeholder={lang === 'uz' ? "Shtrixkod yoki tovar nomi..." : "Найти товар или штрихкод..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-transparent py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none min-w-0"
+              className="flex-1 bg-transparent py-2.5 text-xs font-medium focus:outline-none min-w-0"
             />
             {search && (
-              <button type="button" onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600 px-1 text-xs font-bold">✕</button>
+              <button type="button" onClick={() => setSearch('')} className="atelier-text-muted px-1">
+                <Icon name="close" size={15} />
+              </button>
             )}
           </div>
           {search.trim() && (
-            <button type="submit" className="px-3 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-black shrink-0">↵</button>
+            <button type="submit" className="px-3.5 py-2.5 atelier-btn-primary rounded-2xl text-xs font-semibold shrink-0">OK</button>
           )}
           <button
             type="button"
             onClick={() => setScannerActive(true)}
-            className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black rounded-xl text-xs shadow-md active:scale-95 transition flex items-center gap-1 shrink-0"
+            className="px-4 py-2.5 atelier-btn-cta font-bold rounded-2xl text-xs flex items-center gap-1.5 shrink-0 shadow-sm"
           >
-            <span className="text-sm">📷</span>
+            <Icon name="scan" size={17} />
             <span>{lang === 'uz' ? "Skaner" : "Сканер"}</span>
           </button>
         </form>
+
+        {/* Subtle Secondary Utility Strip */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <button type="button" onClick={() => setVoiceAssistantOpen(true)} className="px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
+            <Icon name="mic" size={12} /><span>{lang === 'uz' ? "Ovoz" : "Голос"}</span>
+          </button>
+          <button type="button" onClick={() => setPriceCheckOpen(true)} className="px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
+            <Icon name="tag" size={12} /><span>{lang === 'uz' ? "Narx?" : "Цена?"}</span>
+          </button>
+          <button type="button" onClick={() => setRefundModalOpen(true)} className="px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
+            <Icon name="receipt" size={12} /><span>{lang === 'uz' ? "Chek / Vozvrat" : "Чеки / Возврат"}</span>
+          </button>
+          <button type="button" onClick={parkCurrentCart} disabled={cart.length === 0} className="px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft disabled:opacity-40 flex items-center gap-1 whitespace-nowrap shrink-0">
+            <Icon name="pause" size={12} /><span>{lang === 'uz' ? "Saqlash" : "Отложить"}</span>
+          </button>
+          {parkedCarts.length > 0 && (
+            <button type="button" onClick={() => setParkedModalOpen(true)} className="px-3 py-1 rounded-full text-[11px] font-bold atelier-btn-primary flex items-center gap-1 whitespace-nowrap shrink-0">
+              <Icon name="folder" size={12} /><span>{parkedCarts.length}</span>
+            </button>
+          )}
+          {cart.length > 0 && (
+            <button
+              type="button"
+              onClick={() => clearCart(true)}
+              style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger-fg)' }}
+              className="px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 ml-auto"
+            >
+              <Icon name="trash" size={12} /><span>{lang === 'uz' ? "Tozalash" : "Очистить"}</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Non-blocking Sale Success Banner */}
+      {/* Sale Success Pill Banner */}
       {successToast && (
-        <div className="shrink-0 bg-emerald-600 text-white rounded-xl px-3 py-2 shadow-lg flex items-center justify-between gap-2 text-xs">
-          <div className="truncate font-bold">
-            ✅ #{successToast.receiptNumber} • {formatMoney(successToast.total)}
-            {successToast.change > 0 && <span className="ml-1.5 text-amber-200 font-black">({lang === 'uz' ? 'Qaytim:' : 'Сдача:'} {formatMoney(successToast.change)})</span>}
+        <div style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-fg)' }} className="shrink-0 rounded-2xl px-3.5 py-2.5 shadow-md flex items-center justify-between gap-2 text-xs">
+          <div className="truncate font-semibold flex items-center gap-2 font-nums">
+            <Icon name="check" size={15} />
+            <span>#{successToast.receiptNumber} • {formatMoney(successToast.total)}</span>
+            {successToast.change > 0 && (
+              <span className="opacity-85">({lang === 'uz' ? 'Qaytim:' : 'Сдача:'} {formatMoney(successToast.change)})</span>
+            )}
           </div>
-          <button type="button" onClick={() => setLastReceipt(successToast.data)} className="bg-white text-emerald-800 px-2.5 py-1 rounded-lg font-bold shrink-0">
-            🖨️ {lang === 'uz' ? 'Chek' : 'Чек'}
+          <button type="button" onClick={() => setLastReceipt(successToast.data)} className="atelier-btn-cta px-3 py-1 rounded-full font-bold shrink-0 flex items-center gap-1">
+            <Icon name="printer" size={13} /><span>{lang === 'uz' ? 'Chek' : 'Чек'}</span>
           </button>
         </div>
       )}
 
-      {/* Middle Workspace (Scrolls ONLY inside bounded container) */}
+      {/* Middle Workspace */}
       <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 lg:gap-3 overflow-hidden">
-        {/* Left/Center: Quick Strip + Search Catalog OR Cart */}
-        <div className="flex-1 min-h-0 lg:col-span-7 xl:col-span-8 flex flex-col gap-1.5 overflow-hidden">
-          {/* Compact Horizontal Quick Items Bar (Always 1 tap away) */}
+        <div className="flex-1 min-h-0 lg:col-span-7 xl:col-span-8 flex flex-col gap-2 overflow-hidden">
+          {/* Quick Items Strip */}
           <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <button
               type="button"
@@ -6465,37 +6581,36 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                   setShowAllCatalog(true);
                 }
               }}
-              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold whitespace-nowrap border shrink-0 transition ${
-                showingCatalog
-                  ? 'bg-emerald-600 border-emerald-600 text-white'
-                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition flex items-center gap-1.5 ${
+                showingCatalog ? 'atelier-btn-primary' : 'atelier-card'
               }`}
             >
-              {showingCatalog ? (lang === 'uz' ? `🧾 Savat (${cart.length})` : `🧾 Чек (${cart.length})`) : (lang === 'uz' ? '📂 Katalog' : '📂 Каталог')}
+              <Icon name={showingCatalog ? 'receipt' : 'box'} size={13} />
+              <span>{showingCatalog ? (lang === 'uz' ? `Chek (${cart.length})` : `Чек (${cart.length})`) : (lang === 'uz' ? 'Katalog' : 'Все товары')}</span>
             </button>
             {quickItemsList.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => addQuickItem(item)}
-                className="px-2.5 py-1.5 rounded-xl bg-emerald-50/90 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-emerald-200 dark:border-slate-700 text-left shrink-0 flex items-center gap-1.5 transition"
+                className="px-3 py-1.5 rounded-full atelier-card hover:opacity-90 text-left shrink-0 flex items-center gap-2 transition active:scale-95"
               >
-                <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100 max-w-[110px] truncate">{item.name}</span>
-                <span className="text-[10px] font-black font-mono text-emerald-600 dark:text-emerald-400">{Math.round((item.sale_price || item.price) / 1000)}k</span>
+                <span className="text-xs font-semibold max-w-[115px] truncate">{item.name}</span>
+                <span style={{ color: 'var(--accent)' }} className="text-[11px] font-bold font-nums">{Math.round((item.sale_price || item.price) / 1000)}k</span>
               </button>
             ))}
           </div>
 
-          {/* Scrollable Body: Catalog Search Grid OR Cart Table/Cards */}
-          <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+          {/* Scrollable Body: Catalog OR Cart */}
+          <div className="flex-1 min-h-0 atelier-card rounded-[24px] overflow-hidden flex flex-col">
             {showingCatalog ? (
-              <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-2 space-y-2">
-                {/* Category Filter Strip */}
-                <div className="shrink-0 flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-2.5 space-y-2.5">
+                {/* Category Filter Pills */}
+                <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
                   <button
                     type="button"
                     onClick={() => setSelectedCategory(null)}
-                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap ${selectedCategory === null ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${selectedCategory === null ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}
                   >
                     {lang === 'uz' ? 'Hammasi' : 'Все'}
                   </button>
@@ -6504,7 +6619,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                       key={cat.id}
                       type="button"
                       onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
-                      className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap ${selectedCategory === cat.id ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${selectedCategory === cat.id ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}
                     >
                       {cat.name ? cat.name.split('/')[0].trim() : cat.name}
                     </button>
@@ -6512,36 +6627,36 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                   <button
                     type="button"
                     onClick={() => { setSearch(''); setSelectedCategory(null); setShowAllCatalog(false); }}
-                    className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-600 whitespace-nowrap ml-auto"
+                    className="w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center ml-auto shrink-0"
                   >
-                    ✕
+                    <Icon name="close" size={14} />
                   </button>
                 </div>
 
                 {/* Product Results Grid */}
                 <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
                   {products.length === 0 ? (
-                    <div className="py-8 text-center space-y-2 text-xs text-slate-400">
+                    <div className="py-10 text-center space-y-3 text-xs atelier-text-muted">
                       <div>{lang === 'uz' ? 'Tovar topilmadi' : 'Товары не найдены'}</div>
                       {isOwner && (
-                        <button type="button" onClick={() => setCreateProductOpen(true)} className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold">
-                          ➕ {lang === 'uz' ? "Yangi tovar qo'shish" : "Добавить товар"}
+                        <button type="button" onClick={() => setCreateProductOpen(true)} className="px-4 py-2 rounded-full atelier-btn-cta font-semibold inline-flex items-center gap-1.5">
+                          <Icon name="plus" size={14} /><span>{lang === 'uz' ? "Yangi tovar qo'shish" : "Добавить товар"}</span>
                         </button>
                       )}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {safeArray(products).map((p) => (
                         <button
                           key={p.id}
                           type="button"
                           onClick={() => { addToCart(p, 1.0); playAudioCue('add'); notify(`${p.name} (+1)`); }}
-                          className="bg-slate-50 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-2 text-left transition flex flex-col justify-between gap-1"
+                          className="atelier-subtle hover:opacity-90 rounded-2xl p-3 text-left transition flex flex-col justify-between gap-2 active:scale-95"
                         >
-                          <div className="font-bold text-xs text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight">{p.name}</div>
-                          <div className="flex items-center justify-between w-full pt-1 border-t border-slate-200/70 dark:border-slate-700">
-                            <span className="text-[11px] font-black font-mono text-emerald-600 dark:text-emerald-400">{formatMoney(p.sale_price)}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{p.stock_quantity} {p.unit}</span>
+                          <div className="font-semibold text-xs line-clamp-2 leading-snug">{p.name}</div>
+                          <div className="flex items-center justify-between w-full pt-1.5 border-t atelier-border">
+                            <span style={{ color: 'var(--accent)' }} className="text-xs font-bold font-nums">{formatMoney(p.sale_price)}</span>
+                            <span className="text-[11px] atelier-text-muted font-nums">{p.stock_quantity} {p.unit}</span>
                           </div>
                         </button>
                       ))}
@@ -6550,80 +6665,84 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                 </div>
               </div>
             ) : (
-              /* Active Cart Header + Items */
+              /* Active Cart Container */
               <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                <div className="shrink-0 flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs">
-                  <span className="font-bold flex items-center gap-1.5">
-                    <span>🧾 {lang === 'uz' ? "Savdo cheki" : "Чек"}</span>
-                    <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full font-mono text-[11px] font-bold">
+                <div className="shrink-0 flex items-center justify-between px-3.5 py-2 border-b atelier-border text-xs">
+                  <span className="font-semibold flex items-center gap-2">
+                    <Icon name="receipt" size={15} />
+                    <span>{lang === 'uz' ? "Savdo cheki" : "Текущий чек"}</span>
+                    <span className="atelier-pill-active px-2 py-0.5 rounded-full font-nums text-[11px] font-bold">
                       {cart.length} {lang === 'uz' ? "poz" : "поз"}
                     </span>
                   </span>
-                  <span className="hidden md:inline text-[10px] text-slate-400 font-mono">F2 • F3 • F5 Naqd • F6 Karta • F7 Qarz</span>
+                  <span className="hidden md:inline text-[11px] atelier-text-muted font-nums">F2 Поиск • F5 Нал • F6 Карта • F7 Долг</span>
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto">
                   {cart.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs gap-2">
-                      <span className="text-3xl opacity-60">🛒</span>
-                      <p className="font-semibold text-slate-600 dark:text-slate-400 max-w-xs">
+                    <div className="h-full flex flex-col items-center justify-center text-center p-5 gap-3">
+                      <div className="w-14 h-14 rounded-2xl atelier-subtle flex items-center justify-center atelier-text-muted">
+                        <Icon name="bag" size={26} />
+                      </div>
+                      <p className="text-xs sm:text-sm font-medium atelier-text-muted max-w-xs leading-relaxed">
                         {safeArray(products).length === 0
-                          ? (lang === 'uz' ? "Do'kon bazasi toza. Birinchi tovarni skanerlab qo'shish uchun pastdagi tugmani bosing." : "База чистая. Отсканируйте первый товар, чтобы добавить его в магазин и начать продажу.")
-                          : (lang === 'uz' ? "Chek bo'sh. Skanerlang yoki tezkor tovarni bosing." : "Чек пуст. Отсканируйте товар или выберите сверху.")}
+                          ? (lang === 'uz' ? "Baza toza. Kamerani shtrixkodga tutib birinchi tovarni qo'shing." : "База чистая. Отсканируйте первый товар, чтобы начать работу.")
+                          : (lang === 'uz' ? "Kamerani tovarga tuting yoki yuqoridan tanlang." : "Наведите камеру на товар или выберите быструю позицию сверху.")}
                       </p>
-                      <button type="button" onClick={() => setScannerActive(true)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm">
-                        📷 {lang === 'uz' ? "Skaner bilan qo'shish" : "Сканировать товар"}
+                      <button type="button" onClick={() => setScannerActive(true)} className="px-5 py-2.5 rounded-full atelier-btn-cta font-bold text-xs shadow-sm flex items-center gap-2">
+                        <Icon name="scan" size={16} />
+                        <span>{lang === 'uz' ? "Tovarni skanerlash" : "Сканировать товар"}</span>
                       </button>
                     </div>
                   ) : (
                     <>
-                      {/* Mobile Compact Cart Cards (< md) */}
-                      <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                      {/* Mobile Airy Cart Rows (< md) */}
+                      <div className="md:hidden divide-y atelier-border">
                         {safeArray(cart).map((item) => {
                           const cKey = getCartKey(item);
                           const itemTotal = item.product.sale_price * item.quantity;
                           const isWeight = ['kg', 'l', 'metr'].includes((item.product.unit || '').toLowerCase());
                           const needsDM = Boolean(item.product.is_tobacco || item.product.requires_marking);
                           return (
-                            <div key={cKey} className="p-2.5 space-y-1.5">
+                            <div key={cKey} className="p-3 space-y-2">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0 flex-1">
-                                  <div className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
-                                    {needsDM ? '🚬 ' : ''}{item.product.name}
-                                  </div>
-                                  <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 flex-wrap">
+                                  <div className="font-semibold text-xs truncate">{item.product.name}</div>
+                                  <div className="text-[11px] atelier-text-muted font-nums flex items-center gap-1.5 flex-wrap mt-0.5">
                                     <span>{formatMoney(item.product.sale_price)} / {item.product.unit || 'dona'}</span>
                                     {item.marking_code && (
-                                      <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">DM ✓</span>
+                                      <span style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent-soft-fg)' }} className="px-2 py-0.5 rounded-full text-[10px] font-bold">DM ✓</span>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400">{formatMoney(itemTotal)}</span>
-                                  <button type="button" onClick={() => removeFromCart(cKey)} className="w-6 h-6 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 text-xs font-bold flex items-center justify-center">✕</button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span style={{ color: 'var(--accent)' }} className="font-nums font-bold text-sm">{formatMoney(itemTotal)}</span>
+                                  <button type="button" onClick={() => removeFromCart(cKey)} className="w-7 h-7 rounded-full atelier-btn-soft atelier-text-muted flex items-center justify-center">
+                                    <Icon name="close" size={13} />
+                                  </button>
                                 </div>
                               </div>
                               <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1">
-                                  <button type="button" onClick={() => updateQuantity(cKey, -1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black text-sm border border-slate-200 dark:border-slate-700">-</button>
+                                <div className="flex items-center gap-1.5">
+                                  <button type="button" onClick={() => updateQuantity(cKey, -1)} className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="minus" size={14} /></button>
                                   <input
                                     type="number"
                                     step="any"
                                     value={item.quantity}
                                     onChange={(e) => setItemExactQty(cKey, e.target.value)}
-                                    className="w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1"
+                                    className="w-14 atelier-input rounded-xl text-center font-bold font-nums text-xs py-1.5"
                                   />
-                                  <button type="button" onClick={() => updateQuantity(cKey, 1)} className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black text-sm">+</button>
+                                  <button type="button" onClick={() => updateQuantity(cKey, 1)} className="w-8 h-8 rounded-full atelier-btn-primary flex items-center justify-center"><Icon name="plus" size={14} /></button>
                                 </div>
                                 {needsDM && !item.marking_code && (
-                                  <button type="button" onClick={() => setMarkingScanKey(cKey)} className="px-2 py-1 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] font-bold border border-amber-300">
-                                    📷 DataMatrix
+                                  <button type="button" onClick={() => setMarkingScanKey(cKey)} style={{ backgroundColor: 'var(--warm-bg)', color: 'var(--warm-fg)' }} className="px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1">
+                                    <Icon name="scan" size={12} /><span>DataMatrix</span>
                                   </button>
                                 )}
                                 {isWeight && (
                                   <div className="flex items-center gap-1">
                                     {[0.25, 0.5, 1, 2].map(w => (
-                                      <button key={w} type="button" onClick={() => setItemExactQty(cKey, w)} className="px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">
+                                      <button key={w} type="button" onClick={() => setItemExactQty(cKey, w)} className="px-2 py-1 rounded-full atelier-btn-soft text-[11px] font-nums font-semibold">
                                         {w}
                                       </button>
                                     ))}
@@ -6637,43 +6756,47 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
                       {/* Desktop Cart Table (>= md) */}
                       <table className="hidden md:table w-full text-left text-xs">
-                        <thead className="bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                        <thead className="atelier-subtle atelier-text-muted font-semibold border-b atelier-border sticky top-0 z-10">
                           <tr>
-                            <th className="px-3 py-2 w-8">#</th>
-                            <th className="px-3 py-2">{lang === 'uz' ? "Mahsulot" : "Товар"}</th>
-                            <th className="px-3 py-2 text-right">{lang === 'uz' ? "Narx" : "Цена"}</th>
-                            <th className="px-3 py-2 text-center w-40">{lang === 'uz' ? "Miqdor" : "Кол-во"}</th>
-                            <th className="px-3 py-2 text-right">{lang === 'uz' ? "Jami" : "Сумма"}</th>
-                            <th className="px-2 py-2 w-10"></th>
+                            <th className="px-3.5 py-2.5 w-8">#</th>
+                            <th className="px-3.5 py-2.5">{lang === 'uz' ? "Mahsulot" : "Товар"}</th>
+                            <th className="px-3.5 py-2.5 text-right">{lang === 'uz' ? "Narx" : "Цена"}</th>
+                            <th className="px-3.5 py-2.5 text-center w-40">{lang === 'uz' ? "Miqdor" : "Кол-во"}</th>
+                            <th className="px-3.5 py-2.5 text-right">{lang === 'uz' ? "Jami" : "Сумма"}</th>
+                            <th className="px-2 py-2.5 w-10"></th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y atelier-border">
                           {safeArray(cart).map((item, idx) => {
                             const cKey = getCartKey(item);
                             const needsDM = Boolean(item.product.is_tobacco || item.product.requires_marking);
                             return (
-                            <tr key={cKey} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                              <td className="px-3 py-2 text-[11px] text-slate-400 font-mono">{idx + 1}</td>
-                              <td className="px-3 py-2">
-                                <div className="font-bold truncate max-w-xs">{needsDM ? '🚬 ' : ''}{item.product.name}</div>
-                                <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+                            <tr key={cKey}>
+                              <td className="px-3.5 py-2.5 text-[11px] atelier-text-muted font-nums">{idx + 1}</td>
+                              <td className="px-3.5 py-2.5">
+                                <div className="font-semibold truncate max-w-xs">{item.product.name}</div>
+                                <div className="text-[11px] atelier-text-muted font-nums flex items-center gap-2 mt-0.5">
                                   <span>{item.product.barcode}</span>
-                                  {item.marking_code && <span className="text-emerald-600 font-bold">DM ✓</span>}
+                                  {item.marking_code && <span style={{ color: 'var(--accent)' }} className="font-bold">DM ✓</span>}
                                   {needsDM && !item.marking_code && (
-                                    <button type="button" onClick={() => setMarkingScanKey(cKey)} className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">📷 DataMatrix</button>
+                                    <button type="button" onClick={() => setMarkingScanKey(cKey)} style={{ backgroundColor: 'var(--warm-bg)', color: 'var(--warm-fg)' }} className="px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                                      <Icon name="scan" size={11} /><span>DataMatrix</span>
+                                    </button>
                                   )}
                                 </div>
                               </td>
-                              <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{formatMoney(item.product.sale_price)}</td>
-                              <td className="px-3 py-2">
-                                <div className="flex items-center justify-center gap-1">
-                                  <button type="button" onClick={() => updateQuantity(cKey, -1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black">-</button>
-                                  <input type="number" step="any" value={item.quantity} onChange={(e) => setItemExactQty(cKey, e.target.value)} className="w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1" />
-                                  <button type="button" onClick={() => updateQuantity(cKey, 1)} className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black">+</button>
+                              <td className="px-3.5 py-2.5 text-right font-nums whitespace-nowrap">{formatMoney(item.product.sale_price)}</td>
+                              <td className="px-3.5 py-2.5">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button type="button" onClick={() => updateQuantity(cKey, -1)} className="w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="minus" size={13} /></button>
+                                  <input type="number" step="any" value={item.quantity} onChange={(e) => setItemExactQty(cKey, e.target.value)} className="w-14 atelier-input rounded-xl text-center font-bold font-nums text-xs py-1" />
+                                  <button type="button" onClick={() => updateQuantity(cKey, 1)} className="w-7 h-7 rounded-full atelier-btn-primary flex items-center justify-center"><Icon name="plus" size={13} /></button>
                                 </div>
                               </td>
-                              <td className="px-3 py-2 text-right font-mono font-black text-emerald-600 whitespace-nowrap">{formatMoney(item.product.sale_price * item.quantity)}</td>
-                              <td className="px-2 py-2 text-center"><button type="button" onClick={() => removeFromCart(cKey)} className="text-slate-400 hover:text-rose-500 font-bold">✕</button></td>
+                              <td style={{ color: 'var(--accent)' }} className="px-3.5 py-2.5 text-right font-nums font-bold whitespace-nowrap">{formatMoney(item.product.sale_price * item.quantity)}</td>
+                              <td className="px-2 py-2.5 text-center">
+                                <button type="button" onClick={() => removeFromCart(cKey)} className="atelier-text-muted hover:opacity-100"><Icon name="close" size={14} /></button>
+                              </td>
                             </tr>
                           );})}
                         </tbody>
@@ -6687,35 +6810,35 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         </div>
 
         {/* Desktop Right Checkout Panel (lg+) */}
-        <div className="hidden lg:flex lg:col-span-5 xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex-col justify-between gap-3 overflow-y-auto">
-          <div className="space-y-3">
-            <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-center">
-              <span className="text-xs font-bold uppercase text-slate-500 block">{lang === 'uz' ? "Jami to'lov" : "Итого к оплате"}</span>
-              <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-1">{formatMoney(cartTotal)}</div>
-              <div className="text-[11px] text-slate-400 mt-1">{cart.length} {lang === 'uz' ? "ta mahsulot" : "поз."}</div>
+        <div className="hidden lg:flex lg:col-span-5 xl:col-span-4 atelier-card rounded-[28px] p-4 flex-col justify-between gap-3 overflow-y-auto">
+          <div className="space-y-3.5">
+            <div className="atelier-subtle rounded-2xl p-4 text-center">
+              <span className="text-xs font-semibold atelier-text-muted block">{lang === 'uz' ? "Jami to'lov" : "Итого к оплате"}</span>
+              <div className="text-3xl font-bold font-nums mt-1 tracking-tight">{formatMoney(cartTotal)}</div>
+              <div className="text-xs atelier-text-muted mt-1">{cart.length} {lang === 'uz' ? "ta mahsulot" : "поз."}</div>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span>💵 {lang === 'uz' ? "Olingan naqd:" : "Наличными:"}</span>
-                <button type="button" onClick={() => setSelectedCashReceived(cartTotal)} className="text-emerald-600 hover:underline text-[11px]">
-                  {lang === 'uz' ? "Aniq" : "Ровно"}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="atelier-text-muted">{lang === 'uz' ? "Olingan naqd:" : "Наличными:"}</span>
+                <button type="button" onClick={() => setSelectedCashReceived(cartTotal)} style={{ color: 'var(--accent)' }} className="hover:underline text-xs font-semibold">
+                  {lang === 'uz' ? "Aniq summa" : "Ровно"}
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {[10000, 20000, 50000, 100000, 200000].map((note) => (
-                  <button key={note} type="button" onClick={() => setSelectedCashReceived(note)} className={`py-2 rounded-xl text-xs font-mono font-bold border ${selectedCashReceived === note ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                  <button key={note} type="button" onClick={() => setSelectedCashReceived(note)} className={`py-2 rounded-xl text-xs font-nums font-semibold ${selectedCashReceived === note ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
                     {formatMoney(note)}
                   </button>
                 ))}
-                <button type="button" onClick={() => setSelectedCashReceived(cartTotal)} className={`py-2 rounded-xl text-xs font-mono font-bold border ${selectedCashReceived === cartTotal ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-emerald-600'}`}>
+                <button type="button" onClick={() => setSelectedCashReceived(cartTotal)} className={`py-2 rounded-xl text-xs font-semibold ${selectedCashReceived === cartTotal ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
                   {lang === 'uz' ? "Aniq" : "Ровно"}
                 </button>
               </div>
               {cart.length > 0 && selectedCashReceived !== null && (
-                <div className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 rounded-xl p-2 flex justify-between text-xs font-bold">
+                <div style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent-soft-fg)' }} className="rounded-xl p-2.5 flex justify-between text-xs font-semibold">
                   <span>{lang === 'uz' ? "Qaytim:" : "Сдача:"}</span>
-                  <span className="font-mono text-emerald-700 dark:text-emerald-300">{formatMoney(cashChange)}</span>
+                  <span className="font-nums font-bold">{formatMoney(cashChange)}</span>
                 </div>
               )}
             </div>
@@ -6723,79 +6846,83 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow text-xs">
-                💵 {lang === 'uz' ? "Naqd (F5)" : "Нал (F5)"}
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="atelier-btn-cta disabled:opacity-40 font-bold py-3.5 rounded-2xl shadow-sm text-xs flex items-center justify-center gap-1.5">
+                <Icon name="cash" size={16} /><span>{lang === 'uz' ? "Naqd (F5)" : "Наличные"}</span>
               </button>
-              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold py-3 rounded-2xl shadow text-xs">
-                💳 {lang === 'uz' ? "Karta (F6)" : "Карта (F6)"}
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="atelier-btn-primary disabled:opacity-40 font-bold py-3.5 rounded-2xl shadow-sm text-xs flex items-center justify-center gap-1.5">
+                <Icon name="card" size={16} /><span>{lang === 'uz' ? "Karta (F6)" : "Картой"}</span>
               </button>
-              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} className="bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-extrabold py-2.5 rounded-2xl shadow text-xs">
-                📓 {lang === 'uz' ? "Qarz (F7)" : "В долг (F7)"}
+              <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} style={{ color: 'var(--warm-fg)' }} className="atelier-btn-soft disabled:opacity-40 font-semibold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5">
+                <Icon name="debts" size={15} /><span>{lang === 'uz' ? "Qarzga (F7)" : "В долг"}</span>
               </button>
-              <button type="button" disabled={cart.length === 0} onClick={() => { setCheckoutInitialMethod('MIXED'); setCheckoutModalOpen(true); }} className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 disabled:opacity-40 font-extrabold py-2.5 rounded-2xl text-xs border border-slate-200 dark:border-slate-700">
-                🔀 {lang === 'uz' ? "Split / Skidka" : "Сплит / Скидка"}
+              <button type="button" disabled={cart.length === 0} onClick={() => { setCheckoutInitialMethod('MIXED'); setCheckoutModalOpen(true); }} className="atelier-btn-soft disabled:opacity-40 font-semibold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5">
+                <Icon name="split" size={15} /><span>{lang === 'uz' ? "Split / Chegirma" : "Сплит / Скидка"}</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile Pinned Thumb Checkout Dock (Always On Screen Right Above Nav Bar!) */}
-      <div className="lg:hidden shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-lg space-y-1.5">
+      {/* Mobile Clean Floating Checkout Dock */}
+      <div className="lg:hidden shrink-0 atelier-card rounded-[24px] p-2.5 space-y-2">
         <div className="flex items-center justify-between gap-2 px-1">
-          <div className="flex items-baseline gap-1.5 min-w-0">
-            <span className="text-[11px] font-bold text-slate-500">{lang === 'uz' ? 'Jami:' : 'Итого:'}</span>
-            <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">{formatMoney(cartTotal)}</span>
-            <span className="text-[10px] text-slate-400 font-mono">({cart.length})</span>
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="text-xs font-medium atelier-text-muted">{lang === 'uz' ? 'Jami:' : 'Итого:'}</span>
+            <span className="text-xl font-bold font-nums truncate">{formatMoney(cartTotal)}</span>
+            <span className="text-xs atelier-text-muted font-nums">({cart.length})</span>
           </div>
           <button
             type="button"
             disabled={cart.length === 0}
             onClick={() => { setCheckoutInitialMethod('CASH'); setCheckoutModalOpen(true); }}
-            className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 shrink-0"
+            className="px-3 py-1 rounded-full text-xs font-semibold atelier-btn-soft disabled:opacity-40 shrink-0 flex items-center gap-1"
           >
-            🏷️ {lang === 'uz' ? 'Chegirma / Qaytim' : 'Скидка / Сдача'}
+            <Icon name="tag" size={13} />
+            <span>{lang === 'uz' ? 'Chegirma / Qaytim' : 'Скидка'}</span>
           </button>
         </div>
 
         <div className="grid grid-cols-4 gap-1.5">
-          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm">
-            <span>💵</span>
-            <span className="text-[10px]">{lang === 'uz' ? "Naqd" : "Нал"}</span>
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CASH')} className="py-2.5 rounded-2xl atelier-btn-cta disabled:opacity-40 font-bold text-[11px] flex flex-col items-center justify-center gap-0.5 shadow-sm">
+            <Icon name="cash" size={16} />
+            <span>{lang === 'uz' ? "Naqd" : "Нал"}</span>
           </button>
-          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="py-2 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm">
-            <span>💳</span>
-            <span className="text-[10px]">{lang === 'uz' ? "Karta" : "Карта"}</span>
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('CARD')} className="py-2.5 rounded-2xl atelier-btn-primary disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5">
+            <Icon name="card" size={16} />
+            <span>{lang === 'uz' ? "Karta" : "Карта"}</span>
           </button>
-          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} className="py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm">
-            <span>📓</span>
-            <span className="text-[10px]">{lang === 'uz' ? "Qarz" : "Долг"}</span>
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('DEBT')} style={{ color: 'var(--warm-fg)' }} className="py-2.5 rounded-2xl atelier-btn-soft disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5">
+            <Icon name="debts" size={16} />
+            <span>{lang === 'uz' ? "Qarz" : "В долг"}</span>
           </button>
-          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('MIXED')} className="py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-extrabold text-xs flex flex-col items-center justify-center shadow-sm">
-            <span>🔀</span>
-            <span className="text-[10px]">{lang === 'uz' ? "Split" : "Сплит"}</span>
+          <button type="button" disabled={cart.length === 0 || directLoading} onClick={() => handleDirectCheckout('MIXED')} className="py-2.5 rounded-2xl atelier-btn-soft disabled:opacity-40 font-semibold text-[11px] flex flex-col items-center justify-center gap-0.5">
+            <Icon name="split" size={16} />
+            <span>{lang === 'uz' ? "Split" : "Сплит"}</span>
           </button>
         </div>
       </div>
 
       {/* Parked Carts Modal */}
       {parkedModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-4 sm:p-5 shadow-2xl modal-mobile-safe text-slate-800 dark:text-slate-100">
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800 mb-3 shrink-0">
-              <h3 className="font-bold text-base">📂 {lang === 'uz' ? "Saqlangan cheklar" : "Отложенные чеки"}</h3>
-              <button type="button" onClick={() => setParkedModalOpen(false)} className="text-slate-400 text-lg">✕</button>
+        <div className="fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-2.5 sm:p-3 backdrop-blur-md">
+          <div className="atelier-modal rounded-[28px] w-full max-w-md p-4 sm:p-5 modal-mobile-safe">
+            <div className="flex items-center justify-between pb-3 border-b atelier-border mb-3 shrink-0">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <Icon name="folder" size={18} />
+                <span>{lang === 'uz' ? "Saqlangan cheklar" : "Отложенные чеки"}</span>
+              </h3>
+              <button type="button" onClick={() => setParkedModalOpen(false)} className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="close" size={15} /></button>
             </div>
             <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
               {safeArray(parkedCarts).map((h) => (
-                <div key={h.id} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center justify-between gap-2">
+                <div key={h.id} className="atelier-subtle rounded-2xl p-3 flex items-center justify-between gap-2">
                   <div>
-                    <div className="font-bold text-xs">#{h.id} ({h.timestamp})</div>
-                    <div className="text-[11px] text-slate-500 font-mono">{h.itemCount} poz • <span className="font-bold text-emerald-600">{formatMoney(h.total)}</span></div>
+                    <div className="font-semibold text-xs">#{h.id} ({h.timestamp})</div>
+                    <div className="text-[11px] atelier-text-muted font-nums">{h.itemCount} poz • <span style={{ color: 'var(--accent)' }} className="font-bold">{formatMoney(h.total)}</span></div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => resumeParkedCart(h.id)} className="bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs">{lang === 'uz' ? "Tiklash" : "Открыть"}</button>
-                    <button type="button" onClick={() => removeParkedCart(h.id)} className="text-slate-400 hover:text-rose-500 px-2 py-1.5 text-xs">✕</button>
+                    <button type="button" onClick={() => resumeParkedCart(h.id)} className="atelier-btn-cta font-bold px-3.5 py-1.5 rounded-full text-xs">{lang === 'uz' ? "Tiklash" : "Открыть"}</button>
+                    <button type="button" onClick={() => removeParkedCart(h.id)} className="w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="close" size={13} /></button>
                   </div>
                 </div>
               ))}
@@ -6993,54 +7120,55 @@ function DebtsScreen({ token, notify, t, lang: propLang }) {
   }, [debtors, sortBy, lang]);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3">
+    <div className="h-full flex flex-col overflow-hidden gap-2 sm:gap-3">
       {/* Pinned Top KPI + Quick Add / Voice / OCR + Search / Sort Dock */}
-      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2">
+      <div className="shrink-0 atelier-card rounded-[24px] p-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[10px] text-slate-500 font-semibold truncate">{t.totalOutstandingDebt} ({summary ? `${summary.active_debtors_with_debt}/${summary.debtors_count}` : '0/0'})</div>
-            <div className="text-lg sm:text-xl font-black text-rose-600 dark:text-rose-400 font-mono leading-tight">
+            <div className="text-[11px] atelier-text-muted font-medium truncate">{t.totalOutstandingDebt} ({summary ? `${summary.active_debtors_with_debt}/${summary.debtors_count}` : '0/0'})</div>
+            <div style={{ color: 'var(--danger-fg)' }} className="text-xl sm:text-2xl font-bold font-nums leading-tight mt-0.5">
               -{summary ? formatMoney(summary.total_outstanding_debt) : "0 so'm"}
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <button type="button" onClick={() => setCreateDebtorModalOpen(true)} className="px-2.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-sm">
-              ➕ <span className="hidden sm:inline">{lang === 'uz' ? "Yangi" : "Новый"}</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button type="button" onClick={() => setCreateDebtorModalOpen(true)} className="px-3 py-2 atelier-btn-cta font-bold rounded-2xl text-xs shadow-sm flex items-center gap-1">
+              <Icon name="plus" size={14} /><span>{lang === 'uz' ? "Yangi" : "Новый"}</span>
             </button>
-            <button type="button" onClick={() => setVoiceDebtOpen(true)} className="px-2.5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs shadow-sm" title={t.voiceDebtBtn}>
-              🎙️ <span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
+            <button type="button" onClick={() => setVoiceDebtOpen(true)} className="px-2.5 py-2 atelier-btn-soft font-semibold rounded-2xl text-xs flex items-center gap-1" title={t.voiceDebtBtn}>
+              <Icon name="mic" size={14} /><span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
             </button>
-            <button type="button" onClick={() => setOcrDebtOpen(true)} className="px-2.5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-sm" title={t.scanPaperNotebookBtn}>
-              📸 <span className="hidden sm:inline">OCR</span>
+            <button type="button" onClick={() => setOcrDebtOpen(true)} className="px-2.5 py-2 atelier-btn-soft font-semibold rounded-2xl text-xs flex items-center gap-1" title={t.scanPaperNotebookBtn}>
+              <Icon name="camera" size={14} /><span className="hidden sm:inline">OCR</span>
             </button>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <input
-            type="text"
-            placeholder={lang === 'uz' ? "🔍 Ism yoki telefon..." : "🔍 Имя или телефон..."}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
-          />
+          <div className="flex-1 flex items-center atelier-input rounded-2xl px-3">
+            <span className="atelier-text-muted mr-2"><Icon name="search" size={14} /></span>
+            <input
+              type="text"
+              placeholder={lang === 'uz' ? "Ism yoki telefon..." : "Имя или телефон..."}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 min-w-0 bg-transparent py-2 text-xs focus:outline-none"
+            />
+          </div>
           <button
             type="button"
             onClick={() => setOnlyWithDebt(!onlyWithDebt)}
-            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border whitespace-nowrap shrink-0 ${
-              onlyWithDebt
-                ? 'bg-amber-100 dark:bg-amber-950 border-amber-300 text-amber-800 dark:text-amber-300'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+            className={`px-3 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap shrink-0 transition ${
+              onlyWithDebt ? 'atelier-btn-primary' : 'atelier-btn-soft'
             }`}
           >
             {lang === 'uz' ? "Qarzdorlar" : "С долгом"}
           </button>
         </div>
 
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
             { id: 'overdue', label: lang === 'uz' ? "Muddati o'tgan" : "Просрочка" },
-            { id: 'max_debt', label: lang === 'uz' ? "Katta" : "Сумма" },
+            { id: 'max_debt', label: lang === 'uz' ? "Katta" : "Крупные" },
             { id: 'recent', label: lang === 'uz' ? "Yangi" : "Свежие" },
             { id: 'name', label: "A-Z" }
           ].map(s => (
@@ -7048,13 +7176,11 @@ function DebtsScreen({ token, notify, t, lang: propLang }) {
               key={s.id}
               type="button"
               onClick={() => setSortBy(s.id)}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap border shrink-0 ${
-                sortBy === s.id
-                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900'
-                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 transition ${
+                sortBy === s.id ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'
               }`}
             >
-              {s.label} ({sortedDebtors.length && s.id === sortBy ? sortedDebtors.length : ''}{s.id !== sortBy ? '' : ''})
+              {s.label}{sortBy === s.id ? ` (${sortedDebtors.length})` : ''}
             </button>
           ))}
         </div>
@@ -7063,69 +7189,68 @@ function DebtsScreen({ token, notify, t, lang: propLang }) {
       {/* Scrollable Debtors List */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
         {sortedDebtors.length === 0 ? (
-          <div className="text-center py-12 text-xs text-slate-400">{lang === 'uz' ? "Mijozlar topilmadi" : "Клиенты не найдены"}</div>
+          <div className="text-center py-12 text-xs atelier-text-muted">{lang === 'uz' ? "Mijozlar topilmadi" : "Клиенты не найдены"}</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pb-2">
             {sortedDebtors.map((debtor) => {
               const overdue = checkOverdueStatus(debtor.due_date, debtor.balance, lang);
               const hasDebt = Number(debtor.balance) > 0;
               return (
                 <div
                   key={debtor.id}
-                  className={`bg-white dark:bg-slate-900 border rounded-2xl p-3 shadow-sm flex flex-col justify-between gap-2 ${
-                    overdue?.isOverdue
-                      ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10'
-                      : 'border-slate-200 dark:border-slate-800'
-                  }`}
+                  style={overdue?.isOverdue ? { borderColor: 'var(--danger-fg)' } : {}}
+                  className="atelier-card rounded-[24px] p-3.5 flex flex-col justify-between gap-2.5"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 font-extrabold flex items-center justify-center text-xs font-mono shrink-0">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-full atelier-subtle font-bold flex items-center justify-center text-xs font-nums shrink-0">
                         {getInitials(debtor.full_name)}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1">
-                          <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{debtor.full_name}</h4>
-                          <button type="button" onClick={() => { setSelectedDebtor(debtor); setEditModalOpen(true); }} className="text-[11px] opacity-60 hover:opacity-100" title="Edit">✏️</button>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-bold text-xs truncate">{debtor.full_name}</h4>
+                          <button type="button" onClick={() => { setSelectedDebtor(debtor); setEditModalOpen(true); }} className="atelier-text-muted hover:opacity-100" title="Edit">
+                            <Icon name="edit" size={12} />
+                          </button>
                         </div>
                         {debtor.phone && (
-                          <a href={`tel:${debtor.phone}`} className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono hover:underline">
-                            📞 {debtor.phone}
+                          <a href={`tel:${debtor.phone}`} style={{ color: 'var(--accent)' }} className="text-[11px] font-nums inline-flex items-center gap-1 hover:underline mt-0.5">
+                            <Icon name="phone" size={11} /><span>{debtor.phone}</span>
                           </a>
                         )}
                       </div>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <div className={`text-sm font-black font-mono ${hasDebt ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600'}`}>
+                      <div style={{ color: hasDebt ? 'var(--danger-fg)' : 'var(--accent)' }} className="text-sm font-bold font-nums">
                         {hasDebt ? '-' : ''}{formatMoney(debtor.balance)}
                       </div>
                       {overdue ? (
-                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold border ${overdue.color}`}>{overdue.badge}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${overdue.color}`}>{overdue.badge}</span>
                       ) : debtor.due_date ? (
-                        <span className="text-[10px] text-slate-400">⏳ {debtor.due_date}</span>
+                        <span className="text-[11px] atelier-text-muted">{debtor.due_date}</span>
                       ) : null}
                     </div>
                   </div>
 
                   {debtor.note && (
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-2 py-1 rounded-lg truncate italic">
+                    <div className="text-[11px] atelier-text-muted atelier-subtle px-2.5 py-1.5 rounded-xl truncate italic">
                       "{debtor.note}"
                     </div>
                   )}
 
-                  <div className="grid grid-cols-4 gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setPayModalOpen(true); }} className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 py-1.5 rounded-xl text-[11px] font-bold text-center">
-                      💵 {lang === 'uz' ? "To'lash" : "Оплата"}
+                  <div className="grid grid-cols-4 gap-1.5 pt-2 border-t atelier-border">
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setPayModalOpen(true); }} className="atelier-btn-cta py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 col-span-1">
+                      <Icon name="check" size={12} /><span>{lang === 'uz' ? "To'lash" : "Принять"}</span>
                     </button>
-                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setAddDebtModalOpen(true); }} className="bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 py-1.5 rounded-xl text-[11px] font-bold text-center">
-                      ➕ {lang === 'uz' ? "Qarz" : "Долг"}
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setAddDebtModalOpen(true); }} style={{ color: 'var(--warm-fg)' }} className="atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1">
+                      <Icon name="plus" size={12} /><span>{lang === 'uz' ? "Qarz" : "Долг"}</span>
                     </button>
-                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setRemindModalOpen(true); }} className="bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 py-1.5 rounded-xl text-[11px] font-bold text-center">
-                      📩 {lang === 'uz' ? "Eslat" : "Напом."}
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setRemindModalOpen(true); }} className="atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1">
+                      <Icon name="bell" size={12} /><span>{lang === 'uz' ? "Eslat" : "Напом."}</span>
                     </button>
-                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setHistoryModalOpen(true); }} className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-1.5 rounded-xl text-[11px] font-bold text-center">
-                      📜 {lang === 'uz' ? "Tarix" : "Ист."}
+                    <button type="button" onClick={() => { setSelectedDebtor(debtor); setHistoryModalOpen(true); }} className="atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1">
+                      <Icon name="history" size={12} /><span>{lang === 'uz' ? "Tarix" : "Ист."}</span>
                     </button>
                   </div>
                 </div>
@@ -7480,41 +7605,47 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
   }, [activeAct, actSearch]);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3">
+    <div className="h-full flex flex-col overflow-hidden gap-2 sm:gap-3">
       {/* Pinned Top Controls Dock */}
-      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2">
+      <div className="shrink-0 atelier-card rounded-[24px] p-2.5 sm:p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar">
-            <button type="button" onClick={() => setSubTab('products')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'products' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              📦 {lang === 'uz' ? 'Tovarlar' : 'Товары'} ({total})
+          <div className="flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar">
+            <button type="button" onClick={() => setSubTab('products')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'products' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+              <Icon name="box" size={13} /><span>{lang === 'uz' ? 'Tovarlar' : 'Товары'} ({total})</span>
             </button>
             {isOwner && (
               <>
-                <button type="button" onClick={() => setSubTab('revision')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'revision' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-                  📋 {lang === 'uz' ? 'Reviziya' : 'Ревизия'}
+                <button type="button" onClick={() => setSubTab('revision')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'revision' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+                  <Icon name="check" size={13} /><span>{lang === 'uz' ? 'Reviziya' : 'Ревизия'}</span>
                 </button>
-                <button type="button" onClick={() => setSubTab('movements')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subTab === 'movements' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-                  📜 {lang === 'uz' ? 'Harakat' : 'Движ.'}
+                <button type="button" onClick={() => setSubTab('movements')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subTab === 'movements' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+                  <Icon name="history" size={13} /><span>{lang === 'uz' ? 'Harakat' : 'Движение'}</span>
                 </button>
               </>
             )}
           </div>
 
           {subTab === 'products' && isOwner && (
-            <div className="flex items-center gap-1 shrink-0">
-              <button type="button" onClick={exportCsv} className="px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold" title="Export CSV">⬇️</button>
-              <button type="button" onClick={() => csvInputRef.current?.click()} className="px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold" title="Import CSV">⬆️</button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button type="button" onClick={exportCsv} className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center" title="Export CSV">
+                <Icon name="download" size={14} />
+              </button>
+              <button type="button" onClick={() => csvInputRef.current?.click()} className="w-8 h-8 rounded-full atelier-btn-soft flex items-center justify-center" title="Import CSV">
+                <Icon name="upload" size={14} />
+              </button>
               <input ref={csvInputRef} type="file" accept=".csv" onChange={importCsvFile} className="hidden" />
-              <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-2 py-1.5 rounded-xl bg-indigo-600 text-white text-[11px] font-bold" title={lang === 'uz' ? 'Skanerlab kiritish' : 'Поточный скан'}>🔄 📷</button>
-              <button type="button" onClick={() => setCreateProductOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm">
-                ➕ <span className="hidden sm:inline">{lang === 'uz' ? 'Yangi' : 'Новый'}</span>
+              <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-2.5 h-8 rounded-full atelier-btn-soft text-xs font-semibold flex items-center gap-1" title={lang === 'uz' ? 'Skanerlab kiritish' : 'Поточный скан'}>
+                <Icon name="scan" size={14} />
+              </button>
+              <button type="button" onClick={() => setCreateProductOpen(true)} className="px-3 h-8 rounded-full atelier-btn-cta text-xs font-bold shadow-sm flex items-center gap-1">
+                <Icon name="plus" size={14} /><span className="hidden sm:inline">{lang === 'uz' ? 'Yangi' : 'Добавить'}</span>
               </button>
             </div>
           )}
 
           {subTab === 'revision' && isOwner && (
-            <button type="button" onClick={createAct} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shrink-0">
-              ➕ {lang === 'uz' ? 'Yangi akt' : 'Новый акт'}
+            <button type="button" onClick={createAct} className="px-3 py-1.5 rounded-full atelier-btn-cta text-xs font-bold shrink-0 flex items-center gap-1">
+              <Icon name="plus" size={14} /><span>{lang === 'uz' ? 'Yangi akt' : 'Новый акт'}</span>
             </button>
           )}
         </div>
@@ -7522,37 +7653,42 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
         {subTab === 'products' && (
           <>
             <div className="flex items-center gap-1.5">
-              <input
-                type="text"
-                placeholder={t.searchProductPlaceholder}
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setSkip(0); }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && /^[0-9A-Za-z\-]{4,64}$/.test(search.trim()) && /\d/.test(search)) {
-                    e.preventDefault();
-                    handleCatalogBarcode(search.trim());
-                  }
-                }}
-                className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-emerald-500"
-              />
-              <button type="button" onClick={() => setFilterScannerOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shrink-0">📷</button>
-              <button type="button" onClick={() => { setLowStockOnly(!lowStockOnly); setSkip(0); }} className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${lowStockOnly ? 'bg-rose-100 border-rose-300 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
-                ⚠️ <span className="hidden sm:inline">{lang === 'uz' ? 'Kam' : 'Мало'}</span>
+              <div className="flex-1 flex items-center atelier-input rounded-2xl px-3">
+                <span className="atelier-text-muted mr-2"><Icon name="search" size={14} /></span>
+                <input
+                  type="text"
+                  placeholder={lang === 'uz' ? "Nom yoki shtrixkod..." : "Поиск товара или штрихкода..."}
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setSkip(0); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && /^[0-9A-Za-z\-]{4,64}$/.test(search.trim()) && /\d/.test(search)) {
+                      e.preventDefault();
+                      handleCatalogBarcode(search.trim());
+                    }
+                  }}
+                  className="flex-1 min-w-0 bg-transparent py-2 text-xs focus:outline-none"
+                />
+              </div>
+              <button type="button" onClick={() => setFilterScannerOpen(true)} className="w-9 h-9 rounded-2xl atelier-btn-primary flex items-center justify-center shrink-0">
+                <Icon name="scan" size={16} />
               </button>
-              <button type="button" onClick={() => { setExpiringOnly(!expiringOnly); setSkip(0); }} className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${expiringOnly ? 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
-                ⏰ <span className="hidden sm:inline">{lang === 'uz' ? 'Muddat' : 'Срок'}</span>
+              <button type="button" onClick={() => { setLowStockOnly(!lowStockOnly); setSkip(0); }} className={`px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${lowStockOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
+                {lang === 'uz' ? 'Kam' : 'Мало'}
               </button>
-              <button type="button" onClick={() => { setTobaccoOnly(!tobaccoOnly); setSkip(0); }} className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${tobaccoOnly ? 'bg-indigo-100 border-indigo-300 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
-                🚬 <span className="hidden sm:inline">{lang === 'uz' ? 'Tamaki' : 'Табак'}</span>
+              <button type="button" onClick={() => { setExpiringOnly(!expiringOnly); setSkip(0); }} className={`px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${expiringOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
+                {lang === 'uz' ? 'Muddat' : 'Срок'}
+              </button>
+              <button type="button" onClick={() => { setTobaccoOnly(!tobaccoOnly); setSkip(0); }} className={`px-2.5 py-2 rounded-2xl text-[11px] font-semibold shrink-0 transition ${tobaccoOnly ? 'atelier-btn-primary' : 'atelier-btn-soft'}`}>
+                {lang === 'uz' ? 'Marka' : 'Марка'}
               </button>
             </div>
 
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-              <button type="button" onClick={() => { setSelectedCategory(null); setSkip(0); }} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${selectedCategory === null ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <button type="button" onClick={() => { setSelectedCategory(null); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${selectedCategory === null ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`}>
                 {lang === 'uz' ? 'Hammasi' : 'Все'}
               </button>
               {safeArray(categories).map(cat => (
-                <button key={cat.id} type="button" onClick={() => { setSelectedCategory(cat.id === selectedCategory ? null : cat.id); setSkip(0); }} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${selectedCategory === cat.id ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+                <button key={cat.id} type="button" onClick={() => { setSelectedCategory(cat.id === selectedCategory ? null : cat.id); setSkip(0); }} className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${selectedCategory === cat.id ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'}`}>
                   {cat.name ? cat.name.split('/')[0].trim() : cat.name}
                 </button>
               ))}
@@ -7562,28 +7698,30 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
       </div>
 
       {/* Scrollable Middle Area */}
-      <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 atelier-card rounded-[24px] overflow-hidden flex flex-col">
         {subTab === 'products' && (
           <>
             <div className="flex-1 min-h-0 overflow-y-auto">
               {safeArray(products).length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-xs">
-                  <div className="text-4xl">📦</div>
-                  <div className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                  <div className="w-14 h-14 rounded-2xl atelier-subtle flex items-center justify-center atelier-text-muted">
+                    <Icon name="box" size={26} />
+                  </div>
+                  <div className="font-semibold text-sm max-w-xs">
                     {search || selectedCategory || lowStockOnly || expiringOnly
                       ? (lang === 'uz' ? "Bunday tovar topilmadi" : "Товары по фильтру не найдены")
-                      : (lang === 'uz' ? "Katalog bo'sh — do'kon tovarlarini qo'shishni boshlang" : "Каталог чист — начните добавлять товары магазина")}
+                      : (lang === 'uz' ? "Katalog bo'sh — do'kon tovarlarini qo'shishni boshlang" : "Каталог чист — добавьте первые товары магазина")}
                   </div>
                   {isOwner && (
                     <div className="flex flex-wrap justify-center gap-2">
-                      <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold shadow">
-                        📷 {lang === 'uz' ? "Skanerlab kiritish" : "Сканировать товары"}
+                      <button type="button" onClick={() => setCreateProductOpen({ barcode: '', autoScan: true })} className="px-4 py-2.5 rounded-full atelier-btn-cta font-bold shadow-sm flex items-center gap-1.5">
+                        <Icon name="scan" size={15} /><span>{lang === 'uz' ? "Skanerlab kiritish" : "Сканировать товары"}</span>
                       </button>
-                      <button type="button" onClick={() => setCreateProductOpen({ barcode: search.trim(), autoScan: false })} className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold shadow">
-                        ➕ {lang === 'uz' ? "Qo'lda qo'shish" : "Добавить вручную"}
+                      <button type="button" onClick={() => setCreateProductOpen({ barcode: search.trim(), autoScan: false })} className="px-4 py-2.5 rounded-full atelier-btn-primary font-semibold flex items-center gap-1.5">
+                        <Icon name="plus" size={15} /><span>{lang === 'uz' ? "Qo'lda qo'shish" : "Добавить вручную"}</span>
                       </button>
-                      <button type="button" onClick={() => csvInputRef.current?.click()} className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold">
-                        ⬆️ CSV
+                      <button type="button" onClick={() => csvInputRef.current?.click()} className="px-4 py-2.5 rounded-full atelier-btn-soft font-semibold flex items-center gap-1.5">
+                        <Icon name="upload" size={14} /><span>CSV</span>
                       </button>
                     </div>
                   )}
@@ -7591,51 +7729,53 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
               ) : (
                 <>
                   {/* Mobile Cards (< md) */}
-              <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="block md:hidden divide-y atelier-border">
                 {safeArray(products).map((p) => (
-                  <div key={p.id} className="p-2.5 space-y-1.5">
+                  <div key={p.id} className="p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1">
+                        <div className="font-semibold text-xs flex items-center gap-1.5">
                           {isOwner && (
-                            <button type="button" onClick={() => toggleQuickStar(p)} className={`text-sm ${p.is_quick ? 'opacity-100' : 'opacity-30'}`} title="Tezkor kassa">⚡</button>
+                            <button type="button" onClick={() => toggleQuickStar(p)} style={{ color: p.is_quick ? 'var(--accent)' : 'var(--text-muted)' }} className={p.is_quick ? 'opacity-100' : 'opacity-35'} title="Tezkor kassa">
+                              <Icon name="bolt" size={14} />
+                            </button>
                           )}
                           <span className="truncate">{p.name}</span>
                         </div>
-                        <div className="text-[10px] font-mono text-slate-500 mt-0.5 truncate">
+                        <div className="text-[11px] font-nums atelier-text-muted mt-0.5 truncate">
                           {p.barcode} • {p.category_name?.split('/')[0]?.trim()}
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400">{formatMoney(p.sale_price)}</div>
-                        <div className={`font-mono text-[11px] font-bold ${p.is_low_stock ? 'text-rose-500' : 'text-slate-500'}`}>
+                        <div style={{ color: 'var(--accent)' }} className="font-nums font-bold text-xs">{formatMoney(p.sale_price)}</div>
+                        <div style={{ color: p.is_low_stock ? 'var(--danger-fg)' : 'var(--text-muted)' }} className="font-nums text-[11px] font-semibold">
                           {p.stock_quantity} {p.unit}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px]">
+                    <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t atelier-border text-[10px]">
                       <div className="flex items-center gap-1 flex-wrap">
                         {isOwner && p.purchase_price !== null && (
-                          <span className="font-mono text-slate-400">{lang === 'uz' ? 'Kirim:' : 'Зак:'} {formatMoney(p.purchase_price)}</span>
+                          <span className="font-nums atelier-text-muted">{lang === 'uz' ? 'Kirim:' : 'Зак:'} {formatMoney(p.purchase_price)}</span>
                         )}
                         {(p.is_tobacco || p.requires_marking) && (
-                          <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold">🚬 DM</span>
+                          <span style={{ backgroundColor: 'var(--warm-bg)', color: 'var(--warm-fg)' }} className="px-2 py-0.5 rounded-full font-semibold">DataMatrix</span>
                         )}
-                        <span className={`px-1.5 py-0.5 rounded font-mono font-bold ${p.ikpu_valid ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
-                          {p.ikpu_valid ? 'IKPU ✓' : 'IKPU !'}
+                        <span style={p.ikpu_valid ? { backgroundColor: 'var(--accent-soft)', color: 'var(--accent-soft-fg)' } : {}} className={`px-2 py-0.5 rounded-full font-nums font-semibold ${p.ikpu_valid ? '' : 'atelier-subtle atelier-text-muted'}`}>
+                          {p.ikpu_valid ? 'ИКПУ ✓' : 'Без ИКПУ'}
                         </span>
                         {p.expiry_date && (
-                          <span className={`px-1.5 py-0.5 rounded font-bold ${p.is_expired ? 'bg-rose-100 text-rose-700' : p.is_expiring_soon ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
-                            ⏰ {p.expiry_date}
+                          <span className="px-2 py-0.5 rounded-full font-semibold atelier-subtle">
+                            {p.expiry_date}
                           </span>
                         )}
                       </div>
                       {isOwner && (
                         <div className="flex items-center gap-1 shrink-0">
-                          <button type="button" onClick={() => setPriceTagProduct(p)} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs">🏷️</button>
-                          <button type="button" onClick={() => setEditingProduct(p)} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs">✏️</button>
-                          <button type="button" onClick={() => deleteProduct(p)} className="px-2 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 text-xs">🗑️</button>
+                          <button type="button" onClick={() => setPriceTagProduct(p)} className="w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="tag" size={13} /></button>
+                          <button type="button" onClick={() => setEditingProduct(p)} className="w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="edit" size={13} /></button>
+                          <button type="button" onClick={() => deleteProduct(p)} style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger-fg)' }} className="w-7 h-7 rounded-full flex items-center justify-center"><Icon name="trash" size={13} /></button>
                         </div>
                       )}
                     </div>
@@ -7645,40 +7785,40 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
 
               {/* Desktop Table (>= md) */}
               <table className="hidden md:table w-full text-left text-xs">
-                <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+                <thead className="atelier-subtle atelier-text-muted font-semibold border-b atelier-border sticky top-0 z-10">
                   <tr>
-                    <th className="px-3 py-2.5">⚡</th>
-                    <th className="px-3 py-2.5">{t.colBarcode}</th>
-                    <th className="px-3 py-2.5">{t.colName}</th>
-                    {isOwner && <th className="px-3 py-2.5 text-right">{t.colPurchasePrice}</th>}
-                    <th className="px-3 py-2.5 text-right">{t.colSalePrice}</th>
-                    <th className="px-3 py-2.5 text-right">{t.colStock}</th>
-                    <th className="px-3 py-2.5 text-center">{lang === 'uz' ? 'Muddat' : 'Срок'}</th>
-                    {isOwner && <th className="px-3 py-2.5 text-center">{t.colActions}</th>}
+                    <th className="px-3.5 py-2.5"><Icon name="bolt" size={13} /></th>
+                    <th className="px-3.5 py-2.5">{t.colBarcode}</th>
+                    <th className="px-3.5 py-2.5">{t.colName}</th>
+                    {isOwner && <th className="px-3.5 py-2.5 text-right">{t.colPurchasePrice}</th>}
+                    <th className="px-3.5 py-2.5 text-right">{t.colSalePrice}</th>
+                    <th className="px-3.5 py-2.5 text-right">{t.colStock}</th>
+                    <th className="px-3.5 py-2.5 text-center">{lang === 'uz' ? 'Muddat' : 'Срок'}</th>
+                    {isOwner && <th className="px-3.5 py-2.5 text-center">{t.colActions}</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                <tbody className="divide-y atelier-border">
                   {safeArray(products).map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                      <td className="px-3 py-2">
-                        {isOwner && <button type="button" onClick={() => toggleQuickStar(p)} className={p.is_quick ? 'opacity-100' : 'opacity-25'}>⚡</button>}
+                    <tr key={p.id}>
+                      <td className="px-3.5 py-2.5">
+                        {isOwner && <button type="button" onClick={() => toggleQuickStar(p)} style={{ color: p.is_quick ? 'var(--accent)' : 'var(--text-muted)' }} className={p.is_quick ? 'opacity-100' : 'opacity-30'}><Icon name="bolt" size={14} /></button>}
                       </td>
-                      <td className="px-3 py-2 font-mono text-[11px] text-slate-500">{p.barcode}</td>
-                      <td className="px-3 py-2 font-medium">{p.name}</td>
-                      {isOwner && <td className="px-3 py-2 text-right font-mono text-slate-500">{formatMoney(p.purchase_price)}</td>}
-                      <td className="px-3 py-2 text-right font-bold text-emerald-600 font-mono">{formatMoney(p.sale_price)}</td>
-                      <td className={`px-3 py-2 text-right font-mono font-bold ${p.is_low_stock ? 'text-rose-500' : ''}`}>{p.stock_quantity} {p.unit}</td>
-                      <td className="px-3 py-2 text-center text-[11px]">
+                      <td className="px-3.5 py-2.5 font-nums text-[11px] atelier-text-muted">{p.barcode}</td>
+                      <td className="px-3.5 py-2.5 font-semibold">{p.name}</td>
+                      {isOwner && <td className="px-3.5 py-2.5 text-right font-nums atelier-text-muted">{formatMoney(p.purchase_price)}</td>}
+                      <td style={{ color: 'var(--accent)' }} className="px-3.5 py-2.5 text-right font-bold font-nums">{formatMoney(p.sale_price)}</td>
+                      <td style={{ color: p.is_low_stock ? 'var(--danger-fg)' : 'var(--text-main)' }} className="px-3.5 py-2.5 text-right font-nums font-bold">{p.stock_quantity} {p.unit}</td>
+                      <td className="px-3.5 py-2.5 text-center text-[11px]">
                         {p.expiry_date ? (
-                          <span className={`px-1.5 py-0.5 rounded font-bold ${p.is_expired ? 'bg-rose-100 text-rose-700' : p.is_expiring_soon ? 'bg-amber-100 text-amber-800' : ''}`}>{p.expiry_date}</span>
+                          <span className="px-2 py-0.5 rounded-full font-semibold atelier-subtle">{p.expiry_date}</span>
                         ) : '—'}
                       </td>
                       {isOwner && (
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-3.5 py-2.5 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <button type="button" onClick={() => setPriceTagProduct(p)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">🏷️</button>
-                            <button type="button" onClick={() => setEditingProduct(p)} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">✏️</button>
-                            <button type="button" onClick={() => deleteProduct(p)} className="p-1.5 hover:bg-rose-100 rounded-lg text-rose-600">🗑️</button>
+                            <button type="button" onClick={() => setPriceTagProduct(p)} className="w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="tag" size={13} /></button>
+                            <button type="button" onClick={() => setEditingProduct(p)} className="w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="edit" size={13} /></button>
+                            <button type="button" onClick={() => deleteProduct(p)} style={{ color: 'var(--danger-fg)' }} className="w-7 h-7 rounded-full atelier-btn-soft flex items-center justify-center"><Icon name="trash" size={13} /></button>
                           </div>
                         </td>
                       )}
@@ -7690,51 +7830,51 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
               )}
             </div>
 
-            {/* Pinned Compact Pagination Footer (No Scrolling Needed!) */}
-            <div className="shrink-0 px-3 py-1.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/40">
-              <span className="font-mono text-[11px]">{skip + 1}–{Math.min(skip + limit, total)} / {total}</span>
+            {/* Pinned Compact Pagination Footer */}
+            <div className="shrink-0 px-3.5 py-2 border-t atelier-border flex items-center justify-between text-xs atelier-text-muted">
+              <span className="font-nums text-[11px]">{skip + 1}–{Math.min(skip + limit, total)} / {total}</span>
               <div className="flex gap-1.5">
-                <button type="button" disabled={skip === 0} onClick={() => setSkip(Math.max(0, skip - limit))} className="px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 font-bold">←</button>
-                <button type="button" disabled={skip + limit >= total} onClick={() => setSkip(skip + limit)} className="px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 disabled:opacity-40 font-bold">→</button>
+                <button type="button" disabled={skip === 0} onClick={() => setSkip(Math.max(0, skip - limit))} className="px-3 py-1 rounded-full atelier-btn-soft disabled:opacity-40 font-bold">←</button>
+                <button type="button" disabled={skip + limit >= total} onClick={() => setSkip(skip + limit)} className="px-3 py-1 rounded-full atelier-btn-soft disabled:opacity-40 font-bold">→</button>
               </div>
             </div>
           </>
         )}
 
         {subTab === 'revision' && (
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-2.5 space-y-2">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-3 space-y-2">
             {!activeAct ? (
               <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
                 {acts.length === 0 ? (
-                  <div className="text-center py-10 text-xs text-slate-400">{lang === 'uz' ? "Hozircha reviziya aktlari yo'q. Yangi akt oching." : "Актов ревизии пока нет."}</div>
+                  <div className="text-center py-10 text-xs atelier-text-muted">{lang === 'uz' ? "Hozircha reviziya aktlari yo'q. Yangi akt oching." : "Актов ревизии пока нет."}</div>
                 ) : (
                   acts.map(a => (
-                    <div key={a.id} onClick={() => openAct(a.id)} className="p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between cursor-pointer hover:border-emerald-500">
+                    <div key={a.id} onClick={() => openAct(a.id)} className="p-3 rounded-2xl atelier-subtle flex items-center justify-between cursor-pointer hover:opacity-90">
                       <div>
-                        <div className="font-bold text-xs">{a.name} ({a.act_number})</div>
-                        <div className="text-[11px] text-slate-400">{a.total_products} SKU • +{a.surpluses} / -{a.deficits}</div>
+                        <div className="font-semibold text-xs">{a.name} ({a.act_number})</div>
+                        <div className="text-[11px] atelier-text-muted font-nums">{a.total_products} SKU • +{a.surpluses} / -{a.deficits}</div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${a.status === 'APPLIED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{a.status}</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold atelier-pill-active">{a.status}</span>
                     </div>
                   ))
                 )}
               </div>
             ) : (
               <>
-                <div className="shrink-0 flex items-center justify-between gap-2 pb-1 border-b border-slate-200 dark:border-slate-800">
-                  <button type="button" onClick={() => setActiveAct(null)} className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold">← {lang === 'uz' ? 'Orqaga' : 'Назад'}</button>
-                  <input type="text" placeholder="🔍 Shtrixkod / nom..." value={actSearch} onChange={(e) => setActSearch(e.target.value)} className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1 text-xs" />
-                  <button type="button" onClick={() => setActScannerOpen(true)} className="px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-xs font-bold">📷</button>
+                <div className="shrink-0 flex items-center justify-between gap-2 pb-2 border-b atelier-border">
+                  <button type="button" onClick={() => setActiveAct(null)} className="px-3 py-1.5 rounded-full atelier-btn-soft text-xs font-semibold">← {lang === 'uz' ? 'Orqaga' : 'Назад'}</button>
+                  <input type="text" placeholder="Shtrixkod / nom..." value={actSearch} onChange={(e) => setActSearch(e.target.value)} className="flex-1 min-w-0 atelier-input rounded-2xl px-3 py-1.5 text-xs" />
+                  <button type="button" onClick={() => setActScannerOpen(true)} className="w-8 h-8 atelier-btn-primary rounded-full flex items-center justify-center"><Icon name="scan" size={14} /></button>
                   {activeAct.status !== 'APPLIED' && (
-                    <button type="button" onClick={applyAct} className="px-2.5 py-1 bg-indigo-600 text-white rounded-xl text-xs font-bold">✅ {lang === 'uz' ? "Qo'llash" : "Применить"}</button>
+                    <button type="button" onClick={applyAct} className="px-3 py-1.5 atelier-btn-cta rounded-full text-xs font-bold flex items-center gap-1"><Icon name="check" size={13} /><span>{lang === 'uz' ? "Qo'llash" : "Применить"}</span></button>
                   )}
                 </div>
-                <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="flex-1 min-h-0 overflow-y-auto divide-y atelier-border">
                   {filteredActItems.slice(0, 80).map(it => (
                     <div key={it.product_id} className="py-2 flex items-center justify-between gap-2 text-xs">
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold truncate">{it.product_name}</div>
-                        <div className="text-[10px] font-mono text-slate-400">{lang === 'uz' ? 'Hisobda:' : 'Учет:'} {it.recorded_quantity} {it.unit} {it.difference !== 0 && `(${it.difference > 0 ? '+' : ''}${it.difference})`}</div>
+                        <div className="font-semibold truncate">{it.product_name}</div>
+                        <div className="text-[10px] font-nums atelier-text-muted">{lang === 'uz' ? 'Hisobda:' : 'Учет:'} {it.recorded_quantity} {it.unit} {it.difference !== 0 && `(${it.difference > 0 ? '+' : ''}${it.difference})`}</div>
                       </div>
                       <input
                         type="number"
@@ -7744,7 +7884,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
                         onBlur={(e) => {
                           if (Number(e.target.value) !== Number(it.actual_quantity)) scanActQty(it.product_id, e.target.value);
                         }}
-                        className="w-20 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold"
+                        className="w-20 atelier-input rounded-xl px-2 py-1 text-center font-nums font-bold"
                       />
                     </div>
                   ))}
@@ -7755,21 +7895,21 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
         )}
 
         {subTab === 'movements' && (
-          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 p-2">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y atelier-border p-3">
             {movements.length === 0 ? (
-              <div className="text-center py-10 text-xs text-slate-400">{lang === 'uz' ? "Harakatlar tarixi bo'sh" : "История движений пуста"}</div>
+              <div className="text-center py-10 text-xs atelier-text-muted">{lang === 'uz' ? "Harakatlar tarixi bo'sh" : "История движений пуста"}</div>
             ) : (
               movements.map(m => (
                 <div key={m.id} className="py-2 flex items-center justify-between gap-2 text-xs">
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold truncate">{m.product_name}</div>
-                    <div className="text-[10px] text-slate-400">{m.movement_type} • {m.reference_id || ''} • {new Date(m.created_at).toLocaleString()}</div>
+                    <div className="font-semibold truncate">{m.product_name}</div>
+                    <div className="text-[10px] atelier-text-muted">{m.movement_type} • {m.reference_id || ''} • {new Date(m.created_at).toLocaleString()}</div>
                   </div>
-                  <div className="text-right font-mono shrink-0">
-                    <div className={`font-black ${m.quantity_delta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <div className="text-right font-nums shrink-0">
+                    <div style={{ color: m.quantity_delta >= 0 ? 'var(--accent)' : 'var(--danger-fg)' }} className="font-bold">
                       {m.quantity_delta >= 0 ? '+' : ''}{m.quantity_delta}
                     </div>
-                    <div className="text-[10px] text-slate-400">{m.previous_stock} → {m.new_stock}</div>
+                    <div className="text-[10px] atelier-text-muted">{m.previous_stock} → {m.new_stock}</div>
                   </div>
                 </div>
               ))
@@ -7842,38 +7982,41 @@ function OperationsHubScreen({ token, notify, t, lang: propLang, initialSection 
   });
 
   return (
-    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3">
+    <div className="h-full flex flex-col overflow-hidden gap-2 sm:gap-3">
       {/* Pinned Operations Header */}
-      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2">
+      <div className="shrink-0 atelier-card rounded-[24px] p-2.5 sm:p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar">
-            <button type="button" onClick={() => setSection('suppliers')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'suppliers' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              🏢 {lang === 'uz' ? "Ta'minotchi" : 'Поставщики'} ({suppliers.length})
+          <div className="flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar">
+            <button type="button" onClick={() => setSection('suppliers')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${section === 'suppliers' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+              <Icon name="truck" size={13} /><span>{lang === 'uz' ? "Ta'minotchi" : 'Поставщики'} ({suppliers.length})</span>
             </button>
-            <button type="button" onClick={() => setSection('invoices')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'invoices' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              📦 {lang === 'uz' ? 'Faktura' : 'Накладные'} ({invoices.length})
+            <button type="button" onClick={() => setSection('invoices')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${section === 'invoices' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+              <Icon name="box" size={13} /><span>{lang === 'uz' ? 'Faktura' : 'Накладные'} ({invoices.length})</span>
             </button>
-            <button type="button" onClick={() => setSection('expenses')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${section === 'expenses' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              💸 {lang === 'uz' ? 'Xarajat' : 'Расходы'} ({expenses.length})
+            <button type="button" onClick={() => setSection('expenses')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${section === 'expenses' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+              <Icon name="receipt" size={13} /><span>{lang === 'uz' ? 'Xarajat' : 'Расходы'} ({expenses.length})</span>
             </button>
           </div>
         </div>
 
         <div className="flex items-center justify-between gap-1.5">
           {section === 'suppliers' && (
-            <input type="text" placeholder={lang === 'uz' ? "🔍 Qidiruv..." : "🔍 Поиск..."} value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs" />
+            <div className="flex-1 flex items-center atelier-input rounded-2xl px-3">
+              <span className="atelier-text-muted mr-2"><Icon name="search" size={14} /></span>
+              <input type="text" placeholder={lang === 'uz' ? "Qidiruv..." : "Поиск..."} value={searchSupplier} onChange={(e) => setSearchSupplier(e.target.value)} className="flex-1 min-w-0 bg-transparent py-2 text-xs focus:outline-none" />
+            </div>
           )}
           <div className="flex items-center gap-1.5 ml-auto shrink-0">
             {section !== 'expenses' ? (
               <>
-                <button type="button" onClick={() => setCreateSupplierModalOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">+🏢</button>
-                <button type="button" onClick={() => setOcrInvoiceOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold">📸 OCR</button>
-                <button type="button" onClick={() => setCreateInvoiceModalOpen(true)} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold">➕ {lang === 'uz' ? 'Faktura' : 'Приход'}</button>
+                <button type="button" onClick={() => setCreateSupplierModalOpen(true)} className="px-3 py-2 rounded-full atelier-btn-soft text-xs font-semibold flex items-center gap-1"><Icon name="plus" size={13} /><span>{lang === 'uz' ? "Ta'minotchi" : "Поставщик"}</span></button>
+                <button type="button" onClick={() => setOcrInvoiceOpen(true)} className="px-3 py-2 rounded-full atelier-btn-soft text-xs font-semibold flex items-center gap-1"><Icon name="camera" size={13} /><span>OCR</span></button>
+                <button type="button" onClick={() => setCreateInvoiceModalOpen(true)} className="px-3.5 py-2 rounded-full atelier-btn-cta text-xs font-bold flex items-center gap-1"><Icon name="plus" size={13} /><span>{lang === 'uz' ? 'Faktura' : 'Приход'}</span></button>
               </>
             ) : (
               <>
-                <button type="button" onClick={() => { setIsSpoilageMode(true); setCreateExpenseOpen(true); }} className="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 text-xs font-bold">⚠️ {lang === 'uz' ? 'Spisanie' : 'Списание'}</button>
-                <button type="button" onClick={() => { setIsSpoilageMode(false); setCreateExpenseOpen(true); }} className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold">➕ {lang === 'uz' ? 'Xarajat' : 'Расход'}</button>
+                <button type="button" onClick={() => { setIsSpoilageMode(true); setCreateExpenseOpen(true); }} style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger-fg)' }} className="px-3 py-2 rounded-full text-xs font-semibold flex items-center gap-1"><Icon name="alert" size={13} /><span>{lang === 'uz' ? 'Spisanie' : 'Списание'}</span></button>
+                <button type="button" onClick={() => { setIsSpoilageMode(false); setCreateExpenseOpen(true); }} className="px-3.5 py-2 rounded-full atelier-btn-cta text-xs font-bold flex items-center gap-1"><Icon name="plus" size={13} /><span>{lang === 'uz' ? 'Xarajat' : 'Расход'}</span></button>
               </>
             )}
           </div>
@@ -7883,21 +8026,29 @@ function OperationsHubScreen({ token, notify, t, lang: propLang, initialSection 
       {/* Scrollable Body */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
         {section === 'suppliers' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pb-2">
             {filteredSuppliers.map((s) => (
-              <div key={s.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col justify-between gap-2">
+              <div key={s.id} className="atelier-card rounded-[24px] p-3.5 flex flex-col justify-between gap-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{s.name}</h3>
-                    {s.phone && <a href={`tel:${s.phone}`} className="text-[11px] text-emerald-600 font-mono">📞 {s.phone}</a>}
+                    <h3 className="font-bold text-xs truncate">{s.name}</h3>
+                    {s.phone && (
+                      <a href={`tel:${s.phone}`} style={{ color: 'var(--accent)' }} className="text-[11px] font-nums inline-flex items-center gap-1 mt-0.5 hover:underline">
+                        <Icon name="phone" size={11} /><span>{s.phone}</span>
+                      </a>
+                    )}
                   </div>
-                  <span className={`text-xs font-black font-mono ${s.current_debt > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  <span style={{ color: s.current_debt > 0 ? 'var(--warm-fg)' : 'var(--accent)' }} className="text-xs font-bold font-nums">
                     {formatMoney(s.current_debt || 0)}
                   </span>
                 </div>
-                <div className="flex gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
-                  <button type="button" onClick={() => setReconciliationSupplier(s)} className="flex-1 bg-slate-100 dark:bg-slate-800 py-1.5 rounded-xl text-[11px] font-bold">🧾 {lang === 'uz' ? 'Sverka' : 'Сверка'}</button>
-                  <button type="button" onClick={() => setCreateInvoiceModalOpen(true)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-[11px] font-bold">➕ {lang === 'uz' ? 'Kirim' : 'Приход'}</button>
+                <div className="flex gap-1.5 pt-2 border-t atelier-border">
+                  <button type="button" onClick={() => setReconciliationSupplier(s)} className="flex-1 atelier-btn-soft py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1">
+                    <Icon name="receipt" size={13} /><span>{lang === 'uz' ? 'Sverka' : 'Сверка'}</span>
+                  </button>
+                  <button type="button" onClick={() => setCreateInvoiceModalOpen(true)} className="atelier-btn-cta px-3.5 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1">
+                    <Icon name="plus" size={13} /><span>{lang === 'uz' ? 'Kirim' : 'Приход'}</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -7905,17 +8056,19 @@ function OperationsHubScreen({ token, notify, t, lang: propLang, initialSection 
         )}
 
         {section === 'invoices' && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="atelier-card rounded-[24px] overflow-hidden divide-y atelier-border">
             {safeArray(invoices).map((inv) => (
-              <div key={inv.id} className="p-3 flex items-center justify-between gap-2 text-xs">
+              <div key={inv.id} className="p-3.5 flex items-center justify-between gap-2 text-xs">
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold truncate">📦 № {inv.invoice_number} • {inv.supplier_name}</div>
-                  <div className="text-[11px] font-mono text-slate-500">
-                    {lang === 'uz' ? 'Jami:' : 'Сумма:'} {formatMoney(inv.total_amount)} • {lang === 'uz' ? 'Qarz:' : 'Долг:'} <span className={inv.debt_to_supplier > 0 ? 'text-amber-600 font-bold' : 'text-emerald-600'}>{formatMoney(inv.debt_to_supplier)}</span>
+                  <div className="font-semibold truncate">№ {inv.invoice_number} • {inv.supplier_name}</div>
+                  <div className="text-[11px] font-nums atelier-text-muted mt-0.5">
+                    {lang === 'uz' ? 'Jami:' : 'Сумма:'} {formatMoney(inv.total_amount)} • {lang === 'uz' ? 'Qarz:' : 'Долг:'} <span style={{ color: inv.debt_to_supplier > 0 ? 'var(--warm-fg)' : 'var(--accent)' }} className="font-bold">{formatMoney(inv.debt_to_supplier)}</span>
                   </div>
                 </div>
                 {inv.debt_to_supplier > 0 && (
-                  <button type="button" onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }} className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] shrink-0">💵 {lang === 'uz' ? "To'lash" : 'Оплата'}</button>
+                  <button type="button" onClick={() => { setSelectedInvoice(inv); setPayInvoiceModalOpen(true); }} className="px-3.5 py-1.5 rounded-full atelier-btn-cta font-bold text-[11px] shrink-0">
+                    {lang === 'uz' ? "To'lash" : 'Оплатить'}
+                  </button>
                 )}
               </div>
             ))}
@@ -7923,19 +8076,19 @@ function OperationsHubScreen({ token, notify, t, lang: propLang, initialSection 
         )}
 
         {section === 'expenses' && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="atelier-card rounded-[24px] overflow-hidden divide-y atelier-border">
             {safeArray(expenses).map((exp) => (
-              <div key={exp.id} className="p-3 flex items-center justify-between gap-2 text-xs">
+              <div key={exp.id} className="p-3.5 flex items-center justify-between gap-2 text-xs">
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800">{expenseCategoryName(exp.category, lang)}</span>
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] atelier-subtle">{expenseCategoryName(exp.category, lang)}</span>
                     <span className="truncate">{exp.description}</span>
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
+                  <div className="text-[11px] atelier-text-muted font-nums mt-0.5">
                     {new Date(exp.expense_date).toLocaleDateString()} {exp.product_name ? `• ${exp.product_name} (${exp.spoilage_quantity})` : ''}
                   </div>
                 </div>
-                <div className="font-mono font-bold text-rose-600 shrink-0">-{formatMoney(exp.amount)}</div>
+                <div style={{ color: 'var(--danger-fg)' }} className="font-nums font-bold shrink-0">-{formatMoney(exp.amount)}</div>
               </div>
             ))}
           </div>
@@ -8238,42 +8391,44 @@ function AnalyticsScreen({ token, notify, t }) {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden gap-1.5 sm:gap-3">
+    <div className="h-full flex flex-col overflow-hidden gap-2 sm:gap-3">
       {/* Pinned Period & View Switcher */}
-      <div className="shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 shadow-sm space-y-2">
+      <div className="shrink-0 atelier-card rounded-[24px] p-2.5 sm:p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl overflow-x-auto no-scrollbar">
-            <button type="button" onClick={() => setSubView('finance')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'finance' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              💰 {lang === 'uz' ? 'Moliya' : 'Финансы'}
+          <div className="flex items-center gap-1 atelier-subtle p-1 rounded-2xl overflow-x-auto no-scrollbar">
+            <button type="button" onClick={() => setSubView('finance')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subView === 'finance' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+              <Icon name="chart" size={13} /><span>{lang === 'uz' ? 'Moliya' : 'Финансы'}</span>
             </button>
-            <button type="button" onClick={() => setSubView('insights')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'insights' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              🧠 {lang === 'uz' ? 'AI' : 'AI'}
+            <button type="button" onClick={() => setSubView('insights')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subView === 'insights' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+              <Icon name="sparkles" size={13} /><span>AI</span>
             </button>
-            <button type="button" onClick={() => setSubView('tax')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'tax' ? 'bg-white dark:bg-slate-900 shadow-sm text-indigo-600' : 'text-slate-500'}`}>
-              🏛️ {lang === 'uz' ? 'Soliq' : 'Налог'}
+            <button type="button" onClick={() => setSubView('tax')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subView === 'tax' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+              <Icon name="shield" size={13} /><span>{lang === 'uz' ? 'Soliq' : 'Налог'}</span>
             </button>
-            <button type="button" onClick={() => setSubView('telegram')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'telegram' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              🤖 TG
+            <button type="button" onClick={() => setSubView('telegram')} className={`px-3 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap flex items-center gap-1 ${subView === 'telegram' ? 'atelier-card shadow-sm' : 'atelier-text-muted'}`}>
+              <span>TG</span>
             </button>
           </div>
 
           {subView === 'tax' && (
-            <div className="flex items-center gap-1 shrink-0">
-              <button type="button" onClick={downloadTaxCsv} className="px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold">📥 CSV</button>
-              <button type="button" disabled={tgSending} onClick={sendTaxToTelegram} className="px-2 py-1 rounded-xl bg-indigo-600 text-white text-[11px] font-bold">🤖</button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button type="button" onClick={downloadTaxCsv} className="px-3 py-1.5 rounded-full atelier-btn-soft text-[11px] font-semibold flex items-center gap-1">
+                <Icon name="download" size={12} /><span>CSV</span>
+              </button>
+              <button type="button" disabled={tgSending} onClick={sendTaxToTelegram} className="px-3 py-1.5 rounded-full atelier-btn-primary text-[11px] font-semibold">TG</button>
             </div>
           )}
 
           {subView === 'finance' && (
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl px-2 py-1 shrink-0">
-              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-transparent text-[11px] font-bold outline-none" />
-              {selectedDate && <button type="button" onClick={() => setSelectedDate('')} className="text-rose-500 text-xs font-bold">✕</button>}
+            <div className="flex items-center gap-1 atelier-input rounded-2xl px-2.5 py-1 shrink-0">
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="bg-transparent text-[11px] font-semibold outline-none" />
+              {selectedDate && <button type="button" onClick={() => setSelectedDate('')} style={{ color: 'var(--danger-fg)' }} className="text-xs font-bold"><Icon name="close" size={12} /></button>}
             </div>
           )}
         </div>
 
         {subView !== 'telegram' && (
-          <div className="flex gap-1 overflow-x-auto no-scrollbar">
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
             {[
               { id: 'today', label: t.periodToday },
               { id: 'week', label: t.periodWeek },
@@ -8285,10 +8440,8 @@ function AnalyticsScreen({ token, notify, t }) {
                 key={item.id}
                 type="button"
                 onClick={() => { setSelectedDate(''); setPeriod(item.id); }}
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border whitespace-nowrap ${
-                  period === item.id && !selectedDate
-                    ? 'bg-emerald-600 border-emerald-600 text-white'
-                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition ${
+                  period === item.id && !selectedDate ? 'atelier-pill-active' : 'atelier-btn-soft atelier-text-muted'
                 }`}
               >
                 {item.label}
@@ -8301,63 +8454,63 @@ function AnalyticsScreen({ token, notify, t }) {
       {/* Scrollable Analytics Content */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 space-y-2.5 pb-2">
         {subView === 'finance' && (loading || !data ? (
-          <div className="py-16 text-center text-xs text-slate-400">{t.processing}</div>
+          <div className="py-16 text-center text-xs atelier-text-muted">{t.processing}</div>
         ) : (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
-                <div className="text-[11px] text-slate-500 font-semibold">{t.kpiRevenue}</div>
-                <div className="text-lg sm:text-xl font-black text-emerald-600 font-mono mt-0.5">{formatMoney(data.revenue)}</div>
-                <div className="text-[10px] text-slate-400">{data.sales_count} {t.kpiReceiptsCount} • {formatMoney(data.average_receipt)}</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <div className="text-[11px] atelier-text-muted font-medium">{t.kpiRevenue}</div>
+                <div style={{ color: 'var(--accent)' }} className="text-lg sm:text-xl font-bold font-nums mt-0.5">{formatMoney(data.revenue)}</div>
+                <div className="text-[11px] atelier-text-muted font-nums mt-0.5">{data.sales_count} {t.kpiReceiptsCount} • {formatMoney(data.average_receipt)}</div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
-                <div className="text-[11px] text-slate-500 font-semibold">{t.kpiNetProfit}</div>
-                <div className={`text-lg sm:text-xl font-black font-mono mt-0.5 ${data.net_profit >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatMoney(data.net_profit)}</div>
-                <div className="text-[10px] text-slate-400">{t.kpiMarginPct} {data.margin_percentage}%</div>
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <div className="text-[11px] atelier-text-muted font-medium">{t.kpiNetProfit}</div>
+                <div style={{ color: data.net_profit >= 0 ? 'var(--accent)' : 'var(--danger-fg)' }} className="text-lg sm:text-xl font-bold font-nums mt-0.5">{formatMoney(data.net_profit)}</div>
+                <div className="text-[11px] atelier-text-muted font-nums mt-0.5">{t.kpiMarginPct} {data.margin_percentage}%</div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
-                <div className="text-[11px] text-slate-500 font-semibold">{t.kpiCogs}</div>
-                <div className="text-base sm:text-lg font-black font-mono mt-0.5">{formatMoney(data.cogs)}</div>
-                <div className="text-[10px] text-cyan-600 font-bold">{t.kpiGrossMargin}: {formatMoney(data.gross_margin)}</div>
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <div className="text-[11px] atelier-text-muted font-medium">{t.kpiCogs}</div>
+                <div className="text-base sm:text-lg font-bold font-nums mt-0.5">{formatMoney(data.cogs)}</div>
+                <div className="text-[11px] atelier-text-muted font-nums mt-0.5">{t.kpiGrossMargin}: {formatMoney(data.gross_margin)}</div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
-                <div className="text-[11px] text-slate-500 font-semibold">{t.kpiCustomerDebt}</div>
-                <div className="text-base sm:text-lg font-black text-amber-600 font-mono mt-0.5">{formatMoney(data.customer_debt_outstanding)}</div>
-                <div className="text-[10px] text-rose-500 font-bold">⚠️ {data.low_stock_count} {lang === 'uz' ? 'kam tovar' : 'мало на скл.'}</div>
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <div className="text-[11px] atelier-text-muted font-medium">{t.kpiCustomerDebt}</div>
+                <div style={{ color: 'var(--warm-fg)' }} className="text-base sm:text-lg font-bold font-nums mt-0.5">{formatMoney(data.customer_debt_outstanding)}</div>
+                <div style={{ color: 'var(--danger-fg)' }} className="text-[11px] font-semibold mt-0.5">{data.low_stock_count} {lang === 'uz' ? 'kam tovar' : 'мало на складе'}</div>
               </div>
             </div>
 
             {!selectedDate && (period === 'week' || period === 'month') && data.daily_breakdown?.length > 0 && (
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
-                <h3 className="font-bold text-xs mb-2">📅 {lang === 'uz' ? 'Kunlik hisobot (bosing)' : 'По дням'}</h3>
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <h3 className="font-bold text-xs mb-2">{lang === 'uz' ? 'Kunlik hisobot (bosing)' : 'По дням (нажмите для деталей)'}</h3>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                   {safeArray(data.daily_breakdown).map((day) => (
-                    <button key={day.date} type="button" onClick={() => setViewingDayDetails(day.date)} className="shrink-0 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-left min-w-[105px]">
-                      <div className="text-[10px] font-bold text-slate-500">{day.date.slice(5)} ({day.sales_count})</div>
-                      <div className="text-xs font-black font-mono text-emerald-600">{formatMoney(day.revenue)}</div>
+                    <button key={day.date} type="button" onClick={() => setViewingDayDetails(day.date)} className="shrink-0 p-2.5 rounded-2xl atelier-subtle text-left min-w-[110px] hover:opacity-90">
+                      <div className="text-[11px] font-semibold atelier-text-muted font-nums">{day.date.slice(5)} ({day.sales_count})</div>
+                      <div style={{ color: 'var(--accent)' }} className="text-xs font-bold font-nums mt-0.5">{formatMoney(day.revenue)}</div>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div className="atelier-card rounded-[24px] p-3.5 space-y-2 text-xs">
                 <h3 className="font-bold">{t.paymentsBreakdownTitle}</h3>
-                <div className="flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"><span>💵 {t.methodCash}</span><span className="font-mono font-bold text-emerald-600">{formatMoney(data.cash_total)}</span></div>
-                <div className="flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"><span>💳 {t.methodCard}</span><span className="font-mono font-bold text-cyan-600">{formatMoney(data.card_total)}</span></div>
-                <div className="flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40"><span>📓 {t.methodDebt}</span><span className="font-mono font-bold text-amber-600">{formatMoney(data.debt_total)}</span></div>
+                <div className="flex justify-between p-2.5 rounded-2xl atelier-subtle"><span className="flex items-center gap-1.5"><Icon name="cash" size={14} />{t.methodCash}</span><span style={{ color: 'var(--accent)' }} className="font-nums font-bold">{formatMoney(data.cash_total)}</span></div>
+                <div className="flex justify-between p-2.5 rounded-2xl atelier-subtle"><span className="flex items-center gap-1.5"><Icon name="card" size={14} />{t.methodCard}</span><span className="font-nums font-bold">{formatMoney(data.card_total)}</span></div>
+                <div className="flex justify-between p-2.5 rounded-2xl atelier-subtle"><span className="flex items-center gap-1.5"><Icon name="debts" size={14} />{t.methodDebt}</span><span style={{ color: 'var(--warm-fg)' }} className="font-nums font-bold">{formatMoney(data.debt_total)}</span></div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5 text-xs">
+              <div className="atelier-card rounded-[24px] p-3.5 space-y-2 text-xs">
                 <h3 className="font-bold">{t.topSellingTitle}</h3>
                 {safeArray(data?.top_selling_products).length === 0 ? (
-                  <div className="text-slate-400 py-3 text-center">{lang === 'uz' ? "Savdolar yo'q" : 'Нет продаж'}</div>
+                  <div className="atelier-text-muted py-4 text-center">{lang === 'uz' ? "Savdolar yo'q" : 'Нет продаж'}</div>
                 ) : (
                   safeArray(data?.top_selling_products).map((item, idx) => (
-                    <div key={item.product_id} className="flex justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40">
+                    <div key={item.product_id} className="flex justify-between p-2.5 rounded-2xl atelier-subtle">
                       <span className="font-medium truncate pr-2">{idx + 1}. {item.name}</span>
-                      <span className="font-mono font-bold text-emerald-600 shrink-0">{item.quantity_sold} • {formatMoney(item.revenue)}</span>
+                      <span style={{ color: 'var(--accent)' }} className="font-nums font-bold shrink-0">{item.quantity_sold} • {formatMoney(item.revenue)}</span>
                     </div>
                   ))
                 )}
@@ -8367,31 +8520,31 @@ function AnalyticsScreen({ token, notify, t }) {
         ))}
 
         {subView === 'insights' && (loading || !insights ? (
-          <div className="py-16 text-center text-xs text-slate-400">{t.processing}</div>
+          <div className="py-16 text-center text-xs atelier-text-muted">{t.processing}</div>
         ) : (
           <div className="space-y-2.5 text-xs">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
-              <h3 className="font-bold">🧠 {lang === 'uz' ? "Do'kon egasiga AI tavsiyalar" : 'AI Рекомендации владельцу'}</h3>
+            <div className="atelier-card rounded-[24px] p-3.5 space-y-2">
+              <h3 className="font-bold flex items-center gap-1.5"><Icon name="sparkles" size={15} /><span>{lang === 'uz' ? "Do'kon egasiga AI tavsiyalar" : 'Рекомендации по магазину'}</span></h3>
               {safeArray(insights.owner_recommendations).map((rec, i) => (
-                <div key={i} className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">{rec}</div>
+                <div key={i} className="p-3 rounded-2xl atelier-subtle">{rec}</div>
               ))}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5">
-                <h3 className="font-bold text-rose-600">⚠️ {lang === 'uz' ? 'Tez tugayotgan (Zakaz)' : 'Срочный закуп'} ({safeArray(insights.low_stock_items).length})</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div className="atelier-card rounded-[24px] p-3.5 space-y-2">
+                <h3 style={{ color: 'var(--danger-fg)' }} className="font-bold">{lang === 'uz' ? 'Tez tugayotgan (Zakaz)' : 'Срочный закуп'} ({safeArray(insights.low_stock_items).length})</h3>
                 {safeArray(insights.low_stock_items).slice(0, 8).map(it => (
-                  <div key={it.id} className="flex justify-between p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40">
+                  <div key={it.id} className="flex justify-between p-2 rounded-xl atelier-subtle">
                     <span className="truncate">{it.name}</span>
-                    <span className="font-mono font-bold text-rose-500">{it.stock_quantity} {it.unit}</span>
+                    <span style={{ color: 'var(--danger-fg)' }} className="font-nums font-bold">{it.stock_quantity} {it.unit}</span>
                   </div>
                 ))}
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-1.5">
-                <h3 className="font-bold text-amber-600">🐢 {lang === 'uz' ? 'Sekin aylanayotgan tovarlar' : 'Неликвид / Медленный сбыт'} ({safeArray(insights.slow_turnover_items).length})</h3>
+              <div className="atelier-card rounded-[24px] p-3.5 space-y-2">
+                <h3 style={{ color: 'var(--warm-fg)' }} className="font-bold">{lang === 'uz' ? 'Sekin aylanayotgan tovarlar' : 'Медленный сбыт'} ({safeArray(insights.slow_turnover_items).length})</h3>
                 {safeArray(insights.slow_turnover_items).slice(0, 8).map(it => (
-                  <div key={it.id} className="flex justify-between p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40">
+                  <div key={it.id} className="flex justify-between p-2 rounded-xl atelier-subtle">
                     <span className="truncate">{it.name}</span>
-                    <span className="font-mono text-slate-500">{it.stock_quantity} {it.unit}</span>
+                    <span className="font-nums atelier-text-muted">{it.stock_quantity} {it.unit}</span>
                   </div>
                 ))}
               </div>
@@ -8400,20 +8553,31 @@ function AnalyticsScreen({ token, notify, t }) {
         ))}
 
         {subView === 'tax' && (loading || !taxReport ? (
-          <div className="py-16 text-center text-xs text-slate-400">{t.processing}</div>
+          <div className="py-16 text-center text-xs atelier-text-muted">{t.processing}</div>
         ) : (
           <div className="space-y-2.5 text-xs">
             {/* 5-point Soliq & Asl Belgisi Readiness Checklist */}
             {safeArray(taxReport.compliance_checklist).length > 0 && (
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5">
-                <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-                  🛡️ {lang === 'uz' ? 'Soliq va Asl Belgisi tayyorlik tekshiruvi (100%)' : 'Чек-лист соответствия закону РУз (ПКМ №943 / №631)'}
+              <div className="atelier-card rounded-[24px] p-3">
+                <div className="text-[11px] font-semibold atelier-text-muted mb-2 flex items-center gap-1.5">
+                  <Icon name="shield" size={14} />
+                  <span>{lang === 'uz' ? 'Soliq va Asl Belgisi tayyorlik tekshiruvi' : 'Чек-лист соответствия закону РУз (ПКМ №943 / №631)'}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
                   {safeArray(taxReport.compliance_checklist).map((chk) => (
-                    <div key={chk.key} className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border text-[11px] ${chk.ok ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'}`}>
-                      <span className="font-bold truncate">{chk.ok ? '✅' : '⚠️'} {lang === 'uz' ? chk.label_uz : chk.label_ru}</span>
-                      <span className="font-mono text-[10px] shrink-0 opacity-85">{chk.detail}</span>
+                    <div
+                      key={chk.key}
+                      style={{
+                        backgroundColor: chk.ok ? 'var(--accent-soft)' : 'var(--warm-bg)',
+                        color: chk.ok ? 'var(--accent-soft-fg)' : 'var(--warm-fg)'
+                      }}
+                      className="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl text-[11px]"
+                    >
+                      <span className="font-semibold truncate flex items-center gap-1.5">
+                        <Icon name={chk.ok ? 'check' : 'alert'} size={13} />
+                        <span>{lang === 'uz' ? chk.label_uz : chk.label_ru}</span>
+                      </span>
+                      <span className="font-nums text-[10px] shrink-0 opacity-85">{chk.detail}</span>
                     </div>
                   ))}
                 </div>
@@ -8424,7 +8588,14 @@ function AnalyticsScreen({ token, notify, t }) {
             {safeArray(taxReport.warnings).length > 0 && (
               <div className="space-y-1.5">
                 {safeArray(taxReport.warnings).map((w, idx) => (
-                  <div key={idx} className={`p-2.5 rounded-2xl border ${w.level === 'danger' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 text-rose-800 dark:text-rose-200' : w.level === 'warn' ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 text-amber-900 dark:text-amber-200' : 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 text-indigo-900 dark:text-indigo-200'}`}>
+                  <div
+                    key={idx}
+                    style={{
+                      backgroundColor: w.level === 'danger' ? 'var(--danger-bg)' : (w.level === 'warn' ? 'var(--warm-bg)' : 'var(--accent-soft)'),
+                      color: w.level === 'danger' ? 'var(--danger-fg)' : (w.level === 'warn' ? 'var(--warm-fg)' : 'var(--accent-soft-fg)')
+                    }}
+                    className="p-3 rounded-2xl border atelier-border"
+                  >
                     <div className="font-bold">{lang === 'uz' ? w.title_uz : w.title_ru}</div>
                     <div className="text-[11px] opacity-90 mt-0.5">{lang === 'uz' ? w.detail_uz : w.detail_ru}</div>
                   </div>
@@ -8433,39 +8604,39 @@ function AnalyticsScreen({ token, notify, t }) {
             )}
 
             {/* Taxpayer & Tax Calculation KPIs */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
-                <div className="text-[11px] text-slate-500 font-semibold">{lang === 'uz' ? 'Soliq bazasi (Sof savdo)' : 'Налоговая база'}</div>
-                <div className="text-base sm:text-lg font-black font-mono text-emerald-600 mt-0.5">{formatMoney(taxReport.summary.net_taxable_revenue)}</div>
-                <div className="text-[10px] text-slate-400">{taxReport.summary.receipts_count} {lang === 'uz' ? 'chek' : 'чеков'} • -{formatMoney(taxReport.summary.refunds_total)} {lang === 'uz' ? 'qaytarish' : 'возвр.'}</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <div className="text-[11px] atelier-text-muted font-medium">{lang === 'uz' ? 'Soliq bazasi (Sof savdo)' : 'Налоговая база'}</div>
+                <div style={{ color: 'var(--accent)' }} className="text-base sm:text-lg font-bold font-nums mt-0.5">{formatMoney(taxReport.summary.net_taxable_revenue)}</div>
+                <div className="text-[11px] atelier-text-muted font-nums">{taxReport.summary.receipts_count} {lang === 'uz' ? 'chek' : 'чеков'} • -{formatMoney(taxReport.summary.refunds_total)} {lang === 'uz' ? 'qaytarish' : 'возвр.'}</div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3">
-                <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">💰 {lang === 'uz' ? 'Hisoblangan soliq' : 'К уплате налог'} ({taxReport.summary.tax_rate_percent}%)</div>
-                <div className="text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">{formatMoney(taxReport.summary.estimated_tax_due)}</div>
-                <div className="text-[10px] text-slate-400">{lang === 'uz' ? `Topshirish: oyning ${taxReport.summary.filing_deadline_day}-sanasi` : `Срок сдачи: до ${taxReport.summary.filing_deadline_day}-го`}</div>
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <div className="text-[11px] atelier-text-muted font-medium">{lang === 'uz' ? 'Hisoblangan soliq' : 'К уплате налог'} ({taxReport.summary.tax_rate_percent}%)</div>
+                <div className="text-base sm:text-lg font-bold font-nums mt-0.5">{formatMoney(taxReport.summary.estimated_tax_due)}</div>
+                <div className="text-[11px] atelier-text-muted">{lang === 'uz' ? `Topshirish: ${taxReport.summary.filing_deadline_day}-sanagacha` : `Срок сдачи: до ${taxReport.summary.filing_deadline_day}-го`}</div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
-                <div className="text-[11px] text-slate-500 font-semibold">🏛️ IKPU &amp; {lang === 'uz' ? 'Qadoq' : 'Упаковка'}</div>
-                <div className="text-base sm:text-lg font-black font-mono mt-0.5">{taxReport.catalog_compliance.with_valid_ikpu} / {taxReport.catalog_compliance.total_active_sku}</div>
-                <div className="text-[10px] text-amber-600 font-bold">
-                  {taxReport.catalog_compliance.missing_ikpu_count} {lang === 'uz' ? 'IKPUsiz' : 'без ИКПУ'} • 📦 {taxReport.catalog_compliance.with_package_code ?? 0}
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <div className="text-[11px] atelier-text-muted font-medium">IKPU &amp; {lang === 'uz' ? 'Qadoq' : 'Упаковка'}</div>
+                <div className="text-base sm:text-lg font-bold font-nums mt-0.5">{taxReport.catalog_compliance.with_valid_ikpu} / {taxReport.catalog_compliance.total_active_sku}</div>
+                <div style={{ color: 'var(--warm-fg)' }} className="text-[11px] font-semibold">
+                  {taxReport.catalog_compliance.missing_ikpu_count} {lang === 'uz' ? 'IKPUsiz' : 'без ИКПУ'} • Qadoq {taxReport.catalog_compliance.with_package_code ?? 0}
                 </div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
-                <div className="text-[11px] text-slate-500 font-semibold">🏷️ {lang === 'uz' ? 'Markirovka (Asl Belgisi)' : 'Маркировка (DataMatrix)'}</div>
-                <div className="text-base sm:text-lg font-black font-mono mt-0.5">{taxReport.tobacco_and_marking.tobacco_units_sold} {lang === 'uz' ? 'dona' : 'шт/пач'}</div>
-                <div className="text-[10px] font-bold text-emerald-600">{taxReport.tobacco_and_marking.datamatrix_coverage_pct}% DM • {formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)}</div>
+              <div className="atelier-card rounded-[24px] p-3.5">
+                <div className="text-[11px] atelier-text-muted font-medium">{lang === 'uz' ? 'Markirovka (Asl Belgisi)' : 'Маркировка (DataMatrix)'}</div>
+                <div className="text-base sm:text-lg font-bold font-nums mt-0.5">{taxReport.tobacco_and_marking.tobacco_units_sold} {lang === 'uz' ? 'dona' : 'шт/пач'}</div>
+                <div style={{ color: 'var(--accent)' }} className="text-[11px] font-semibold font-nums">{taxReport.tobacco_and_marking.datamatrix_coverage_pct}% DM • {formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)}</div>
               </div>
             </div>
 
             {safeArray(taxReport.catalog_compliance.missing_ikpu_sample).length > 0 && (
-              <div className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-2xl p-2.5 space-y-1">
-                <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300">
-                  ⚠️ {lang === 'uz' ? "IKPU (17 raqam) kiritilmagan tovarlar (223-modda 1% jarima xavfi):" : "Товары без 17-значного ИКПУ (риск штрафа 1% по ст. 223 НК):"}
+              <div className="atelier-card rounded-[24px] p-3 space-y-1.5">
+                <div style={{ color: 'var(--warm-fg)' }} className="text-[11px] font-semibold">
+                  {lang === 'uz' ? "IKPU (17 raqam) kiritilmagan tovarlar (223-modda 1% jarima xavfi):" : "Товары без 17-значного ИКПУ (риск штрафа 1% по ст. 223 НК):"}
                 </div>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {safeArray(taxReport.catalog_compliance.missing_ikpu_sample).map((p) => (
-                    <span key={p.id} className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[10px] font-medium">
+                    <span key={p.id} className="px-2.5 py-1 rounded-full atelier-subtle text-[10px] font-medium">
                       {p.name} ({p.barcode})
                     </span>
                   ))}
@@ -8473,34 +8644,34 @@ function AnalyticsScreen({ token, notify, t }) {
               </div>
             )}
 
-            {/* All Asl Belgisi DataMatrix Ledger (Tobacco, Water, Beverages, Beer) */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+            {/* All Asl Belgisi DataMatrix Ledger */}
+            <div className="atelier-card rounded-[24px] p-3.5 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold">🏷️ {lang === 'uz' ? 'Asl Belgisi DataMatrix (Tamaki • Suv • Ichimlik • Pivo)' : 'Маркировка Asl Belgisi (Табак • Вода • Напитки • Пиво)'}</h3>
-                <span className="text-[10px] font-mono text-slate-400">
+                <h3 className="font-bold">{lang === 'uz' ? 'Asl Belgisi DataMatrix (Tamaki • Suv • Ichimlik • Pivo)' : 'Маркировка Asl Belgisi (Табак • Вода • Напитки • Пиво)'}</h3>
+                <span className="text-[11px] font-nums atelier-text-muted">
                   DM ✓ {taxReport.tobacco_and_marking.marked_with_datamatrix_count} / ✗ {taxReport.tobacco_and_marking.missing_datamatrix_count}
                 </span>
               </div>
               {safeArray(taxReport.tobacco_and_marking.marking_ledger).length === 0 ? (
-                <div className="text-center py-4 text-slate-400">
+                <div className="text-center py-4 atelier-text-muted">
                   {lang === 'uz' ? "Tanlangan davrda markirovkali tovar sotuvi yo'q" : 'За период продаж маркированных товаров нет'}
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
+                <div className="divide-y atelier-border max-h-60 overflow-y-auto">
                   {safeArray(taxReport.tobacco_and_marking.marking_ledger).slice(0, 50).map((m, i) => (
-                    <div key={i} className="py-1.5 flex items-center justify-between gap-2">
+                    <div key={i} className="py-2 flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold truncate">
-                          {m.product_name} {m.is_returned ? '↩️' : ''}
-                          {m.marking_group_label && <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">{m.marking_group_label}</span>}
+                        <div className="font-semibold truncate">
+                          {m.product_name} {m.is_returned ? '↩' : ''}
+                          {m.marking_group_label && <span className="ml-1.5 text-[10px] px-2 py-0.5 rounded-full atelier-subtle font-semibold">{m.marking_group_label}</span>}
                         </div>
-                        <div className="text-[10px] font-mono text-slate-400 truncate">
-                          {m.sold_at} • {m.receipt_number} • {m.has_datamatrix ? `DM: ${m.masked_code}` : '⚠️ БЕЗ DATAMATRIX'}
+                        <div className="text-[11px] font-nums atelier-text-muted truncate">
+                          {m.sold_at} • {m.receipt_number} • {m.has_datamatrix ? `DM: ${m.masked_code}` : 'БЕЗ DATAMATRIX'}
                         </div>
                       </div>
-                      <div className="text-right font-mono shrink-0">
-                        <div className="font-bold text-emerald-600">{formatMoney(m.total_price)}</div>
-                        <div className="text-[10px] text-slate-400">{m.quantity} sht</div>
+                      <div className="text-right font-nums shrink-0">
+                        <div style={{ color: 'var(--accent)' }} className="font-bold">{formatMoney(m.total_price)}</div>
+                        <div className="text-[10px] atelier-text-muted">{m.quantity} sht</div>
                       </div>
                     </div>
                   ))}
@@ -8509,21 +8680,21 @@ function AnalyticsScreen({ token, notify, t }) {
             </div>
 
             {/* IKPU Sales Breakdown */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
-              <h3 className="font-bold">🧾 {lang === 'uz' ? 'IKPU (MXIK) bo‘yicha sotuvlar' : 'Продажи в разрезе ИКПУ (MXIK)'}</h3>
+            <div className="atelier-card rounded-[24px] p-3.5 space-y-2">
+              <h3 className="font-bold">{lang === 'uz' ? 'IKPU (MXIK) bo‘yicha sotuvlar' : 'Продажи в разрезе ИКПУ (MXIK)'}</h3>
               {safeArray(taxReport.ikpu_breakdown).length === 0 ? (
-                <div className="text-center py-4 text-slate-400">{lang === 'uz' ? "Sotuvlar yo'q" : 'Продаж за период нет'}</div>
+                <div className="text-center py-4 atelier-text-muted">{lang === 'uz' ? "Sotuvlar yo'q" : 'Продаж за период нет'}</div>
               ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-56 overflow-y-auto">
+                <div className="divide-y atelier-border max-h-56 overflow-y-auto">
                   {safeArray(taxReport.ikpu_breakdown).map((row, idx) => (
-                    <div key={idx} className="py-1.5 flex items-center justify-between gap-2">
+                    <div key={idx} className="py-2 flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="font-mono font-bold text-[11px]">{row.ikpu_code || '⚠️ BEZ IKPU'} {row.is_tobacco ? '🚬' : ''}</div>
-                        <div className="text-[10px] text-slate-500 truncate">{row.sample_name} ({row.quantity_sold} poz)</div>
+                        <div className="font-nums font-bold text-[11px]">{row.ikpu_code || 'BEZ IKPU'}</div>
+                        <div className="text-[11px] atelier-text-muted truncate">{row.sample_name} ({row.quantity_sold} poz)</div>
                       </div>
-                      <div className="text-right font-mono shrink-0">
-                        <div className="font-bold text-emerald-600">{formatMoney(row.net_revenue)}</div>
-                        {row.vat_amount > 0 && <div className="text-[10px] text-slate-400">QQS: {formatMoney(row.vat_amount)}</div>}
+                      <div className="text-right font-nums shrink-0">
+                        <div style={{ color: 'var(--accent)' }} className="font-bold">{formatMoney(row.net_revenue)}</div>
+                        {row.vat_amount > 0 && <div className="text-[10px] atelier-text-muted">QQS: {formatMoney(row.vat_amount)}</div>}
                       </div>
                     </div>
                   ))}
@@ -8535,26 +8706,32 @@ function AnalyticsScreen({ token, notify, t }) {
 
         {subView === 'telegram' && (
           <div className="space-y-2.5 text-xs">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+            <div className="atelier-card rounded-[24px] p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">🤖 Telegram Bot Hisobotlar</h3>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${tgStatus?.configured ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>
-                  {tgStatus?.configured ? '🟢 Ulangan' : '🟡 Sozlanmagan'}
+                <h3 className="font-bold">Telegram Bot Hisobotlar</h3>
+                <span
+                  style={{
+                    backgroundColor: tgStatus?.configured ? 'var(--accent-soft)' : 'var(--warm-bg)',
+                    color: tgStatus?.configured ? 'var(--accent-soft-fg)' : 'var(--warm-fg)'
+                  }}
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                >
+                  {tgStatus?.configured ? (lang === 'uz' ? 'Ulangan' : 'Подключён') : (lang === 'uz' ? 'Sozlanmagan' : 'Не настроен')}
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('test-send')} className="py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold">🧪 Test xabar</button>
-                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('z-report')} className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold">📊 Z-Hisobot yuborish</button>
-                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('alert-low-stock')} className="py-2.5 rounded-xl bg-amber-600 text-white font-bold">⚠️ Kam qoldiq alert</button>
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('test-send')} className="py-2.5 rounded-2xl atelier-btn-soft font-semibold">Test xabar</button>
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('z-report')} className="py-2.5 rounded-2xl atelier-btn-cta font-bold">Z-Hisobot yuborish</button>
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('alert-low-stock')} className="py-2.5 rounded-2xl atelier-btn-primary font-semibold">Kam qoldiq alert</button>
               </div>
             </div>
 
-            <form onSubmit={saveTgSettings} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+            <form onSubmit={saveTgSettings} className="atelier-card rounded-[24px] p-3.5 space-y-2.5">
               <div className="font-bold">{lang === 'uz' ? 'Bot sozlamalarini ulash:' : 'Настройка Telegram бота:'}</div>
-              <input type="password" required placeholder="Bot Token (123456:ABC...)" value={tgToken} onChange={(e) => setTgToken(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs" />
+              <input type="password" required placeholder="Bot Token (123456:ABC...)" value={tgToken} onChange={(e) => setTgToken(e.target.value)} className="w-full atelier-input rounded-2xl px-3.5 py-2.5 font-nums text-xs" />
               <div className="flex gap-2">
-                <input type="number" required placeholder="Owner Chat ID (masalan: 123456789)" value={tgChatId} onChange={(e) => setTgChatId(e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-xs" />
-                <button type="submit" disabled={tgSending} className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold">{tgSending ? '...' : 'Saqlash'}</button>
+                <input type="number" required placeholder="Owner Chat ID (masalan: 123456789)" value={tgChatId} onChange={(e) => setTgChatId(e.target.value)} className="flex-1 atelier-input rounded-2xl px-3.5 py-2.5 font-nums text-xs" />
+                <button type="submit" disabled={tgSending} className="px-5 py-2.5 rounded-2xl atelier-btn-primary font-semibold">{tgSending ? '...' : 'Saqlash'}</button>
               </div>
             </form>
           </div>
