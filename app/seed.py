@@ -21,6 +21,7 @@ CATEGORIES_DATA = [
     {"name": "Muzlatilgan mahsulotlar / Заморозка", "description": "Chuchvara, vareniklar, muzlatilgan go'sht va sabzavot", "icon": "snowflake"},
     {"name": "Choy va kofe / Чай и кофе", "description": "Ko'k choy 95, qora choy, eriydigan va donador kofe", "icon": "coffee"},
     {"name": "Maishiy kimyo / Бытовая химия", "description": "Kir yuvish kukuni, sovun, idish yuvish vositalari, salfetkalar", "icon": "sparkles"},
+    {"name": "Tamaki mahsulotlari / Табачные изделия", "description": "Sigaretalar, stiklar, tamaki (Asl Belgisi DataMatrix 18+)", "icon": "cigarette"},
 ]
 
 PRODUCT_TEMPLATES = {

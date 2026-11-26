@@ -669,13 +669,67 @@ function SettingsModal({
   const [activeStoreId, setActiveStoreId] = useState(() => localStorage.getItem('pos_store_id') || '');
   const [newStoreName, setNewStoreName] = useState('');
   const [newStoreType, setNewStoreType] = useState('grocery');
+  const [showTaxProfile, setShowTaxProfile] = useState(false);
+  const [taxProfile, setTaxProfile] = useState({
+    legal_name: '',
+    inn_stir: '',
+    tax_regime: 'TURNOVER_1',
+    tax_rate_percent: '1',
+    address: '',
+    kkm_serial: '',
+    tobacco_license_note: '',
+    strict_tobacco_marking: false
+  });
+  const [savingTax, setSavingTax] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE}/pos/stores`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])
       .then(list => setStores(safeArray(list)))
       .catch(() => {});
+    if (user?.role === 'owner') {
+      fetch(`${API_BASE}/tax/profile`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.profile) {
+            setTaxProfile({
+              legal_name: d.profile.legal_name || '',
+              inn_stir: d.profile.inn_stir || '',
+              tax_regime: d.profile.tax_regime || 'TURNOVER_1',
+              tax_rate_percent: String(d.profile.tax_rate_percent ?? '1'),
+              address: d.profile.address || '',
+              kkm_serial: d.profile.kkm_serial || '',
+              tobacco_license_note: d.profile.tobacco_license_note || '',
+              strict_tobacco_marking: Boolean(d.profile.strict_tobacco_marking)
+            });
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
+
+  const saveTaxProfile = async () => {
+    setSavingTax(true);
+    try {
+      const res = await fetch(`${API_BASE}/tax/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          ...taxProfile,
+          tax_rate_percent: Number(taxProfile.tax_rate_percent) || 0,
+          store_id: activeStoreId ? Number(activeStoreId) : null
+        })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Xatolik');
+      notify(lang === 'uz' ? 'Soliq profili saqlandi!' : 'Налоговый профиль сохранён!');
+      setShowTaxProfile(false);
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setSavingTax(false);
+    }
+  };
 
   const createStoreOutlet = async () => {
     if (!newStoreName.trim()) return;
@@ -845,6 +899,60 @@ function SettingsModal({
             </div>
           )}
 
+          {/* Soliq / Tax & Tobacco Compliance Profile */}
+          {user?.role === 'owner' && (
+            <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-2xl border border-indigo-200 dark:border-indigo-800 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="font-bold text-indigo-950 dark:text-indigo-200">🏛️ {lang === "uz" ? "Soliq va Tamaki profili (STIR / KKM)" : "Налоговый профиль (ИНН / Табачка)"}</div>
+                  <div className="text-[11px] text-indigo-700 dark:text-indigo-400">
+                    {taxProfile.inn_stir ? `STIR: ${taxProfile.inn_stir} • ${taxProfile.tax_regime} (${taxProfile.tax_rate_percent}%)` : (lang === "uz" ? "STIR, soliq rejimi va Asl Belgisi sozlamalari" : "Укажите ИНН, налог и правила DataMatrix")}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setShowTaxProfile(!showTaxProfile)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl font-bold">
+                  {showTaxProfile ? '▲' : (lang === "uz" ? "Sozlash" : "Настроить")}
+                </button>
+              </div>
+              {showTaxProfile && (
+                <div className="space-y-2 pt-2 border-t border-indigo-200 dark:border-indigo-800">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <input type="text" placeholder={lang === "uz" ? "YaTT / MChJ nomi" : "Название ИП / ООО"} value={taxProfile.legal_name} onChange={(e) => setTaxProfile(p => ({ ...p, legal_name: e.target.value }))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs" />
+                    <input type="text" placeholder={lang === "uz" ? "STIR / INN (9 raqam)" : "ИНН / СТИР (9 цифр)"} value={taxProfile.inn_stir} onChange={(e) => setTaxProfile(p => ({ ...p, inn_stir: e.target.value }))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono" />
+                  </div>
+                  <div className="flex gap-1.5">
+                    <select
+                      value={taxProfile.tax_regime}
+                      onChange={(e) => {
+                        const r = e.target.value;
+                        const defRate = r === 'TURNOVER_1' ? '1' : r === 'TURNOVER_4' ? '4' : r === 'VAT_12' ? '12' : r === 'VAT_6' ? '6' : taxProfile.tax_rate_percent;
+                        setTaxProfile(p => ({ ...p, tax_regime: r, tax_rate_percent: defRate }));
+                      }}
+                      className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold"
+                    >
+                      <option value="TURNOVER_1">{lang === "uz" ? "YaTT aylanmadan soliq (1%)" : "ИП: Налог с оборота (1%)"}</option>
+                      <option value="TURNOVER_4">{lang === "uz" ? "MChJ aylanmadan soliq (4%)" : "ООО: Налог с оборота (4%)"}</option>
+                      <option value="TURNOVER_CUSTOM">{lang === "uz" ? "Aylanmadan soliq (boshqa %)" : "Налог с оборота (свой %)"}</option>
+                      <option value="VAT_12">{lang === "uz" ? "QQS to'lovchi (12%)" : "Плательщик НДС (12%)"}</option>
+                      <option value="VAT_6">{lang === "uz" ? "Soddalashtirilgan QQS (6%)" : "Упрощённый НДС (6%)"}</option>
+                    </select>
+                    <input type="number" step="0.5" value={taxProfile.tax_rate_percent} onChange={(e) => setTaxProfile(p => ({ ...p, tax_rate_percent: e.target.value }))} className="w-16 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-mono font-bold text-center" title="%" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <input type="text" placeholder={lang === "uz" ? "KKM / FM seriya (ixtiyoriy)" : "Серийник ККМ / ФМ (опц.)"} value={taxProfile.kkm_serial} onChange={(e) => setTaxProfile(p => ({ ...p, kkm_serial: e.target.value }))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono" />
+                    <input type="text" placeholder={lang === "uz" ? "Tamaki ruxsatnomasi / yig'im" : "Сбор/разрешение на табак"} value={taxProfile.tobacco_license_note} onChange={(e) => setTaxProfile(p => ({ ...p, tobacco_license_note: e.target.value }))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs" />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-indigo-950 dark:text-indigo-200">
+                    <input type="checkbox" checked={taxProfile.strict_tobacco_marking} onChange={(e) => setTaxProfile(p => ({ ...p, strict_tobacco_marking: e.target.checked }))} className="rounded text-indigo-600" />
+                    <span>🚬 {lang === "uz" ? "Kassada tamaki uchun DataMatrix skaneri majburiy" : "На кассе требовать скан DataMatrix для табака"}</span>
+                  </label>
+                  <button type="button" disabled={savingTax} onClick={saveTaxProfile} className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs">
+                    {savingTax ? "..." : (lang === "uz" ? "Soliq profilini saqlash" : "Сохранить налоговый профиль")}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Account Security & QR Share */}
           <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
             <div className="flex items-center justify-between gap-2">
@@ -932,6 +1040,96 @@ function SettingsModal({
   );
 }
 
+// ------------------- REUSABLE UZBEKISTAN TAX & TOBACCO PRODUCT FIELDS -------------------
+function TaxProductFields({ token, lang = 'uz', ikpuCode, setIkpuCode, vatRate, setVatRate, isTobacco, setIsTobacco, requiresMarking, setRequiresMarking, productName = '' }) {
+  const [searching, setSearching] = useState(false);
+  const [hints, setHints] = useState([]);
+  const [showTax, setShowTax] = useState(Boolean(ikpuCode || isTobacco || requiresMarking || Number(vatRate) > 0));
+
+  const runMxikSearch = async () => {
+    setSearching(true);
+    try {
+      const q = ikpuCode?.trim() || productName?.trim() || (isTobacco ? 'сигареты' : '');
+      const res = await fetch(`${API_BASE}/tax/mxik-search?q=${encodeURIComponent(q)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setHints(safeArray(d.items));
+      }
+    } catch (e) {} finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-800 dark:text-slate-200">
+          <input
+            type="checkbox"
+            checked={Boolean(isTobacco)}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setIsTobacco(checked);
+              if (checked) {
+                setRequiresMarking(true);
+                setShowTax(true);
+              }
+            }}
+            className="w-4 h-4 rounded text-amber-600"
+          />
+          <span>🚬 {lang === 'uz' ? "Tamaki / 18+ (DataMatrix)" : "Табак / 18+ (DataMatrix)"}</span>
+        </label>
+        <button type="button" onClick={() => setShowTax(!showTax)} className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+          🏛️ {lang === 'uz' ? "IKPU / QQS" : "ИКПУ / НДС"} {showTax ? '▲' : '▼'}
+        </button>
+      </div>
+
+      {showTax && (
+        <div className="space-y-1.5 pt-1.5 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex gap-1.5 items-center">
+            <input
+              type="text"
+              placeholder={lang === 'uz' ? "17 xonali IKPU (MXIK)" : "17-значный ИКПУ (MXIK)"}
+              value={ikpuCode || ''}
+              onChange={(e) => setIkpuCode(e.target.value.replace(/\D/g, '').slice(0, 17))}
+              className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono"
+            />
+            <button type="button" disabled={searching} onClick={runMxikSearch} className="px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-[11px]">
+              {searching ? '...' : '🔍 IKPU'}
+            </button>
+            <select value={String(vatRate ?? 0)} onChange={(e) => setVatRate(Number(e.target.value))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] font-bold">
+              <option value="0">0% QQS</option>
+              <option value="12">12% НДС</option>
+              <option value="-1">Без НДС</option>
+            </select>
+          </div>
+          <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-600 dark:text-slate-300">
+            <input type="checkbox" checked={Boolean(requiresMarking)} onChange={(e) => setRequiresMarking(e.target.checked)} className="rounded text-indigo-600" />
+            <span>🏷️ {lang === 'uz' ? "Majburiy markirovka (Asl Belgisi DataMatrix)" : "Обязательная маркировка (Asl Belgisi DataMatrix)"}</span>
+          </label>
+          {hints.length > 0 && (
+            <div className="max-h-28 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800">
+              {hints.map((h, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => { setIkpuCode(h.mxik); setHints([]); }}
+                  className="w-full text-left px-2 py-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-[10px] flex justify-between gap-2"
+                >
+                  <span className="truncate">{h.name}</span>
+                  <span className="font-mono font-bold text-indigo-600 shrink-0">{h.mxik}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ------------------- EDIT PRODUCT MODAL -------------------
 function EditProductModal({ token, product, categories: propCategories, onClose, onSuccess, notify, t, lang: propLang }) {
   const lang = propLang || (typeof window !== "undefined" && window.pos_lang) || "uz";
@@ -944,6 +1142,10 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
   const [salePrice, setSalePrice] = useState(String(product.sale_price || ""));
   const [stockQuantity, setStockQuantity] = useState(String(product.stock_quantity ?? "0"));
   const [expiryDate, setExpiryDate] = useState(product.expiry_date || "");
+  const [ikpuCode, setIkpuCode] = useState(product.ikpu_code || "");
+  const [vatRate, setVatRate] = useState(Number(product.vat_rate ?? 0));
+  const [isTobacco, setIsTobacco] = useState(Boolean(product.is_tobacco));
+  const [requiresMarking, setRequiresMarking] = useState(Boolean(product.requires_marking));
   const [isQuick, setIsQuick] = useState(Boolean(product.is_quick));
   const [loading, setLoading] = useState(false);
 
@@ -986,6 +1188,10 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
         sale_price: Number(salePrice),
         stock_quantity: Number(stockQuantity) || 0,
         expiry_date: expiryDate.trim() || null,
+        ikpu_code: ikpuCode.trim() || null,
+        vat_rate: Number(vatRate) || 0,
+        is_tobacco: Boolean(isTobacco),
+        requires_marking: Boolean(requiresMarking || isTobacco),
         is_quick: Boolean(isQuick)
       };
       const res = await fetch(`${API_BASE}/products/${product.id}`, {
@@ -1076,6 +1282,20 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
               </select>
             </div>
           </div>
+
+          <TaxProductFields
+            token={token}
+            lang={lang}
+            ikpuCode={ikpuCode}
+            setIkpuCode={setIkpuCode}
+            vatRate={vatRate}
+            setVatRate={setVatRate}
+            isTobacco={isTobacco}
+            setIsTobacco={setIsTobacco}
+            requiresMarking={requiresMarking}
+            setRequiresMarking={setRequiresMarking}
+            productName={name}
+          />
 
           <label className="flex items-center gap-2 cursor-pointer pt-1">
             <input type="checkbox" checked={isQuick} onChange={(e) => setIsQuick(e.target.checked)} className="rounded text-emerald-600" />
@@ -2068,7 +2288,7 @@ function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
 
       if (hasBarcodeDetector) {
         try {
-          const desiredFormats = ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'];
+          const desiredFormats = ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code', 'data_matrix'];
           let supported = desiredFormats;
           if (window.BarcodeDetector.getSupportedFormats) {
             try {
@@ -2153,7 +2373,8 @@ function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
             window.Html5QrcodeSupportedFormats.CODE_39,
             window.Html5QrcodeSupportedFormats.UPC_A,
             window.Html5QrcodeSupportedFormats.UPC_E,
-            window.Html5QrcodeSupportedFormats.QR_CODE
+            window.Html5QrcodeSupportedFormats.QR_CODE,
+            window.Html5QrcodeSupportedFormats.DATA_MATRIX
           ] : undefined;
 
           html5Instance = new window.Html5Qrcode('qr-reader', {
@@ -2262,7 +2483,7 @@ function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
       if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
         try {
           const detector = new window.BarcodeDetector({
-            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code']
+            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code', 'data_matrix']
           });
           const bitmap = await createImageBitmap(file);
           const results = await detector.detect(bitmap);
@@ -2325,7 +2546,7 @@ function CameraScannerModal({ onScan, onClose, notify, t, lang }) {
             <span className="text-xl">📷</span>
             <div>
               <div className="font-bold text-sm text-emerald-400">
-                {lang === 'uz' ? 'Shtrixkod skaneri (EAN-13 / QR / 1D)' : 'Сканер штрихкодов (EAN-13 / QR / 1D)'}
+                {lang === 'uz' ? 'Shtrixkod / DataMatrix (EAN-13 / QR)' : 'Сканер (EAN-13 / DataMatrix / QR)'}
               </div>
               <div className="text-[10px] text-slate-400 flex items-center gap-1">
                 <span className={`w-1.5 h-1.5 rounded-full ${engineType === 'hardware' ? 'bg-emerald-400 animate-pulse' : engineType === 'html5' ? 'bg-blue-400' : 'bg-amber-400'}`}></span>
@@ -2529,6 +2750,10 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
   const [salePrice, setSalePrice] = useState('');
   const [stockQuantity, setStockQuantity] = useState('1');
   const [expiryDate, setExpiryDate] = useState('');
+  const [ikpuCode, setIkpuCode] = useState('');
+  const [vatRate, setVatRate] = useState(0);
+  const [isTobacco, setIsTobacco] = useState(false);
+  const [requiresMarking, setRequiresMarking] = useState(false);
   const [isQuick, setIsQuick] = useState(false);
   const [cameraActive, setCameraActive] = useState(Boolean(autoScanOnMount && !initialBarcode));
   const [voiceActive, setVoiceActive] = useState(false);
@@ -2622,6 +2847,10 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
           sale_price: Number(salePrice),
           stock_quantity: Number(stockQuantity) || 0,
           expiry_date: expiryDate.trim() || null,
+          ikpu_code: ikpuCode.trim() || null,
+          vat_rate: Number(vatRate) || 0,
+          is_tobacco: Boolean(isTobacco),
+          requires_marking: Boolean(requiresMarking || isTobacco),
           is_quick: Boolean(isQuick)
         })
       });
@@ -2639,6 +2868,7 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
         setSalePrice('');
         setStockQuantity('1');
         setExpiryDate('');
+        setIkpuCode('');
         setIsQuick(false);
         setCameraActive(true);
       } else {
@@ -2738,7 +2968,20 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{t.categoryLabel || "Kategoriya"}</label>
-              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-medium">
+              <select
+                value={categoryId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCategoryId(val);
+                  const catObj = safeArray(categories).find(c => String(c.id) === String(val));
+                  const catName = (catObj?.name || '').toLowerCase();
+                  if (catName.includes('tamaki') || catName.includes('табак')) {
+                    setIsTobacco(true);
+                    setRequiresMarking(true);
+                  }
+                }}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-medium"
+              >
                 {safeArray(categories).length === 0 ? (
                   <option value="">{lang === 'uz' ? "Kategoriya yo'q" : "Без категории"}</option>
                 ) : (
@@ -2802,6 +3045,20 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
               )}
             </div>
           </div>
+
+          <TaxProductFields
+            token={token}
+            lang={lang}
+            ikpuCode={ikpuCode}
+            setIkpuCode={setIkpuCode}
+            vatRate={vatRate}
+            setVatRate={setVatRate}
+            isTobacco={isTobacco}
+            setIsTobacco={setIsTobacco}
+            requiresMarking={requiresMarking}
+            setRequiresMarking={setRequiresMarking}
+            productName={name}
+          />
 
           <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200 pt-1">
             <input type="checkbox" checked={isQuick} onChange={(e) => setIsQuick(e.target.checked)} className="w-4 h-4 rounded text-emerald-600" />
@@ -4022,14 +4279,17 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
     }
     setLoading(true);
     try {
+      const activeStoreId = (() => { try { return localStorage.getItem('pos_store_id') || ''; } catch (e) { return ''; } })();
       const payload = {
         items: safeArray(cart).map((i) => ({
           product_id: typeof i.product.id === 'number' ? i.product.id : null,
           barcode: i.product.barcode,
           name: i.product.name,
+          marking_code: i.marking_code || null,
           price: i.product.sale_price,
           quantity: i.quantity
         })),
+        store_id: activeStoreId ? Number(activeStoreId) : null,
         payment_method: method,
         discount_amount: discNum,
         cash_received: method === 'CASH' ? cashNum : (method === 'MIXED' ? cashNum : 0),
@@ -4230,7 +4490,15 @@ function ReceiptModal({ receipt, onClose, t }) {
         <div className="flex-1 min-h-0 overflow-y-auto pr-1">
           <div id="printable-receipt" className="bg-white text-slate-900 p-4 rounded-2xl border border-dashed border-slate-300 font-mono text-xs space-y-2">
             <div className="text-center border-b border-dashed border-slate-300 pb-2">
-              <div className="font-black text-sm">🛒 GroceryStore POS</div>
+              <div className="font-black text-sm">
+                🛒 {receipt.tax_profile?.legal_name || "GroceryStore POS"}
+              </div>
+              {receipt.tax_profile?.inn_stir && (
+                <div className="text-[10px] text-slate-600">STIR/ИНН: {receipt.tax_profile.inn_stir}</div>
+              )}
+              {receipt.tax_profile?.address && (
+                <div className="text-[10px] text-slate-500">{receipt.tax_profile.address}</div>
+              )}
               <div className="text-[11px] text-slate-600">{receipt.receipt_number}</div>
               <div className="text-[10px] text-slate-500">{new Date(receipt.created_at || Date.now()).toLocaleString()}</div>
               <div className="text-[10px] text-slate-500">Kassir: {receipt.cashier_name || 'Kassir'}</div>
@@ -4240,8 +4508,14 @@ function ReceiptModal({ receipt, onClose, t }) {
               {safeArray(receipt.items).map((it, idx) => (
                 <div key={idx} className="py-1.5 flex justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold truncate">{it.product_name}</div>
+                    <div className="font-bold truncate">{it.is_tobacco ? '🚬 ' : ''}{it.product_name}</div>
                     <div className="text-[10px] text-slate-500">{it.quantity} x {formatMoney(it.unit_price)}</div>
+                    {it.ikpu_code && (
+                      <div className="text-[9px] text-slate-400">IKPU: {it.ikpu_code}</div>
+                    )}
+                    {(it.masked_marking_code || it.marking_code) && (
+                      <div className="text-[9px] text-emerald-700 font-bold">DM: {it.masked_marking_code || it.marking_code}</div>
+                    )}
                   </div>
                   <div className="font-bold whitespace-nowrap">{formatMoney(it.total_price)}</div>
                 </div>
@@ -4253,6 +4527,12 @@ function ReceiptModal({ receipt, onClose, t }) {
                 <div className="flex justify-between text-[11px] text-rose-600 font-bold">
                   <span>{lang === 'uz' ? 'Chegirma:' : 'Скидка:'}</span>
                   <span>-{formatMoney(receipt.discount_amount)}</span>
+                </div>
+              )}
+              {Number(receipt.vat_amount) > 0 && (
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>{lang === 'uz' ? 'QQS (NDS):' : 'В т.ч. НДС:'}</span>
+                  <span>{formatMoney(receipt.vat_amount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-black text-sm">
@@ -4282,8 +4562,13 @@ function ReceiptModal({ receipt, onClose, t }) {
                 </div>
               )}
             </div>
-            <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300">
-              {lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"}
+            <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-0.5">
+              <div>{lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"}</div>
+              <div className="text-[9px] text-slate-400">
+                {receipt.fiscal_status === 'FISCALIZED'
+                  ? 'OFD / Soliq fiskal cheki'
+                  : (lang === 'uz' ? 'Ichki hisob cheki (Fiskal modul / OFD ulanmagan)' : 'Внутренний учётный чек (Без ФМ / ОФД)')}
+              </div>
             </div>
           </div>
         </div>
@@ -5571,6 +5856,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [localShift, setLocalShift] = useState(null);
+  const [markingScanKey, setMarkingScanKey] = useState(null);
   const currentShift = propShift !== undefined ? propShift : localShift;
 
   // Parked / Held Carts (MoySklad Queue)
@@ -5773,10 +6059,20 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         return;
       }
       const prod = await res.json();
+      if (prod.marking_already_sold) {
+        playAudioCue('error');
+        notify(lang === 'uz'
+          ? `${prod.name}: Ushbu DataMatrix markirovka kodi avval sotilgan!`
+          : `${prod.name}: Этот DataMatrix код уже был продан!`, 'error');
+        setSearch('');
+        return;
+      }
       playAudioCue('add');
       const qty = prod.detected_weight ? Number(prod.detected_weight) : 1.0;
-      addToCart(prod, qty);
-      notify(prod.detected_weight ? `${prod.name} (${qty} kg)` : prod.name);
+      addToCart(prod, qty, prod.detected_marking_code || null);
+      notify(prod.detected_marking_code
+        ? `🚬 ${prod.name} (DataMatrix ✓)`
+        : (prod.detected_weight ? `${prod.name} (${qty} kg)` : prod.name));
       setSearch('');
       if (searchInputRef.current) searchInputRef.current.focus();
     } catch (err) {
@@ -5784,17 +6080,31 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     }
   };
 
-  const addToCart = (product, quantity = 1.0) => {
+  const getCartKey = (item) => item.cartKey || `${item.product.id}`;
+
+  const addToCart = (product, quantity = 1.0, markingCode = null) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      if (markingCode) {
+        if (prev.some((item) => item.marking_code === markingCode)) {
+          notify(lang === 'uz' ? "Bu DataMatrix kodi savatda bor!" : "Этот DataMatrix уже в чеке!", 'error');
+          return prev;
+        }
+        return [...prev, {
+          cartKey: `${product.id}:${markingCode}`,
+          product,
+          quantity: 1,
+          marking_code: markingCode
+        }];
+      }
+      const existing = prev.find((item) => item.product.id === product.id && !item.marking_code);
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id
+          getCartKey(item) === getCartKey(existing)
             ? { ...item, quantity: Math.round((item.quantity + quantity) * 1000) / 1000 }
             : item
         );
       }
-      return [...prev, { product, quantity: Math.round(quantity * 1000) / 1000 }];
+      return [...prev, { cartKey: `${product.id}`, product, quantity: Math.round(quantity * 1000) / 1000, marking_code: null }];
     });
   };
 
@@ -5813,11 +6123,11 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     notify(`${item.name} (+1)`);
   };
 
-  const updateQuantity = (productId, delta) => {
+  const updateQuantity = (cartKeyOrId, delta) => {
     setCart((prev) =>
       prev
         .map((item) => {
-          if (item.product.id === productId) {
+          if (getCartKey(item) === String(cartKeyOrId) || item.product.id === cartKeyOrId) {
             const newQty = Math.round((item.quantity + delta) * 1000) / 1000;
             return newQty > 0 ? { ...item, quantity: newQty } : null;
           }
@@ -5827,18 +6137,36 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     );
   };
 
-  const setItemExactQty = (productId, newQty) => {
+  const setItemExactQty = (cartKeyOrId, newQty) => {
     const parsed = parseFloat(newQty);
     if (isNaN(parsed) || parsed <= 0) return;
     setCart((prev) =>
       prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity: parsed } : item
+        (getCartKey(item) === String(cartKeyOrId) || item.product.id === cartKeyOrId) ? { ...item, quantity: parsed } : item
       )
     );
   };
 
-  const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeFromCart = (cartKeyOrId) => {
+    setCart((prev) => prev.filter((item) => getCartKey(item) !== String(cartKeyOrId) && item.product.id !== cartKeyOrId));
+  };
+
+  const attachMarkingToCartItem = (cartKey, scannedCode) => {
+    const clean = (scannedCode || '').trim();
+    if (!clean) return;
+    setCart((prev) => {
+      if (prev.some((it) => it.marking_code === clean && getCartKey(it) !== cartKey)) {
+        notify(lang === 'uz' ? "Bu DataMatrix kodi boshqa qatorda bor!" : "Этот DataMatrix уже привязан!", 'error');
+        return prev;
+      }
+      return prev.map((it) =>
+        getCartKey(it) === cartKey
+          ? { ...it, marking_code: clean, cartKey: `${it.product.id}:${clean}` }
+          : it
+      );
+    });
+    playAudioCue('success');
+    notify(lang === 'uz' ? "DataMatrix kod biriktirildi ✓" : "Код DataMatrix привязан ✓");
   };
 
   const clearCart = (askConfirm = false) => {
@@ -5860,14 +6188,17 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     setDirectLoading(true);
     try {
       const cashVal = paymentMethod === 'CASH' ? cashGiven : 0;
+      const activeStoreId = (() => { try { return localStorage.getItem('pos_store_id') || ''; } catch (e) { return ''; } })();
       const payload = {
         items: safeArray(cart).map((i) => ({
           product_id: typeof i.product.id === 'number' ? i.product.id : null,
           barcode: i.product.barcode,
           name: i.product.name,
+          marking_code: i.marking_code || null,
           price: i.product.sale_price,
           quantity: i.quantity
         })),
+        store_id: activeStoreId ? Number(activeStoreId) : null,
         payment_method: paymentMethod,
         cash_received: cashVal,
         card_amount: paymentMethod === 'CARD' ? cartTotal : 0,
@@ -6115,36 +6446,50 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                       {/* Mobile Compact Cart Cards (< md) */}
                       <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
                         {safeArray(cart).map((item) => {
+                          const cKey = getCartKey(item);
                           const itemTotal = item.product.sale_price * item.quantity;
                           const isWeight = ['kg', 'l', 'metr'].includes((item.product.unit || '').toLowerCase());
+                          const needsDM = Boolean(item.product.is_tobacco || item.product.requires_marking);
                           return (
-                            <div key={item.product.id} className="p-2.5 space-y-1.5">
+                            <div key={cKey} className="p-2.5 space-y-1.5">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0 flex-1">
-                                  <div className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{item.product.name}</div>
-                                  <div className="text-[10px] text-slate-400 font-mono">{formatMoney(item.product.sale_price)} / {item.product.unit || 'dona'}</div>
+                                  <div className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                                    {needsDM ? '🚬 ' : ''}{item.product.name}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 flex-wrap">
+                                    <span>{formatMoney(item.product.sale_price)} / {item.product.unit || 'dona'}</span>
+                                    {item.marking_code && (
+                                      <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">DM ✓</span>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
                                   <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400">{formatMoney(itemTotal)}</span>
-                                  <button type="button" onClick={() => removeFromCart(item.product.id)} className="w-6 h-6 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 text-xs font-bold flex items-center justify-center">✕</button>
+                                  <button type="button" onClick={() => removeFromCart(cKey)} className="w-6 h-6 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 text-xs font-bold flex items-center justify-center">✕</button>
                                 </div>
                               </div>
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-1">
-                                  <button type="button" onClick={() => updateQuantity(item.product.id, -1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black text-sm border border-slate-200 dark:border-slate-700">-</button>
+                                  <button type="button" onClick={() => updateQuantity(cKey, -1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black text-sm border border-slate-200 dark:border-slate-700">-</button>
                                   <input
                                     type="number"
                                     step="any"
                                     value={item.quantity}
-                                    onChange={(e) => setItemExactQty(item.product.id, e.target.value)}
+                                    onChange={(e) => setItemExactQty(cKey, e.target.value)}
                                     className="w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1"
                                   />
-                                  <button type="button" onClick={() => updateQuantity(item.product.id, 1)} className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black text-sm">+</button>
+                                  <button type="button" onClick={() => updateQuantity(cKey, 1)} className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black text-sm">+</button>
                                 </div>
+                                {needsDM && !item.marking_code && (
+                                  <button type="button" onClick={() => setMarkingScanKey(cKey)} className="px-2 py-1 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] font-bold border border-amber-300">
+                                    📷 DataMatrix
+                                  </button>
+                                )}
                                 {isWeight && (
                                   <div className="flex items-center gap-1">
                                     {[0.25, 0.5, 1, 2].map(w => (
-                                      <button key={w} type="button" onClick={() => setItemExactQty(item.product.id, w)} className="px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">
+                                      <button key={w} type="button" onClick={() => setItemExactQty(cKey, w)} className="px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">
                                         {w}
                                       </button>
                                     ))}
@@ -6169,25 +6514,34 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {safeArray(cart).map((item, idx) => (
-                            <tr key={item.product.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          {safeArray(cart).map((item, idx) => {
+                            const cKey = getCartKey(item);
+                            const needsDM = Boolean(item.product.is_tobacco || item.product.requires_marking);
+                            return (
+                            <tr key={cKey} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                               <td className="px-3 py-2 text-[11px] text-slate-400 font-mono">{idx + 1}</td>
                               <td className="px-3 py-2">
-                                <div className="font-bold truncate max-w-xs">{item.product.name}</div>
-                                <div className="text-[10px] text-slate-400 font-mono">{item.product.barcode}</div>
+                                <div className="font-bold truncate max-w-xs">{needsDM ? '🚬 ' : ''}{item.product.name}</div>
+                                <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+                                  <span>{item.product.barcode}</span>
+                                  {item.marking_code && <span className="text-emerald-600 font-bold">DM ✓</span>}
+                                  {needsDM && !item.marking_code && (
+                                    <button type="button" onClick={() => setMarkingScanKey(cKey)} className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">📷 DataMatrix</button>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-3 py-2 text-right font-mono whitespace-nowrap">{formatMoney(item.product.sale_price)}</td>
                               <td className="px-3 py-2">
                                 <div className="flex items-center justify-center gap-1">
-                                  <button type="button" onClick={() => updateQuantity(item.product.id, -1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black">-</button>
-                                  <input type="number" step="any" value={item.quantity} onChange={(e) => setItemExactQty(item.product.id, e.target.value)} className="w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1" />
-                                  <button type="button" onClick={() => updateQuantity(item.product.id, 1)} className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black">+</button>
+                                  <button type="button" onClick={() => updateQuantity(cKey, -1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black">-</button>
+                                  <input type="number" step="any" value={item.quantity} onChange={(e) => setItemExactQty(cKey, e.target.value)} className="w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1" />
+                                  <button type="button" onClick={() => updateQuantity(cKey, 1)} className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black">+</button>
                                 </div>
                               </td>
                               <td className="px-3 py-2 text-right font-mono font-black text-emerald-600 whitespace-nowrap">{formatMoney(item.product.sale_price * item.quantity)}</td>
-                              <td className="px-2 py-2 text-center"><button type="button" onClick={() => removeFromCart(item.product.id)} className="text-slate-400 hover:text-rose-500 font-bold">✕</button></td>
+                              <td className="px-2 py-2 text-center"><button type="button" onClick={() => removeFromCart(cKey)} className="text-slate-400 hover:text-rose-500 font-bold">✕</button></td>
                             </tr>
-                          ))}
+                          );})}
                         </tbody>
                       </table>
                     </>
@@ -6363,6 +6717,20 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         <CameraScannerModal
           onScan={(code) => { setScannerActive(false); processBarcode(code); }}
           onClose={() => setScannerActive(false)}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
+
+      {markingScanKey !== null && (
+        <CameraScannerModal
+          onScan={(code) => {
+            const key = markingScanKey;
+            setMarkingScanKey(null);
+            attachMarkingToCartItem(key, code);
+          }}
+          onClose={() => setMarkingScanKey(null)}
           notify={notify}
           t={t}
           lang={lang}
@@ -6751,6 +7119,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
   const [search, setSearch] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [expiringOnly, setExpiringOnly] = useState(false);
+  const [tobaccoOnly, setTobaccoOnly] = useState(false);
   const [skip, setSkip] = useState(0);
   const limit = 30;
   const csvInputRef = useRef(null);
@@ -6773,7 +7142,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
     if (subTab === 'products') fetchProducts();
     else if (subTab === 'revision' && isOwner) fetchActs();
     else if (subTab === 'movements' && isOwner) fetchMovements();
-  }, [subTab, search, selectedCategory, lowStockOnly, expiringOnly, skip]);
+  }, [subTab, search, selectedCategory, lowStockOnly, expiringOnly, tobaccoOnly, skip]);
 
   const fetchProducts = async () => {
     try {
@@ -6782,6 +7151,7 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
       if (selectedCategory) params.append('category_id', String(selectedCategory));
       if (lowStockOnly) params.append('low_stock_only', 'true');
       if (expiringOnly) params.append('expiring_soon_only', 'true');
+      if (tobaccoOnly) params.append('tobacco_only', 'true');
 
       const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -7038,6 +7408,9 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
               <button type="button" onClick={() => { setExpiringOnly(!expiringOnly); setSkip(0); }} className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${expiringOnly ? 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
                 ⏰ <span className="hidden sm:inline">{lang === 'uz' ? 'Muddat' : 'Срок'}</span>
               </button>
+              <button type="button" onClick={() => { setTobaccoOnly(!tobaccoOnly); setSkip(0); }} className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${tobaccoOnly ? 'bg-indigo-100 border-indigo-300 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                🚬 <span className="hidden sm:inline">{lang === 'uz' ? 'Tamaki' : 'Табак'}</span>
+              </button>
             </div>
 
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
@@ -7112,6 +7485,12 @@ function CatalogScreen({ token, notify, isOwner, t, lang: propLang }) {
                         {isOwner && p.purchase_price !== null && (
                           <span className="font-mono text-slate-400">{lang === 'uz' ? 'Kirim:' : 'Зак:'} {formatMoney(p.purchase_price)}</span>
                         )}
+                        {(p.is_tobacco || p.requires_marking) && (
+                          <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold">🚬 DM</span>
+                        )}
+                        <span className={`px-1.5 py-0.5 rounded font-mono font-bold ${p.ikpu_valid ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                          {p.ikpu_valid ? 'IKPU ✓' : 'IKPU !'}
+                        </span>
                         {p.expiry_date && (
                           <span className={`px-1.5 py-0.5 rounded font-bold ${p.is_expired ? 'bg-rose-100 text-rose-700' : p.is_expiring_soon ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
                             ⏰ {p.expiry_date}
@@ -7574,11 +7953,12 @@ function CreateExpenseModal({ token, catalogSample, isSpoilage, onClose, onSucce
 // ------------------- ACCOUNTING & ANALYTICS DASHBOARD -------------------
 function AnalyticsScreen({ token, notify, t }) {
   const lang = (typeof window !== 'undefined' && window.pos_lang) || (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
-  const [subView, setSubView] = useState('finance'); // 'finance' | 'insights' | 'telegram'
+  const [subView, setSubView] = useState('finance'); // 'finance' | 'insights' | 'tax' | 'telegram'
   const [period, setPeriod] = useState('today');
   const [selectedDate, setSelectedDate] = useState('');
   const [data, setData] = useState(null);
   const [insights, setInsights] = useState(null);
+  const [taxReport, setTaxReport] = useState(null);
   const [tgStatus, setTgStatus] = useState(null);
   const [tgToken, setTgToken] = useState('');
   const [tgChatId, setTgChatId] = useState('');
@@ -7589,8 +7969,63 @@ function AnalyticsScreen({ token, notify, t }) {
   useEffect(() => {
     if (subView === 'finance') fetchDashboard();
     else if (subView === 'insights') fetchInsights();
+    else if (subView === 'tax') fetchTaxReport();
     else if (subView === 'telegram') fetchTgStatus();
   }, [subView, period, selectedDate]);
+
+  const fetchTaxReport = async () => {
+    setLoading(true);
+    try {
+      const p = period === 'all' ? 'year' : (period === 'custom' ? 'month' : period);
+      const url = selectedDate
+        ? `${API_BASE}/tax/report?period=custom&selected_date=${selectedDate}`
+        : `${API_BASE}/tax/report?period=${p}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setTaxReport(await res.json());
+    } catch (e) {
+      notify(lang === 'uz' ? 'Soliq hisobotini yuklashda xatolik' : 'Ошибка загрузки налогового отчёта', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadTaxCsv = async () => {
+    try {
+      const p = period === 'all' ? 'year' : (period === 'custom' ? 'month' : period);
+      const res = await fetch(`${API_BASE}/tax/export-csv?period=${p}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('CSV error');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `soliq_tax_${p}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      notify(lang === 'uz' ? 'Soliq CSV yuklab olindi!' : 'Налоговый реестр CSV скачан!');
+    } catch (e) {
+      notify(e.message, 'error');
+    }
+  };
+
+  const sendTaxToTelegram = async () => {
+    setTgSending(true);
+    try {
+      const p = period === 'all' ? 'year' : (period === 'custom' ? 'month' : period);
+      const res = await fetch(`${API_BASE}/tax/send-telegram?period=${p}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Xatolik');
+      notify(d.message || 'Yuborildi!');
+    } catch (e) {
+      notify(e.message, 'error');
+    } finally {
+      setTgSending(false);
+    }
+  };
 
   const fetchDashboard = async () => {
     setLoading(true);
@@ -7678,12 +8113,22 @@ function AnalyticsScreen({ token, notify, t }) {
               💰 {lang === 'uz' ? 'Moliya' : 'Финансы'}
             </button>
             <button type="button" onClick={() => setSubView('insights')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'insights' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              🧠 {lang === 'uz' ? 'AI Tahlil' : 'AI Инсайты'}
+              🧠 {lang === 'uz' ? 'AI' : 'AI'}
+            </button>
+            <button type="button" onClick={() => setSubView('tax')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'tax' ? 'bg-white dark:bg-slate-900 shadow-sm text-indigo-600' : 'text-slate-500'}`}>
+              🏛️ {lang === 'uz' ? 'Soliq' : 'Налог'}
             </button>
             <button type="button" onClick={() => setSubView('telegram')} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'telegram' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`}>
-              🤖 Telegram
+              🤖 TG
             </button>
           </div>
+
+          {subView === 'tax' && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button type="button" onClick={downloadTaxCsv} className="px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold">📥 CSV</button>
+              <button type="button" disabled={tgSending} onClick={sendTaxToTelegram} className="px-2 py-1 rounded-xl bg-indigo-600 text-white text-[11px] font-bold">🤖</button>
+            </div>
+          )}
 
           {subView === 'finance' && (
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl px-2 py-1 shrink-0">
@@ -7699,6 +8144,7 @@ function AnalyticsScreen({ token, notify, t }) {
               { id: 'today', label: t.periodToday },
               { id: 'week', label: t.periodWeek },
               { id: 'month', label: t.periodMonth },
+              ...(subView === 'tax' ? [{ id: 'quarter', label: lang === 'uz' ? 'Kvartal' : 'Квартал' }] : []),
               { id: 'all', label: t.periodAll }
             ].map((item) => (
               <button
@@ -7815,6 +8261,103 @@ function AnalyticsScreen({ token, notify, t }) {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        ))}
+
+        {subView === 'tax' && (loading || !taxReport ? (
+          <div className="py-16 text-center text-xs text-slate-400">{t.processing}</div>
+        ) : (
+          <div className="space-y-2.5 text-xs">
+            {/* Warnings / Soliq Audit */}
+            {safeArray(taxReport.warnings).length > 0 && (
+              <div className="space-y-1.5">
+                {safeArray(taxReport.warnings).map((w, idx) => (
+                  <div key={idx} className={`p-2.5 rounded-2xl border ${w.level === 'danger' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 text-rose-800 dark:text-rose-200' : w.level === 'warn' ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 text-amber-900 dark:text-amber-200' : 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 text-indigo-900 dark:text-indigo-200'}`}>
+                    <div className="font-bold">{lang === 'uz' ? w.title_uz : w.title_ru}</div>
+                    <div className="text-[11px] opacity-90 mt-0.5">{lang === 'uz' ? w.detail_uz : w.detail_ru}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Taxpayer & Tax Calculation KPIs */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
+                <div className="text-[11px] text-slate-500 font-semibold">{lang === 'uz' ? 'Soliq bazasi (Sof savdo)' : 'Налоговая база'}</div>
+                <div className="text-base sm:text-lg font-black font-mono text-emerald-600 mt-0.5">{formatMoney(taxReport.summary.net_taxable_revenue)}</div>
+                <div className="text-[10px] text-slate-400">{taxReport.summary.receipts_count} {lang === 'uz' ? 'chek' : 'чеков'} • -{formatMoney(taxReport.summary.refunds_total)} {lang === 'uz' ? 'qaytarish' : 'возвр.'}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3">
+                <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">💰 {lang === 'uz' ? 'Hisoblangan soliq' : 'К уплате налог'} ({taxReport.summary.tax_rate_percent}%)</div>
+                <div className="text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">{formatMoney(taxReport.summary.estimated_tax_due)}</div>
+                <div className="text-[10px] text-slate-400">{lang === 'uz' ? `Topshirish: oyning ${taxReport.summary.filing_deadline_day}-sanasi` : `Срок сдачи: до ${taxReport.summary.filing_deadline_day}-го`}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
+                <div className="text-[11px] text-slate-500 font-semibold">🏛️ IKPU (MXIK) {lang === 'uz' ? 'holati' : 'база'}</div>
+                <div className="text-base sm:text-lg font-black font-mono mt-0.5">{taxReport.catalog_compliance.with_valid_ikpu} / {taxReport.catalog_compliance.total_active_sku}</div>
+                <div className="text-[10px] text-amber-600 font-bold">{taxReport.catalog_compliance.missing_ikpu_count} {lang === 'uz' ? 'ta IKPU kodsiz' : 'без ИКПУ'}</div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
+                <div className="text-[11px] text-slate-500 font-semibold">🚬 {lang === 'uz' ? 'Tamaki / DataMatrix' : 'Табачка / Маркировка'}</div>
+                <div className="text-base sm:text-lg font-black font-mono mt-0.5">{taxReport.tobacco_and_marking.tobacco_units_sold} {lang === 'uz' ? 'quti' : 'пачек'}</div>
+                <div className="text-[10px] font-bold text-emerald-600">{taxReport.tobacco_and_marking.datamatrix_coverage_pct}% DataMatrix • {formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)}</div>
+              </div>
+            </div>
+
+            {/* Tobacco & Asl Belgisi DataMatrix Ledger */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-bold">🚬 {lang === 'uz' ? 'Tamaki va DataMatrix jurnali (Asl Belgisi)' : 'Табачка и маркировка (Asl Belgisi DataMatrix)'}</h3>
+                <span className="text-[10px] font-mono text-slate-400">
+                  DM ✓ {taxReport.tobacco_and_marking.marked_with_datamatrix_count} / ✗ {taxReport.tobacco_and_marking.missing_datamatrix_count}
+                </span>
+              </div>
+              {safeArray(taxReport.tobacco_and_marking.marking_ledger).length === 0 ? (
+                <div className="text-center py-4 text-slate-400">
+                  {lang === 'uz' ? "Tanlangan davrda tamaki/markirovka sotuvi yo'q" : 'За период продаж табака/маркировки нет'}
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
+                  {safeArray(taxReport.tobacco_and_marking.marking_ledger).slice(0, 50).map((m, i) => (
+                    <div key={i} className="py-1.5 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold truncate">{m.product_name} {m.is_returned ? '↩️' : ''}</div>
+                        <div className="text-[10px] font-mono text-slate-400 truncate">
+                          {m.sold_at} • {m.receipt_number} • {m.has_datamatrix ? `DM: ${m.masked_code}` : '⚠️ БЕЗ DATAMATRIX'}
+                        </div>
+                      </div>
+                      <div className="text-right font-mono shrink-0">
+                        <div className="font-bold text-emerald-600">{formatMoney(m.total_price)}</div>
+                        <div className="text-[10px] text-slate-400">{m.quantity} sht</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* IKPU Sales Breakdown */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+              <h3 className="font-bold">🧾 {lang === 'uz' ? 'IKPU (MXIK) bo‘yicha sotuvlar' : 'Продажи в разрезе ИКПУ (MXIK)'}</h3>
+              {safeArray(taxReport.ikpu_breakdown).length === 0 ? (
+                <div className="text-center py-4 text-slate-400">{lang === 'uz' ? "Sotuvlar yo'q" : 'Продаж за период нет'}</div>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-56 overflow-y-auto">
+                  {safeArray(taxReport.ikpu_breakdown).map((row, idx) => (
+                    <div key={idx} className="py-1.5 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-mono font-bold text-[11px]">{row.ikpu_code || '⚠️ BEZ IKPU'} {row.is_tobacco ? '🚬' : ''}</div>
+                        <div className="text-[10px] text-slate-500 truncate">{row.sample_name} ({row.quantity_sold} poz)</div>
+                      </div>
+                      <div className="text-right font-mono shrink-0">
+                        <div className="font-bold text-emerald-600">{formatMoney(row.net_revenue)}</div>
+                        {row.vat_amount > 0 && <div className="text-[10px] text-slate-400">QQS: {formatMoney(row.vat_amount)}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

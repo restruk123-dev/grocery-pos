@@ -20,6 +20,7 @@ from ..models import (
 from ..auth import get_current_user, require_role, verify_password
 from ..seed import seed_database, purge_seeded_demo_data
 from ..services.translit import get_search_variants
+from ..services.uz_tax import parse_gs1_datamatrix, validate_ikpu
 
 router = APIRouter(prefix="/products", tags=["Products & Catalog"])
 TZ_TASHKENT = timezone(timedelta(hours=5))
@@ -41,8 +42,11 @@ def _serialize_product(
     is_owner: bool,
     category_name: Optional[str] = None,
     detected_weight: Optional[float] = None,
+    detected_marking_code: Optional[str] = None,
+    marking_already_sold: bool = False,
 ) -> dict:
     is_expired, is_expiring_soon, days_to_expiry = _expiry_meta(getattr(product, "expiry_date", None))
+    ikpu_code = getattr(product, "ikpu_code", None)
     data = {
         "id": product.id,
         "barcode": product.barcode,
@@ -55,6 +59,12 @@ def _serialize_product(
         "stock_quantity": product.stock_quantity,
         "min_stock_alert": product.min_stock_alert,
         "expiry_date": getattr(product, "expiry_date", None),
+        "ikpu_code": ikpu_code,
+        "ikpu_valid": validate_ikpu(ikpu_code),
+        "package_code": getattr(product, "package_code", None),
+        "vat_rate": float(getattr(product, "vat_rate", 0.0) or 0.0),
+        "requires_marking": bool(getattr(product, "requires_marking", False)),
+        "is_tobacco": bool(getattr(product, "is_tobacco", False)),
         "is_expired": is_expired,
         "is_expiring_soon": is_expiring_soon,
         "days_to_expiry": days_to_expiry,
@@ -64,6 +74,9 @@ def _serialize_product(
     }
     if detected_weight is not None:
         data["detected_weight"] = detected_weight
+    if detected_marking_code is not None:
+        data["detected_marking_code"] = detected_marking_code
+        data["marking_already_sold"] = marking_already_sold
     return data
 
 class ProductCreate(BaseModel):
@@ -76,6 +89,11 @@ class ProductCreate(BaseModel):
     stock_quantity: float = Field(default=0.0, ge=0.0, le=1000000.0)
     min_stock_alert: float = Field(default=5.0, ge=0.0, le=100000.0)
     expiry_date: Optional[str] = Field(default=None, max_length=32)
+    ikpu_code: Optional[str] = Field(default=None, max_length=32)
+    package_code: Optional[str] = Field(default=None, max_length=32)
+    vat_rate: float = Field(default=0.0, ge=-1.0, le=30.0)
+    requires_marking: bool = Field(default=False)
+    is_tobacco: bool = Field(default=False)
     is_quick: bool = Field(default=False)
 
 class ProductUpdate(BaseModel):
@@ -88,6 +106,11 @@ class ProductUpdate(BaseModel):
     stock_quantity: Optional[float] = Field(default=None, ge=0.0, le=1000000.0)
     min_stock_alert: Optional[float] = Field(default=None, ge=0.0, le=100000.0)
     expiry_date: Optional[str] = Field(default=None, max_length=32)
+    ikpu_code: Optional[str] = Field(default=None, max_length=32)
+    package_code: Optional[str] = Field(default=None, max_length=32)
+    vat_rate: Optional[float] = Field(default=None, ge=-1.0, le=30.0)
+    requires_marking: Optional[bool] = None
+    is_tobacco: Optional[bool] = None
     is_quick: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -121,6 +144,7 @@ def list_products(
     category_id: Optional[int] = Query(None, description="Kategoriya ID"),
     low_stock_only: bool = Query(False, description="Faqat oz qolgan tovarlar / Только товары с остатком ниже минимального"),
     expiring_soon_only: bool = Query(False, description="Muddati yaqinlashgan tovarlar (7 kun) / Скоро истекает срок"),
+    tobacco_only: bool = Query(False, description="Faqat tamaki / markirovka tovarlari"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=2000),
     current_user: User = Depends(get_current_user),
@@ -147,6 +171,9 @@ def list_products(
     if expiring_soon_only:
         cutoff = (datetime.now(TZ_TASHKENT).date() + timedelta(days=7)).isoformat()
         query = query.where(Product.expiry_date != None, Product.expiry_date != "", Product.expiry_date <= cutoff)
+
+    if tobacco_only:
+        query = query.where(or_(Product.is_tobacco == True, Product.requires_marking == True))
 
     # Get total count efficiently without loading full records into memory
     count_query = select(func.count()).select_from(query.subquery())
@@ -192,7 +219,11 @@ def get_quick_products(
     return [_serialize_product(p, is_owner=is_owner) for p in items]
 
 
-CSV_COLUMNS = ["barcode", "name", "sale_price", "purchase_price", "stock_quantity", "unit", "category_name", "min_stock_alert", "is_quick"]
+CSV_COLUMNS = [
+    "barcode", "name", "sale_price", "purchase_price", "stock_quantity",
+    "unit", "category_name", "min_stock_alert", "is_quick",
+    "ikpu_code", "package_code", "vat_rate", "is_tobacco", "requires_marking",
+]
 MAX_CATALOG_IMPORT_BYTES = 5 * 1024 * 1024
 MAX_CATALOG_IMPORT_ROWS = 10_000
 
@@ -240,6 +271,11 @@ def export_catalog_csv(
             "category_name": _spreadsheet_safe_text(categories.get(product.category_id, "")),
             "min_stock_alert": product.min_stock_alert,
             "is_quick": "true" if product.is_quick else "false",
+            "ikpu_code": _spreadsheet_safe_text(getattr(product, "ikpu_code", "") or ""),
+            "package_code": _spreadsheet_safe_text(getattr(product, "package_code", "") or ""),
+            "vat_rate": getattr(product, "vat_rate", 0.0) or 0.0,
+            "is_tobacco": "true" if getattr(product, "is_tobacco", False) else "false",
+            "requires_marking": "true" if getattr(product, "requires_marking", False) else "false",
         })
     return Response(
         content="\ufeff" + output.getvalue(),
@@ -310,6 +346,12 @@ async def import_catalog_csv(
             if quick_value not in {"true", "false", "1", "0", "yes", "no"}:
                 row_errors.append({"line": line_number, "error": "is_quick must be true or false"})
                 continue
+            tob_val = row.get("is_tobacco", "false").lower() in {"true", "1", "yes"}
+            mark_val = tob_val or (row.get("requires_marking", "false").lower() in {"true", "1", "yes"})
+            try:
+                vat_val = float(row.get("vat_rate") or 0.0)
+            except (TypeError, ValueError):
+                vat_val = 0.0
             prepared.append({
                 "_line_number": line_number,
                 "barcode": barcode,
@@ -318,6 +360,11 @@ async def import_catalog_csv(
                 "unit": (row.get("unit") or "dona")[:20],
                 "category_name": row.get("category_name", "")[:150],
                 "is_quick": quick_value in {"true", "1", "yes"},
+                "ikpu_code": (row.get("ikpu_code") or "").strip()[:32] or None,
+                "package_code": (row.get("package_code") or "").strip()[:32] or None,
+                "vat_rate": vat_val,
+                "is_tobacco": tob_val,
+                "requires_marking": mark_val,
             })
     except csv.Error as exc:
         raise HTTPException(status_code=400, detail=f"Invalid CSV: {exc}") from exc
@@ -361,6 +408,40 @@ def get_product_by_barcode(
     clean_barcode = barcode.strip()
     product = session.exec(select(Product).where(Product.barcode == clean_barcode, Product.is_active == True)).first()
     detected_weight = None
+    detected_marking_code = None
+    marking_already_sold = False
+
+    # GS1 DataMatrix (Asl Belgisi tobacco / beverages) lookup
+    if not product:
+        dm = parse_gs1_datamatrix(clean_barcode)
+        if dm:
+            detected_marking_code = dm["marking_code"]
+            product = session.exec(
+                select(Product).where(
+                    Product.barcode.in_(dm["barcode_candidates"]),
+                    Product.is_active == True,
+                )
+            ).first()
+            prior = session.exec(
+                select(SaleItem).where(SaleItem.marking_code == detected_marking_code)
+            ).all()
+            if prior:
+                for p_it in prior:
+                    ref = session.exec(
+                        select(SaleRefund).where(SaleRefund.sale_id == p_it.sale_id)
+                    ).all()
+                    ref_qty = 0.0
+                    if ref:
+                        ref_items = session.exec(
+                            select(SaleRefundItem).where(
+                                SaleRefundItem.refund_id.in_([r.id for r in ref]),
+                                SaleRefundItem.product_id == p_it.product_id,
+                            )
+                        ).all()
+                        ref_qty = sum(ri.quantity for ri in ref_items)
+                    if ref_qty < p_it.quantity:
+                        marking_already_sold = True
+                        break
 
     # CIS / Uzbekistan Weighing Scales Barcode Support (EAN-13 prefixes 20..29)
     # Structure: [2-digit prefix 20..29] + [5-digit PLU code] + [5-digit weight in grams] + [1 checksum]
@@ -395,7 +476,14 @@ def get_product_by_barcode(
 
     cat = session.exec(select(Category).where(Category.id == product.category_id)).first() if product.category_id else None
     is_owner = (current_user.role == UserRole.OWNER)
-    data = _serialize_product(product, is_owner=is_owner, category_name=cat.name if cat else None, detected_weight=detected_weight)
+    data = _serialize_product(
+        product,
+        is_owner=is_owner,
+        category_name=cat.name if cat else None,
+        detected_weight=detected_weight,
+        detected_marking_code=detected_marking_code,
+        marking_already_sold=marking_already_sold,
+    )
     data["detected_weight"] = detected_weight
     return data
 
@@ -441,6 +529,11 @@ def create_product(
             existing.stock_quantity = data.stock_quantity
             existing.min_stock_alert = data.min_stock_alert
             existing.expiry_date = data.expiry_date.strip()[:10] if data.expiry_date else None
+            existing.ikpu_code = data.ikpu_code.strip() if data.ikpu_code and data.ikpu_code.strip() else None
+            existing.package_code = data.package_code.strip() if data.package_code and data.package_code.strip() else None
+            existing.vat_rate = data.vat_rate
+            existing.is_tobacco = bool(data.is_tobacco)
+            existing.requires_marking = bool(data.requires_marking or data.is_tobacco)
             existing.is_quick = data.is_quick
             session.add(existing)
             session.commit()
@@ -455,6 +548,10 @@ def create_product(
     product_data["name"] = data.name.strip()
     if product_data.get("expiry_date"):
         product_data["expiry_date"] = product_data["expiry_date"].strip()[:10]
+    product_data["ikpu_code"] = (product_data.get("ikpu_code") or "").strip() or None
+    product_data["package_code"] = (product_data.get("package_code") or "").strip() or None
+    if product_data.get("is_tobacco"):
+        product_data["requires_marking"] = True
 
     product = Product(**product_data)
     session.add(product)
@@ -489,6 +586,14 @@ def update_product(
     if "expiry_date" in update_data:
         exp_val = update_data["expiry_date"]
         update_data["expiry_date"] = exp_val.strip()[:10] if exp_val and exp_val.strip() else None
+    if "ikpu_code" in update_data:
+        val = update_data["ikpu_code"]
+        update_data["ikpu_code"] = val.strip() if val and val.strip() else None
+    if "package_code" in update_data:
+        val = update_data["package_code"]
+        update_data["package_code"] = val.strip() if val and val.strip() else None
+    if update_data.get("is_tobacco"):
+        update_data["requires_marking"] = True
 
     for key, val in update_data.items():
         setattr(product, key, val)

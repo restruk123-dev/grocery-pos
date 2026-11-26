@@ -710,13 +710,70 @@ function SettingsModal({
   const [activeStoreId, setActiveStoreId] = useState(() => localStorage.getItem('pos_store_id') || '');
   const [newStoreName, setNewStoreName] = useState('');
   const [newStoreType, setNewStoreType] = useState('grocery');
+  const [showTaxProfile, setShowTaxProfile] = useState(false);
+  const [taxProfile, setTaxProfile] = useState({
+    legal_name: '',
+    inn_stir: '',
+    tax_regime: 'TURNOVER_1',
+    tax_rate_percent: '1',
+    address: '',
+    kkm_serial: '',
+    tobacco_license_note: '',
+    strict_tobacco_marking: false
+  });
+  const [savingTax, setSavingTax] = useState(false);
   useEffect(() => {
     fetch(`${API_BASE}/pos/stores`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
     }).then(r => r.ok ? r.json() : []).then(list => setStores(safeArray(list))).catch(() => {});
+    if (user?.role === 'owner') {
+      fetch(`${API_BASE}/tax/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }).then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.profile) {
+          setTaxProfile({
+            legal_name: d.profile.legal_name || '',
+            inn_stir: d.profile.inn_stir || '',
+            tax_regime: d.profile.tax_regime || 'TURNOVER_1',
+            tax_rate_percent: String(d.profile.tax_rate_percent ?? '1'),
+            address: d.profile.address || '',
+            kkm_serial: d.profile.kkm_serial || '',
+            tobacco_license_note: d.profile.tobacco_license_note || '',
+            strict_tobacco_marking: Boolean(d.profile.strict_tobacco_marking)
+          });
+        }
+      }).catch(() => {});
+    }
   }, []);
+  const saveTaxProfile = async () => {
+    setSavingTax(true);
+    try {
+      const res = await fetch(`${API_BASE}/tax/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...taxProfile,
+          tax_rate_percent: Number(taxProfile.tax_rate_percent) || 0,
+          store_id: activeStoreId ? Number(activeStoreId) : null
+        })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Xatolik');
+      notify(lang === 'uz' ? 'Soliq profili saqlandi!' : 'Налоговый профиль сохранён!');
+      setShowTaxProfile(false);
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setSavingTax(false);
+    }
+  };
   const createStoreOutlet = async () => {
     if (!newStoreName.trim()) return;
     try {
@@ -914,7 +971,110 @@ function SettingsModal({
     type: "button",
     onClick: createStoreOutlet,
     className: "px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold"
-  }, "+"))), /*#__PURE__*/React.createElement("div", {
+  }, "+"))), user?.role === 'owner' && /*#__PURE__*/React.createElement("div", {
+    className: "p-3 bg-indigo-50/70 dark:bg-indigo-950/30 rounded-2xl border border-indigo-200 dark:border-indigo-800 space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-indigo-950 dark:text-indigo-200"
+  }, "🏛️ ", lang === "uz" ? "Soliq va Tamaki profili (STIR / KKM)" : "Налоговый профиль (ИНН / Табачка)"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-indigo-700 dark:text-indigo-400"
+  }, taxProfile.inn_stir ? `STIR: ${taxProfile.inn_stir} • ${taxProfile.tax_regime} (${taxProfile.tax_rate_percent}%)` : lang === "uz" ? "STIR, soliq rejimi va Asl Belgisi sozlamalari" : "Укажите ИНН, налог и правила DataMatrix")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setShowTaxProfile(!showTaxProfile),
+    className: "px-3 py-1.5 bg-indigo-600 text-white rounded-xl font-bold"
+  }, showTaxProfile ? '▲' : lang === "uz" ? "Sozlash" : "Настроить")), showTaxProfile && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 pt-2 border-t border-indigo-200 dark:border-indigo-800"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: lang === "uz" ? "YaTT / MChJ nomi" : "Название ИП / ООО",
+    value: taxProfile.legal_name,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      legal_name: e.target.value
+    })),
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs"
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: lang === "uz" ? "STIR / INN (9 raqam)" : "ИНН / СТИР (9 цифр)",
+    value: taxProfile.inn_stir,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      inn_stir: e.target.value
+    })),
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: taxProfile.tax_regime,
+    onChange: e => {
+      const r = e.target.value;
+      const defRate = r === 'TURNOVER_1' ? '1' : r === 'TURNOVER_4' ? '4' : r === 'VAT_12' ? '12' : r === 'VAT_6' ? '6' : taxProfile.tax_rate_percent;
+      setTaxProfile(p => ({
+        ...p,
+        tax_regime: r,
+        tax_rate_percent: defRate
+      }));
+    },
+    className: "flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "TURNOVER_1"
+  }, lang === "uz" ? "YaTT aylanmadan soliq (1%)" : "ИП: Налог с оборота (1%)"), /*#__PURE__*/React.createElement("option", {
+    value: "TURNOVER_4"
+  }, lang === "uz" ? "MChJ aylanmadan soliq (4%)" : "ООО: Налог с оборота (4%)"), /*#__PURE__*/React.createElement("option", {
+    value: "TURNOVER_CUSTOM"
+  }, lang === "uz" ? "Aylanmadan soliq (boshqa %)" : "Налог с оборота (свой %)"), /*#__PURE__*/React.createElement("option", {
+    value: "VAT_12"
+  }, lang === "uz" ? "QQS to'lovchi (12%)" : "Плательщик НДС (12%)"), /*#__PURE__*/React.createElement("option", {
+    value: "VAT_6"
+  }, lang === "uz" ? "Soddalashtirilgan QQS (6%)" : "Упрощённый НДС (6%)")), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    step: "0.5",
+    value: taxProfile.tax_rate_percent,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      tax_rate_percent: e.target.value
+    })),
+    className: "w-16 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-xs font-mono font-bold text-center",
+    title: "%"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: lang === "uz" ? "KKM / FM seriya (ixtiyoriy)" : "Серийник ККМ / ФМ (опц.)",
+    value: taxProfile.kkm_serial,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      kkm_serial: e.target.value
+    })),
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono"
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: lang === "uz" ? "Tamaki ruxsatnomasi / yig'im" : "Сбор/разрешение на табак",
+    value: taxProfile.tobacco_license_note,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      tobacco_license_note: e.target.value
+    })),
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs"
+  })), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 cursor-pointer text-[11px] font-bold text-indigo-950 dark:text-indigo-200"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: taxProfile.strict_tobacco_marking,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      strict_tobacco_marking: e.target.checked
+    })),
+    className: "rounded text-indigo-600"
+  }), /*#__PURE__*/React.createElement("span", null, "🚬 ", lang === "uz" ? "Kassada tamaki uchun DataMatrix skaneri majburiy" : "На кассе требовать скан DataMatrix для табака")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: savingTax,
+    onClick: saveTaxProfile,
+    className: "w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs"
+  }, savingTax ? "..." : lang === "uz" ? "Soliq profilini saqlash" : "Сохранить налоговый профиль"))), /*#__PURE__*/React.createElement("div", {
     className: "p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
@@ -1014,6 +1174,111 @@ function SettingsModal({
   }, t.closeModal || (lang === "uz" ? "Yopish" : "Закрыть")))));
 }
 
+// ------------------- REUSABLE UZBEKISTAN TAX & TOBACCO PRODUCT FIELDS -------------------
+function TaxProductFields({
+  token,
+  lang = 'uz',
+  ikpuCode,
+  setIkpuCode,
+  vatRate,
+  setVatRate,
+  isTobacco,
+  setIsTobacco,
+  requiresMarking,
+  setRequiresMarking,
+  productName = ''
+}) {
+  const [searching, setSearching] = useState(false);
+  const [hints, setHints] = useState([]);
+  const [showTax, setShowTax] = useState(Boolean(ikpuCode || isTobacco || requiresMarking || Number(vatRate) > 0));
+  const runMxikSearch = async () => {
+    setSearching(true);
+    try {
+      const q = ikpuCode?.trim() || productName?.trim() || (isTobacco ? 'сигареты' : '');
+      const res = await fetch(`${API_BASE}/tax/mxik-search?q=${encodeURIComponent(q)}`, {
+        headers: token ? {
+          Authorization: `Bearer ${token}`
+        } : {}
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setHints(safeArray(d.items));
+      }
+    } catch (e) {} finally {
+      setSearching(false);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-2 text-xs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-1.5 cursor-pointer font-bold text-slate-800 dark:text-slate-200"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: Boolean(isTobacco),
+    onChange: e => {
+      const checked = e.target.checked;
+      setIsTobacco(checked);
+      if (checked) {
+        setRequiresMarking(true);
+        setShowTax(true);
+      }
+    },
+    className: "w-4 h-4 rounded text-amber-600"
+  }), /*#__PURE__*/React.createElement("span", null, "🚬 ", lang === 'uz' ? "Tamaki / 18+ (DataMatrix)" : "Табак / 18+ (DataMatrix)")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setShowTax(!showTax),
+    className: "text-[11px] font-bold text-indigo-600 dark:text-indigo-400"
+  }, "🏛️ ", lang === 'uz' ? "IKPU / QQS" : "ИКПУ / НДС", " ", showTax ? '▲' : '▼')), showTax && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5 pt-1.5 border-t border-slate-200 dark:border-slate-700"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5 items-center"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: lang === 'uz' ? "17 xonali IKPU (MXIK)" : "17-значный ИКПУ (MXIK)",
+    value: ikpuCode || '',
+    onChange: e => setIkpuCode(e.target.value.replace(/\D/g, '').slice(0, 17)),
+    className: "flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: searching,
+    onClick: runMxikSearch,
+    className: "px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-[11px]"
+  }, searching ? '...' : '🔍 IKPU'), /*#__PURE__*/React.createElement("select", {
+    value: String(vatRate ?? 0),
+    onChange: e => setVatRate(Number(e.target.value)),
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] font-bold"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "0"
+  }, "0% QQS"), /*#__PURE__*/React.createElement("option", {
+    value: "12"
+  }, "12% НДС"), /*#__PURE__*/React.createElement("option", {
+    value: "-1"
+  }, "Без НДС"))), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-600 dark:text-slate-300"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: Boolean(requiresMarking),
+    onChange: e => setRequiresMarking(e.target.checked),
+    className: "rounded text-indigo-600"
+  }), /*#__PURE__*/React.createElement("span", null, "🏷️ ", lang === 'uz' ? "Majburiy markirovka (Asl Belgisi DataMatrix)" : "Обязательная маркировка (Asl Belgisi DataMatrix)")), hints.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "max-h-28 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-800"
+  }, hints.map((h, idx) => /*#__PURE__*/React.createElement("button", {
+    key: idx,
+    type: "button",
+    onClick: () => {
+      setIkpuCode(h.mxik);
+      setHints([]);
+    },
+    className: "w-full text-left px-2 py-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-[10px] flex justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "truncate"
+  }, h.name), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-bold text-indigo-600 shrink-0"
+  }, h.mxik))))));
+}
+
 // ------------------- EDIT PRODUCT MODAL -------------------
 function EditProductModal({
   token,
@@ -1035,6 +1300,10 @@ function EditProductModal({
   const [salePrice, setSalePrice] = useState(String(product.sale_price || ""));
   const [stockQuantity, setStockQuantity] = useState(String(product.stock_quantity ?? "0"));
   const [expiryDate, setExpiryDate] = useState(product.expiry_date || "");
+  const [ikpuCode, setIkpuCode] = useState(product.ikpu_code || "");
+  const [vatRate, setVatRate] = useState(Number(product.vat_rate ?? 0));
+  const [isTobacco, setIsTobacco] = useState(Boolean(product.is_tobacco));
+  const [requiresMarking, setRequiresMarking] = useState(Boolean(product.requires_marking));
   const [isQuick, setIsQuick] = useState(Boolean(product.is_quick));
   const [loading, setLoading] = useState(false);
   const pNum = Number(purchasePrice) || 0;
@@ -1073,6 +1342,10 @@ function EditProductModal({
         sale_price: Number(salePrice),
         stock_quantity: Number(stockQuantity) || 0,
         expiry_date: expiryDate.trim() || null,
+        ikpu_code: ikpuCode.trim() || null,
+        vat_rate: Number(vatRate) || 0,
+        is_tobacco: Boolean(isTobacco),
+        requires_marking: Boolean(requiresMarking || isTobacco),
         is_quick: Boolean(isQuick)
       };
       const res = await fetch(`${API_BASE}/products/${product.id}`, {
@@ -1196,7 +1469,19 @@ function EditProductModal({
     value: "quti"
   }, "quti"), /*#__PURE__*/React.createElement("option", {
     value: "metr"
-  }, "metr")))), /*#__PURE__*/React.createElement("label", {
+  }, "metr")))), /*#__PURE__*/React.createElement(TaxProductFields, {
+    token: token,
+    lang: lang,
+    ikpuCode: ikpuCode,
+    setIkpuCode: setIkpuCode,
+    vatRate: vatRate,
+    setVatRate: setVatRate,
+    isTobacco: isTobacco,
+    setIsTobacco: setIsTobacco,
+    requiresMarking: requiresMarking,
+    setRequiresMarking: setRequiresMarking,
+    productName: name
+  }), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer pt-1"
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
@@ -2165,7 +2450,7 @@ function CameraScannerModal({
       const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
       if (hasBarcodeDetector) {
         try {
-          const desiredFormats = ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'];
+          const desiredFormats = ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code', 'data_matrix'];
           let supported = desiredFormats;
           if (window.BarcodeDetector.getSupportedFormats) {
             try {
@@ -2253,7 +2538,7 @@ function CameraScannerModal({
       // LEVEL 2: Html5Qrcode fallback
       try {
         if (window.Html5Qrcode) {
-          const formats = window.Html5QrcodeSupportedFormats ? [window.Html5QrcodeSupportedFormats.EAN_13, window.Html5QrcodeSupportedFormats.EAN_8, window.Html5QrcodeSupportedFormats.CODE_128, window.Html5QrcodeSupportedFormats.CODE_39, window.Html5QrcodeSupportedFormats.UPC_A, window.Html5QrcodeSupportedFormats.UPC_E, window.Html5QrcodeSupportedFormats.QR_CODE] : undefined;
+          const formats = window.Html5QrcodeSupportedFormats ? [window.Html5QrcodeSupportedFormats.EAN_13, window.Html5QrcodeSupportedFormats.EAN_8, window.Html5QrcodeSupportedFormats.CODE_128, window.Html5QrcodeSupportedFormats.CODE_39, window.Html5QrcodeSupportedFormats.UPC_A, window.Html5QrcodeSupportedFormats.UPC_E, window.Html5QrcodeSupportedFormats.QR_CODE, window.Html5QrcodeSupportedFormats.DATA_MATRIX] : undefined;
           html5Instance = new window.Html5Qrcode('qr-reader', {
             formatsToSupport: formats,
             experimentalFeatures: {
@@ -2365,7 +2650,7 @@ function CameraScannerModal({
       if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
         try {
           const detector = new window.BarcodeDetector({
-            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code']
+            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code', 'data_matrix']
           });
           const bitmap = await createImageBitmap(file);
           const results = await detector.detect(bitmap);
@@ -2426,7 +2711,7 @@ function CameraScannerModal({
     className: "text-xl"
   }, "📷"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "font-bold text-sm text-emerald-400"
-  }, lang === 'uz' ? 'Shtrixkod skaneri (EAN-13 / QR / 1D)' : 'Сканер штрихкодов (EAN-13 / QR / 1D)'), /*#__PURE__*/React.createElement("div", {
+  }, lang === 'uz' ? 'Shtrixkod / DataMatrix (EAN-13 / QR)' : 'Сканер (EAN-13 / DataMatrix / QR)'), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-400 flex items-center gap-1"
   }, /*#__PURE__*/React.createElement("span", {
     className: `w-1.5 h-1.5 rounded-full ${engineType === 'hardware' ? 'bg-emerald-400 animate-pulse' : engineType === 'html5' ? 'bg-blue-400' : 'bg-amber-400'}`
@@ -2577,6 +2862,10 @@ function CreateProductModal({
   const [salePrice, setSalePrice] = useState('');
   const [stockQuantity, setStockQuantity] = useState('1');
   const [expiryDate, setExpiryDate] = useState('');
+  const [ikpuCode, setIkpuCode] = useState('');
+  const [vatRate, setVatRate] = useState(0);
+  const [isTobacco, setIsTobacco] = useState(false);
+  const [requiresMarking, setRequiresMarking] = useState(false);
   const [isQuick, setIsQuick] = useState(false);
   const [cameraActive, setCameraActive] = useState(Boolean(autoScanOnMount && !initialBarcode));
   const [voiceActive, setVoiceActive] = useState(false);
@@ -2675,6 +2964,10 @@ function CreateProductModal({
           sale_price: Number(salePrice),
           stock_quantity: Number(stockQuantity) || 0,
           expiry_date: expiryDate.trim() || null,
+          ikpu_code: ikpuCode.trim() || null,
+          vat_rate: Number(vatRate) || 0,
+          is_tobacco: Boolean(isTobacco),
+          requires_marking: Boolean(requiresMarking || isTobacco),
           is_quick: Boolean(isQuick)
         })
       });
@@ -2694,6 +2987,7 @@ function CreateProductModal({
         setSalePrice('');
         setStockQuantity('1');
         setExpiryDate('');
+        setIkpuCode('');
         setIsQuick(false);
         setCameraActive(true);
       } else {
@@ -2774,7 +3068,16 @@ function CreateProductModal({
     className: "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1"
   }, t.categoryLabel || "Kategoriya"), /*#__PURE__*/React.createElement("select", {
     value: categoryId,
-    onChange: e => setCategoryId(e.target.value),
+    onChange: e => {
+      const val = e.target.value;
+      setCategoryId(val);
+      const catObj = safeArray(categories).find(c => String(c.id) === String(val));
+      const catName = (catObj?.name || '').toLowerCase();
+      if (catName.includes('tamaki') || catName.includes('табак')) {
+        setIsTobacco(true);
+        setRequiresMarking(true);
+      }
+    },
     className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-medium"
   }, safeArray(categories).length === 0 ? /*#__PURE__*/React.createElement("option", {
     value: ""
@@ -2853,7 +3156,19 @@ function CreateProductModal({
     className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs"
   }), addedCount > 0 && /*#__PURE__*/React.createElement("div", {
     className: "mt-1 text-[10px] font-bold text-emerald-600"
-  }, "✅ +", addedCount, " ", lang === 'uz' ? "ta qo'shildi" : "добавлено"))), /*#__PURE__*/React.createElement("label", {
+  }, "✅ +", addedCount, " ", lang === 'uz' ? "ta qo'shildi" : "добавлено"))), /*#__PURE__*/React.createElement(TaxProductFields, {
+    token: token,
+    lang: lang,
+    ikpuCode: ikpuCode,
+    setIkpuCode: setIkpuCode,
+    vatRate: vatRate,
+    setVatRate: setVatRate,
+    isTobacco: isTobacco,
+    setIsTobacco: setIsTobacco,
+    requiresMarking: requiresMarking,
+    setRequiresMarking: setRequiresMarking,
+    productName: name
+  }), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200 pt-1"
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
@@ -4027,14 +4342,23 @@ function CheckoutModal({
     }
     setLoading(true);
     try {
+      const activeStoreId = (() => {
+        try {
+          return localStorage.getItem('pos_store_id') || '';
+        } catch (e) {
+          return '';
+        }
+      })();
       const payload = {
         items: safeArray(cart).map(i => ({
           product_id: typeof i.product.id === 'number' ? i.product.id : null,
           barcode: i.product.barcode,
           name: i.product.name,
+          marking_code: i.marking_code || null,
           price: i.product.sale_price,
           quantity: i.quantity
         })),
+        store_id: activeStoreId ? Number(activeStoreId) : null,
         payment_method: method,
         discount_amount: discNum,
         cash_received: method === 'CASH' ? cashNum : method === 'MIXED' ? cashNum : 0,
@@ -4283,7 +4607,11 @@ function ReceiptModal({
     className: "text-center border-b border-dashed border-slate-300 pb-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-black text-sm"
-  }, "🛒 GroceryStore POS"), /*#__PURE__*/React.createElement("div", {
+  }, "🛒 ", receipt.tax_profile?.legal_name || "GroceryStore POS"), receipt.tax_profile?.inn_stir && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-600"
+  }, "STIR/ИНН: ", receipt.tax_profile.inn_stir), receipt.tax_profile?.address && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-500"
+  }, receipt.tax_profile.address), /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-slate-600"
   }, receipt.receipt_number), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-500"
@@ -4298,15 +4626,21 @@ function ReceiptModal({
     className: "flex-1 min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-bold truncate"
-  }, it.product_name), /*#__PURE__*/React.createElement("div", {
+  }, it.is_tobacco ? '🚬 ' : '', it.product_name), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-500"
-  }, it.quantity, " x ", formatMoney(it.unit_price))), /*#__PURE__*/React.createElement("div", {
+  }, it.quantity, " x ", formatMoney(it.unit_price)), it.ikpu_code && /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400"
+  }, "IKPU: ", it.ikpu_code), (it.masked_marking_code || it.marking_code) && /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-emerald-700 font-bold"
+  }, "DM: ", it.masked_marking_code || it.marking_code)), /*#__PURE__*/React.createElement("div", {
     className: "font-bold whitespace-nowrap"
   }, formatMoney(it.total_price))))), /*#__PURE__*/React.createElement("div", {
     className: "border-t border-dashed border-slate-300 pt-2 space-y-1"
   }, Number(receipt.discount_amount) > 0 && /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[11px] text-rose-600 font-bold"
-  }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Chegirma:' : 'Скидка:'), /*#__PURE__*/React.createElement("span", null, "-", formatMoney(receipt.discount_amount))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Chegirma:' : 'Скидка:'), /*#__PURE__*/React.createElement("span", null, "-", formatMoney(receipt.discount_amount))), Number(receipt.vat_amount) > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[10px] text-slate-500"
+  }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'QQS (NDS):' : 'В т.ч. НДС:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.vat_amount))), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between font-black text-sm"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'JAMI:' : 'ИТОГО:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.total_amount))), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[11px]"
@@ -4319,8 +4653,10 @@ function ReceiptModal({
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Qaytim:' : 'Сдача:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.change_given))), receipt.debt_amount > 0 && /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[11px] font-bold text-amber-700"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Qarzga:' : 'В долг:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.debt_amount), " (", receipt.debtor_name, ")"))), /*#__PURE__*/React.createElement("div", {
-    className: "text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300"
-  }, lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"))), /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-0.5"
+  }, /*#__PURE__*/React.createElement("div", null, lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400"
+  }, receipt.fiscal_status === 'FISCALIZED' ? 'OFD / Soliq fiskal cheki' : lang === 'uz' ? 'Ichki hisob cheki (Fiskal modul / OFD ulanmagan)' : 'Внутренний учётный чек (Без ФМ / ОФД)')))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -5920,6 +6256,7 @@ function PosScreen({
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [localShift, setLocalShift] = useState(null);
+  const [markingScanKey, setMarkingScanKey] = useState(null);
   const currentShift = propShift !== undefined ? propShift : localShift;
 
   // Parked / Held Carts (MoySklad Queue)
@@ -6130,28 +6467,49 @@ function PosScreen({
         return;
       }
       const prod = await res.json();
+      if (prod.marking_already_sold) {
+        playAudioCue('error');
+        notify(lang === 'uz' ? `${prod.name}: Ushbu DataMatrix markirovka kodi avval sotilgan!` : `${prod.name}: Этот DataMatrix код уже был продан!`, 'error');
+        setSearch('');
+        return;
+      }
       playAudioCue('add');
       const qty = prod.detected_weight ? Number(prod.detected_weight) : 1.0;
-      addToCart(prod, qty);
-      notify(prod.detected_weight ? `${prod.name} (${qty} kg)` : prod.name);
+      addToCart(prod, qty, prod.detected_marking_code || null);
+      notify(prod.detected_marking_code ? `🚬 ${prod.name} (DataMatrix ✓)` : prod.detected_weight ? `${prod.name} (${qty} kg)` : prod.name);
       setSearch('');
       if (searchInputRef.current) searchInputRef.current.focus();
     } catch (err) {
       notify(err.message, 'error');
     }
   };
-  const addToCart = (product, quantity = 1.0) => {
+  const getCartKey = item => item.cartKey || `${item.product.id}`;
+  const addToCart = (product, quantity = 1.0, markingCode = null) => {
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
+      if (markingCode) {
+        if (prev.some(item => item.marking_code === markingCode)) {
+          notify(lang === 'uz' ? "Bu DataMatrix kodi savatda bor!" : "Этот DataMatrix уже в чеке!", 'error');
+          return prev;
+        }
+        return [...prev, {
+          cartKey: `${product.id}:${markingCode}`,
+          product,
+          quantity: 1,
+          marking_code: markingCode
+        }];
+      }
+      const existing = prev.find(item => item.product.id === product.id && !item.marking_code);
       if (existing) {
-        return prev.map(item => item.product.id === product.id ? {
+        return prev.map(item => getCartKey(item) === getCartKey(existing) ? {
           ...item,
           quantity: Math.round((item.quantity + quantity) * 1000) / 1000
         } : item);
       }
       return [...prev, {
+        cartKey: `${product.id}`,
         product,
-        quantity: Math.round(quantity * 1000) / 1000
+        quantity: Math.round(quantity * 1000) / 1000,
+        marking_code: null
       }];
     });
   };
@@ -6169,9 +6527,9 @@ function PosScreen({
     addToCart(prod, 1.0);
     notify(`${item.name} (+1)`);
   };
-  const updateQuantity = (productId, delta) => {
+  const updateQuantity = (cartKeyOrId, delta) => {
     setCart(prev => prev.map(item => {
-      if (item.product.id === productId) {
+      if (getCartKey(item) === String(cartKeyOrId) || item.product.id === cartKeyOrId) {
         const newQty = Math.round((item.quantity + delta) * 1000) / 1000;
         return newQty > 0 ? {
           ...item,
@@ -6181,16 +6539,33 @@ function PosScreen({
       return item;
     }).filter(Boolean));
   };
-  const setItemExactQty = (productId, newQty) => {
+  const setItemExactQty = (cartKeyOrId, newQty) => {
     const parsed = parseFloat(newQty);
     if (isNaN(parsed) || parsed <= 0) return;
-    setCart(prev => prev.map(item => item.product.id === productId ? {
+    setCart(prev => prev.map(item => getCartKey(item) === String(cartKeyOrId) || item.product.id === cartKeyOrId ? {
       ...item,
       quantity: parsed
     } : item));
   };
-  const removeFromCart = productId => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
+  const removeFromCart = cartKeyOrId => {
+    setCart(prev => prev.filter(item => getCartKey(item) !== String(cartKeyOrId) && item.product.id !== cartKeyOrId));
+  };
+  const attachMarkingToCartItem = (cartKey, scannedCode) => {
+    const clean = (scannedCode || '').trim();
+    if (!clean) return;
+    setCart(prev => {
+      if (prev.some(it => it.marking_code === clean && getCartKey(it) !== cartKey)) {
+        notify(lang === 'uz' ? "Bu DataMatrix kodi boshqa qatorda bor!" : "Этот DataMatrix уже привязан!", 'error');
+        return prev;
+      }
+      return prev.map(it => getCartKey(it) === cartKey ? {
+        ...it,
+        marking_code: clean,
+        cartKey: `${it.product.id}:${clean}`
+      } : it);
+    });
+    playAudioCue('success');
+    notify(lang === 'uz' ? "DataMatrix kod biriktirildi ✓" : "Код DataMatrix привязан ✓");
   };
   const clearCart = (askConfirm = false) => {
     if (askConfirm && cart.length > 0) {
@@ -6210,14 +6585,23 @@ function PosScreen({
     setDirectLoading(true);
     try {
       const cashVal = paymentMethod === 'CASH' ? cashGiven : 0;
+      const activeStoreId = (() => {
+        try {
+          return localStorage.getItem('pos_store_id') || '';
+        } catch (e) {
+          return '';
+        }
+      })();
       const payload = {
         items: safeArray(cart).map(i => ({
           product_id: typeof i.product.id === 'number' ? i.product.id : null,
           barcode: i.product.barcode,
           name: i.product.name,
+          marking_code: i.marking_code || null,
           price: i.product.sale_price,
           quantity: i.quantity
         })),
+        store_id: activeStoreId ? Number(activeStoreId) : null,
         payment_method: paymentMethod,
         cash_received: cashVal,
         card_amount: paymentMethod === 'CARD' ? cartTotal : 0,
@@ -6429,10 +6813,12 @@ function PosScreen({
   }, "📷 ", lang === 'uz' ? "Skaner bilan qo'shish" : "Сканировать товар")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "md:hidden divide-y divide-slate-100 dark:divide-slate-800"
   }, safeArray(cart).map(item => {
+    const cKey = getCartKey(item);
     const itemTotal = item.product.sale_price * item.quantity;
     const isWeight = ['kg', 'l', 'metr'].includes((item.product.unit || '').toLowerCase());
+    const needsDM = Boolean(item.product.is_tobacco || item.product.requires_marking);
     return /*#__PURE__*/React.createElement("div", {
-      key: item.product.id,
+      key: cKey,
       className: "p-2.5 space-y-1.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-start justify-between gap-2"
@@ -6440,15 +6826,17 @@ function PosScreen({
       className: "min-w-0 flex-1"
     }, /*#__PURE__*/React.createElement("div", {
       className: "font-bold text-xs text-slate-900 dark:text-slate-100 truncate"
-    }, item.product.name), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-slate-400 font-mono"
-    }, formatMoney(item.product.sale_price), " / ", item.product.unit || 'dona')), /*#__PURE__*/React.createElement("div", {
+    }, needsDM ? '🚬 ' : '', item.product.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-400 font-mono flex items-center gap-1.5 flex-wrap"
+    }, /*#__PURE__*/React.createElement("span", null, formatMoney(item.product.sale_price), " / ", item.product.unit || 'dona'), item.marking_code && /*#__PURE__*/React.createElement("span", {
+      className: "px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold"
+    }, "DM ✓"))), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-1.5 shrink-0"
     }, /*#__PURE__*/React.createElement("span", {
       className: "font-mono font-black text-xs text-emerald-600 dark:text-emerald-400"
     }, formatMoney(itemTotal)), /*#__PURE__*/React.createElement("button", {
       type: "button",
-      onClick: () => removeFromCart(item.product.id),
+      onClick: () => removeFromCart(cKey),
       className: "w-6 h-6 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 text-xs font-bold flex items-center justify-center"
     }, "✕"))), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-2"
@@ -6456,24 +6844,28 @@ function PosScreen({
       className: "flex items-center gap-1"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
-      onClick: () => updateQuantity(item.product.id, -1),
+      onClick: () => updateQuantity(cKey, -1),
       className: "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black text-sm border border-slate-200 dark:border-slate-700"
     }, "-"), /*#__PURE__*/React.createElement("input", {
       type: "number",
       step: "any",
       value: item.quantity,
-      onChange: e => setItemExactQty(item.product.id, e.target.value),
+      onChange: e => setItemExactQty(cKey, e.target.value),
       className: "w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1"
     }), /*#__PURE__*/React.createElement("button", {
       type: "button",
-      onClick: () => updateQuantity(item.product.id, 1),
+      onClick: () => updateQuantity(cKey, 1),
       className: "w-8 h-8 rounded-lg bg-emerald-600 text-white font-black text-sm"
-    }, "+")), isWeight && /*#__PURE__*/React.createElement("div", {
+    }, "+")), needsDM && !item.marking_code && /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setMarkingScanKey(cKey),
+      className: "px-2 py-1 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] font-bold border border-amber-300"
+    }, "📷 DataMatrix"), isWeight && /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-1"
     }, [0.25, 0.5, 1, 2].map(w => /*#__PURE__*/React.createElement("button", {
       key: w,
       type: "button",
-      onClick: () => setItemExactQty(item.product.id, w),
+      onClick: () => setItemExactQty(cKey, w),
       className: "px-1.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700"
     }, w)))));
   })), /*#__PURE__*/React.createElement("table", {
@@ -6494,46 +6886,56 @@ function PosScreen({
     className: "px-2 py-2 w-10"
   }))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100 dark:divide-slate-800"
-  }, safeArray(cart).map((item, idx) => /*#__PURE__*/React.createElement("tr", {
-    key: item.product.id,
-    className: "hover:bg-slate-50 dark:hover:bg-slate-800/40"
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 text-[11px] text-slate-400 font-mono"
-  }, idx + 1), /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "font-bold truncate max-w-xs"
-  }, item.product.name), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400 font-mono"
-  }, item.product.barcode)), /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 text-right font-mono whitespace-nowrap"
-  }, formatMoney(item.product.sale_price)), /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-center gap-1"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => updateQuantity(item.product.id, -1),
-    className: "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black"
-  }, "-"), /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    step: "any",
-    value: item.quantity,
-    onChange: e => setItemExactQty(item.product.id, e.target.value),
-    className: "w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1"
-  }), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => updateQuantity(item.product.id, 1),
-    className: "w-8 h-8 rounded-lg bg-emerald-600 text-white font-black"
-  }, "+"))), /*#__PURE__*/React.createElement("td", {
-    className: "px-3 py-2 text-right font-mono font-black text-emerald-600 whitespace-nowrap"
-  }, formatMoney(item.product.sale_price * item.quantity)), /*#__PURE__*/React.createElement("td", {
-    className: "px-2 py-2 text-center"
-  }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => removeFromCart(item.product.id),
-    className: "text-slate-400 hover:text-rose-500 font-bold"
-  }, "✕"))))))))))), /*#__PURE__*/React.createElement("div", {
+  }, safeArray(cart).map((item, idx) => {
+    const cKey = getCartKey(item);
+    const needsDM = Boolean(item.product.is_tobacco || item.product.requires_marking);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: cKey,
+      className: "hover:bg-slate-50 dark:hover:bg-slate-800/40"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-2 text-[11px] text-slate-400 font-mono"
+    }, idx + 1), /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-bold truncate max-w-xs"
+    }, needsDM ? '🚬 ' : '', item.product.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-400 font-mono flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", null, item.product.barcode), item.marking_code && /*#__PURE__*/React.createElement("span", {
+      className: "text-emerald-600 font-bold"
+    }, "DM ✓"), needsDM && !item.marking_code && /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setMarkingScanKey(cKey),
+      className: "px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold"
+    }, "📷 DataMatrix"))), /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-2 text-right font-mono whitespace-nowrap"
+    }, formatMoney(item.product.sale_price)), /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-center gap-1"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => updateQuantity(cKey, -1),
+      className: "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 font-black"
+    }, "-"), /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      step: "any",
+      value: item.quantity,
+      onChange: e => setItemExactQty(cKey, e.target.value),
+      className: "w-14 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-center font-black font-mono text-xs py-1"
+    }), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => updateQuantity(cKey, 1),
+      className: "w-8 h-8 rounded-lg bg-emerald-600 text-white font-black"
+    }, "+"))), /*#__PURE__*/React.createElement("td", {
+      className: "px-3 py-2 text-right font-mono font-black text-emerald-600 whitespace-nowrap"
+    }, formatMoney(item.product.sale_price * item.quantity)), /*#__PURE__*/React.createElement("td", {
+      className: "px-2 py-2 text-center"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => removeFromCart(cKey),
+      className: "text-slate-400 hover:text-rose-500 font-bold"
+    }, "✕")));
+  })))))))), /*#__PURE__*/React.createElement("div", {
     className: "hidden lg:flex lg:col-span-5 xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm flex-col justify-between gap-3 overflow-y-auto"
   }, /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
@@ -6725,6 +7127,16 @@ function PosScreen({
       processBarcode(code);
     },
     onClose: () => setScannerActive(false),
+    notify: notify,
+    t: t,
+    lang: lang
+  }), markingScanKey !== null && /*#__PURE__*/React.createElement(CameraScannerModal, {
+    onScan: code => {
+      const key = markingScanKey;
+      setMarkingScanKey(null);
+      attachMarkingToCartItem(key, code);
+    },
+    onClose: () => setMarkingScanKey(null),
     notify: notify,
     t: t,
     lang: lang
@@ -7201,6 +7613,7 @@ function CatalogScreen({
   const [search, setSearch] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [expiringOnly, setExpiringOnly] = useState(false);
+  const [tobaccoOnly, setTobaccoOnly] = useState(false);
   const [skip, setSkip] = useState(0);
   const limit = 30;
   const csvInputRef = useRef(null);
@@ -7220,7 +7633,7 @@ function CatalogScreen({
   }, []);
   useEffect(() => {
     if (subTab === 'products') fetchProducts();else if (subTab === 'revision' && isOwner) fetchActs();else if (subTab === 'movements' && isOwner) fetchMovements();
-  }, [subTab, search, selectedCategory, lowStockOnly, expiringOnly, skip]);
+  }, [subTab, search, selectedCategory, lowStockOnly, expiringOnly, tobaccoOnly, skip]);
   const fetchProducts = async () => {
     try {
       const params = new URLSearchParams({
@@ -7231,6 +7644,7 @@ function CatalogScreen({
       if (selectedCategory) params.append('category_id', String(selectedCategory));
       if (lowStockOnly) params.append('low_stock_only', 'true');
       if (expiringOnly) params.append('expiring_soon_only', 'true');
+      if (tobaccoOnly) params.append('tobacco_only', 'true');
       const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -7555,7 +7969,16 @@ function CatalogScreen({
     className: `px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${expiringOnly ? 'bg-amber-100 border-amber-300 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`
   }, "⏰ ", /*#__PURE__*/React.createElement("span", {
     className: "hidden sm:inline"
-  }, lang === 'uz' ? 'Muddat' : 'Срок'))), /*#__PURE__*/React.createElement("div", {
+  }, lang === 'uz' ? 'Muddat' : 'Срок')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setTobaccoOnly(!tobaccoOnly);
+      setSkip(0);
+    },
+    className: `px-2 py-1.5 rounded-xl text-[11px] font-bold border shrink-0 ${tobaccoOnly ? 'bg-indigo-100 border-indigo-300 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`
+  }, "🚬 ", /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline"
+  }, lang === 'uz' ? 'Tamaki' : 'Табак'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 overflow-x-auto no-scrollbar"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -7634,7 +8057,11 @@ function CatalogScreen({
     className: "flex items-center gap-1 flex-wrap"
   }, isOwner && p.purchase_price !== null && /*#__PURE__*/React.createElement("span", {
     className: "font-mono text-slate-400"
-  }, lang === 'uz' ? 'Kirim:' : 'Зак:', " ", formatMoney(p.purchase_price)), p.expiry_date && /*#__PURE__*/React.createElement("span", {
+  }, lang === 'uz' ? 'Kirim:' : 'Зак:', " ", formatMoney(p.purchase_price)), (p.is_tobacco || p.requires_marking) && /*#__PURE__*/React.createElement("span", {
+    className: "px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-bold"
+  }, "🚬 DM"), /*#__PURE__*/React.createElement("span", {
+    className: `px-1.5 py-0.5 rounded font-mono font-bold ${p.ikpu_valid ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`
+  }, p.ikpu_valid ? 'IKPU ✓' : 'IKPU !'), p.expiry_date && /*#__PURE__*/React.createElement("span", {
     className: `px-1.5 py-0.5 rounded font-bold ${p.is_expired ? 'bg-rose-100 text-rose-700' : p.is_expiring_soon ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`
   }, "⏰ ", p.expiry_date)), isOwner && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 shrink-0"
@@ -8227,11 +8654,12 @@ function AnalyticsScreen({
   t
 }) {
   const lang = typeof window !== 'undefined' && window.pos_lang || typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang') || 'uz';
-  const [subView, setSubView] = useState('finance'); // 'finance' | 'insights' | 'telegram'
+  const [subView, setSubView] = useState('finance'); // 'finance' | 'insights' | 'tax' | 'telegram'
   const [period, setPeriod] = useState('today');
   const [selectedDate, setSelectedDate] = useState('');
   const [data, setData] = useState(null);
   const [insights, setInsights] = useState(null);
+  const [taxReport, setTaxReport] = useState(null);
   const [tgStatus, setTgStatus] = useState(null);
   const [tgToken, setTgToken] = useState('');
   const [tgChatId, setTgChatId] = useState('');
@@ -8239,8 +8667,67 @@ function AnalyticsScreen({
   const [loading, setLoading] = useState(true);
   const [viewingDayDetails, setViewingDayDetails] = useState(null);
   useEffect(() => {
-    if (subView === 'finance') fetchDashboard();else if (subView === 'insights') fetchInsights();else if (subView === 'telegram') fetchTgStatus();
+    if (subView === 'finance') fetchDashboard();else if (subView === 'insights') fetchInsights();else if (subView === 'tax') fetchTaxReport();else if (subView === 'telegram') fetchTgStatus();
   }, [subView, period, selectedDate]);
+  const fetchTaxReport = async () => {
+    setLoading(true);
+    try {
+      const p = period === 'all' ? 'year' : period === 'custom' ? 'month' : period;
+      const url = selectedDate ? `${API_BASE}/tax/report?period=custom&selected_date=${selectedDate}` : `${API_BASE}/tax/report?period=${p}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) setTaxReport(await res.json());
+    } catch (e) {
+      notify(lang === 'uz' ? 'Soliq hisobotini yuklashda xatolik' : 'Ошибка загрузки налогового отчёта', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const downloadTaxCsv = async () => {
+    try {
+      const p = period === 'all' ? 'year' : period === 'custom' ? 'month' : period;
+      const res = await fetch(`${API_BASE}/tax/export-csv?period=${p}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error('CSV error');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `soliq_tax_${p}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      notify(lang === 'uz' ? 'Soliq CSV yuklab olindi!' : 'Налоговый реестр CSV скачан!');
+    } catch (e) {
+      notify(e.message, 'error');
+    }
+  };
+  const sendTaxToTelegram = async () => {
+    setTgSending(true);
+    try {
+      const p = period === 'all' ? 'year' : period === 'custom' ? 'month' : period;
+      const res = await fetch(`${API_BASE}/tax/send-telegram?period=${p}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Xatolik');
+      notify(d.message || 'Yuborildi!');
+    } catch (e) {
+      notify(e.message, 'error');
+    } finally {
+      setTgSending(false);
+    }
+  };
   const fetchDashboard = async () => {
     setLoading(true);
     try {
@@ -8347,11 +8834,26 @@ function AnalyticsScreen({
     type: "button",
     onClick: () => setSubView('insights'),
     className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'insights' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "🧠 ", lang === 'uz' ? 'AI Tahlil' : 'AI Инсайты'), /*#__PURE__*/React.createElement("button", {
+  }, "🧠 ", lang === 'uz' ? 'AI' : 'AI'), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setSubView('tax'),
+    className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'tax' ? 'bg-white dark:bg-slate-900 shadow-sm text-indigo-600' : 'text-slate-500'}`
+  }, "🏛️ ", lang === 'uz' ? 'Soliq' : 'Налог'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSubView('telegram'),
     className: `px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${subView === 'telegram' ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'}`
-  }, "🤖 Telegram")), subView === 'finance' && /*#__PURE__*/React.createElement("div", {
+  }, "🤖 TG")), subView === 'tax' && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: downloadTaxCsv,
+    className: "px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold"
+  }, "📥 CSV"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: tgSending,
+    onClick: sendTaxToTelegram,
+    className: "px-2 py-1 rounded-xl bg-indigo-600 text-white text-[11px] font-bold"
+  }, "🤖")), subView === 'finance' && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl px-2 py-1 shrink-0"
   }, /*#__PURE__*/React.createElement("input", {
     type: "date",
@@ -8373,7 +8875,10 @@ function AnalyticsScreen({
   }, {
     id: 'month',
     label: t.periodMonth
-  }, {
+  }, ...(subView === 'tax' ? [{
+    id: 'quarter',
+    label: lang === 'uz' ? 'Kvartal' : 'Квартал'
+  }] : []), {
     id: 'all',
     label: t.periodAll
   }].map(item => /*#__PURE__*/React.createElement("button", {
@@ -8503,7 +9008,104 @@ function AnalyticsScreen({
     className: "truncate"
   }, it.name), /*#__PURE__*/React.createElement("span", {
     className: "font-mono text-slate-500"
-  }, it.stock_quantity, " ", it.unit))))))), subView === 'telegram' && /*#__PURE__*/React.createElement("div", {
+  }, it.stock_quantity, " ", it.unit))))))), subView === 'tax' && (loading || !taxReport ? /*#__PURE__*/React.createElement("div", {
+    className: "py-16 text-center text-xs text-slate-400"
+  }, t.processing) : /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2.5 text-xs"
+  }, safeArray(taxReport.warnings).length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5"
+  }, safeArray(taxReport.warnings).map((w, idx) => /*#__PURE__*/React.createElement("div", {
+    key: idx,
+    className: `p-2.5 rounded-2xl border ${w.level === 'danger' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 text-rose-800 dark:text-rose-200' : w.level === 'warn' ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 text-amber-900 dark:text-amber-200' : 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 text-indigo-900 dark:text-indigo-200'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold"
+  }, lang === 'uz' ? w.title_uz : w.title_ru), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] opacity-90 mt-0.5"
+  }, lang === 'uz' ? w.detail_uz : w.detail_ru)))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 lg:grid-cols-4 gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-500 font-semibold"
+  }, lang === 'uz' ? 'Soliq bazasi (Sof savdo)' : 'Налоговая база'), /*#__PURE__*/React.createElement("div", {
+    className: "text-base sm:text-lg font-black font-mono text-emerald-600 mt-0.5"
+  }, formatMoney(taxReport.summary.net_taxable_revenue)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400"
+  }, taxReport.summary.receipts_count, " ", lang === 'uz' ? 'chek' : 'чеков', " • -", formatMoney(taxReport.summary.refunds_total), " ", lang === 'uz' ? 'qaytarish' : 'возвр.')), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-indigo-600 dark:text-indigo-400 font-bold"
+  }, "💰 ", lang === 'uz' ? 'Hisoblangan soliq' : 'К уплате налог', " (", taxReport.summary.tax_rate_percent, "%)"), /*#__PURE__*/React.createElement("div", {
+    className: "text-base sm:text-lg font-black font-mono text-indigo-600 dark:text-indigo-400 mt-0.5"
+  }, formatMoney(taxReport.summary.estimated_tax_due)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400"
+  }, lang === 'uz' ? `Topshirish: oyning ${taxReport.summary.filing_deadline_day}-sanasi` : `Срок сдачи: до ${taxReport.summary.filing_deadline_day}-го`)), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-500 font-semibold"
+  }, "🏛️ IKPU (MXIK) ", lang === 'uz' ? 'holati' : 'база'), /*#__PURE__*/React.createElement("div", {
+    className: "text-base sm:text-lg font-black font-mono mt-0.5"
+  }, taxReport.catalog_compliance.with_valid_ikpu, " / ", taxReport.catalog_compliance.total_active_sku), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-amber-600 font-bold"
+  }, taxReport.catalog_compliance.missing_ikpu_count, " ", lang === 'uz' ? 'ta IKPU kodsiz' : 'без ИКПУ')), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-500 font-semibold"
+  }, "🚬 ", lang === 'uz' ? 'Tamaki / DataMatrix' : 'Табачка / Маркировка'), /*#__PURE__*/React.createElement("div", {
+    className: "text-base sm:text-lg font-black font-mono mt-0.5"
+  }, taxReport.tobacco_and_marking.tobacco_units_sold, " ", lang === 'uz' ? 'quti' : 'пачек'), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-bold text-emerald-600"
+  }, taxReport.tobacco_and_marking.datamatrix_coverage_pct, "% DataMatrix • ", formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold"
+  }, "🚬 ", lang === 'uz' ? 'Tamaki va DataMatrix jurnali (Asl Belgisi)' : 'Табачка и маркировка (Asl Belgisi DataMatrix)'), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-mono text-slate-400"
+  }, "DM ✓ ", taxReport.tobacco_and_marking.marked_with_datamatrix_count, " / ✗ ", taxReport.tobacco_and_marking.missing_datamatrix_count)), safeArray(taxReport.tobacco_and_marking.marking_ledger).length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-4 text-slate-400"
+  }, lang === 'uz' ? "Tanlangan davrda tamaki/markirovka sotuvi yo'q" : 'За период продаж табака/маркировки нет') : /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto"
+  }, safeArray(taxReport.tobacco_and_marking.marking_ledger).slice(0, 50).map((m, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "py-1.5 flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold truncate"
+  }, m.product_name, " ", m.is_returned ? '↩️' : ''), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-mono text-slate-400 truncate"
+  }, m.sold_at, " • ", m.receipt_number, " • ", m.has_datamatrix ? `DM: ${m.masked_code}` : '⚠️ БЕЗ DATAMATRIX')), /*#__PURE__*/React.createElement("div", {
+    className: "text-right font-mono shrink-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-emerald-600"
+  }, formatMoney(m.total_price)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400"
+  }, m.quantity, " sht")))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold"
+  }, "🧾 ", lang === 'uz' ? 'IKPU (MXIK) bo‘yicha sotuvlar' : 'Продажи в разрезе ИКПУ (MXIK)'), safeArray(taxReport.ikpu_breakdown).length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-4 text-slate-400"
+  }, lang === 'uz' ? "Sotuvlar yo'q" : 'Продаж за период нет') : /*#__PURE__*/React.createElement("div", {
+    className: "divide-y divide-slate-100 dark:divide-slate-800 max-h-56 overflow-y-auto"
+  }, safeArray(taxReport.ikpu_breakdown).map((row, idx) => /*#__PURE__*/React.createElement("div", {
+    key: idx,
+    className: "py-1.5 flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-mono font-bold text-[11px]"
+  }, row.ikpu_code || '⚠️ BEZ IKPU', " ", row.is_tobacco ? '🚬' : ''), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-500 truncate"
+  }, row.sample_name, " (", row.quantity_sold, " poz)")), /*#__PURE__*/React.createElement("div", {
+    className: "text-right font-mono shrink-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-emerald-600"
+  }, formatMoney(row.net_revenue)), row.vat_amount > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400"
+  }, "QQS: ", formatMoney(row.vat_amount))))))))), subView === 'telegram' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-2.5 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"

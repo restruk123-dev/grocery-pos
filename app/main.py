@@ -16,7 +16,7 @@ from sqlmodel import select
 from .models import Category, SystemSetting
 from .database import init_db, engine, get_session
 from .seed import seed_accounts, seed_database, ensure_default_categories, purge_seeded_demo_data
-from .routers import auth, products, pos, debts, suppliers, expenses, analytics, backup, ai, inventory, telegram
+from .routers import auth, products, pos, debts, suppliers, expenses, analytics, backup, ai, inventory, telegram, tax
 
 def get_current_port() -> int:
     """Returns runtime port from environment, defaulting to 7860 on Spaces or 8000 locally."""
@@ -120,6 +120,7 @@ app.include_router(inventory.router, prefix=api_prefix)
 app.include_router(analytics.router, prefix=api_prefix)
 app.include_router(ai.router, prefix=api_prefix)
 app.include_router(telegram.router, prefix=api_prefix)
+app.include_router(tax.router, prefix=api_prefix)
 
 # Root category aliases for public catalog discovery
 @app.get(f"{api_prefix}/categories", response_model=List[Category], tags=["Categories"])

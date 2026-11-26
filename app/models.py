@@ -71,6 +71,12 @@ class StoreOutlet(SQLModel, table=True):
     store_type: str = Field(default="grocery")  # "grocery", "tobacco", "general"
     address: Optional[str] = None
     phone: Optional[str] = None
+    legal_name: Optional[str] = None
+    inn_stir: Optional[str] = None
+    tax_regime: str = Field(default="TURNOVER_1")  # TURNOVER_1, TURNOVER_4, TURNOVER_CUSTOM, VAT_12, VAT_6
+    tax_rate_percent: float = Field(default=1.0)
+    kkm_serial: Optional[str] = None
+    tobacco_license_note: Optional[str] = None
     receipt_footer: Optional[str] = "Xaridingiz uchun rahmat! / Спасибо за покупку!"
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utc_now)
@@ -101,6 +107,11 @@ class Product(SQLModel, table=True):
     stock_quantity: float = Field(default=0.0)  # текущий остаток
     min_stock_alert: float = Field(default=5.0) # мин. остаток
     expiry_date: Optional[str] = Field(default=None) # YYYY-MM-DD срок годности
+    ikpu_code: Optional[str] = Field(default=None, index=True)  # 17-digit MXIK / ИКПУ from tasnif.soliq.uz
+    package_code: Optional[str] = Field(default=None)           # Packaging code from tasnif.soliq.uz
+    vat_rate: float = Field(default=0.0)                        # 0.0, 12.0, or -1.0 (Without VAT)
+    requires_marking: bool = Field(default=False)               # Asl Belgisi DataMatrix required
+    is_tobacco: bool = Field(default=False)                     # Tobacco / 18+ compliance flag
     is_quick: bool = Field(default=False)       # Быстрый товар для кассы (без штрихкода)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utc_now)
@@ -133,6 +144,10 @@ class Sale(SQLModel, table=True):
     receipt_number: str = Field(unique=True, index=True)
     total_amount: float
     discount_amount: float = Field(default=0.0)
+    vat_amount: float = Field(default=0.0)
+    fiscal_status: str = Field(default="INTERNAL")  # INTERNAL or FISCALIZED
+    fiscal_sign: Optional[str] = None
+    fiscal_receipt_url: Optional[str] = None
     payment_method: PaymentMethod
     cash_received: float = Field(default=0.0)
     change_given: float = Field(default=0.0)
@@ -153,6 +168,12 @@ class SaleItem(SQLModel, table=True):
     purchase_price: float # Зафиксированная себестоимость на момент продажи для отчета COGS
     unit_price: float     # Цена продажи за единицу
     total_price: float    # quantity * unit_price
+    ikpu_code: Optional[str] = None
+    package_code: Optional[str] = None
+    vat_rate: float = Field(default=0.0)
+    vat_amount: float = Field(default=0.0)
+    marking_code: Optional[str] = Field(default=None, index=True)  # GS1 DataMatrix (Asl Belgisi)
+    is_tobacco: bool = Field(default=False)
 
 class Supplier(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

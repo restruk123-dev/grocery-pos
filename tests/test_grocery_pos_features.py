@@ -706,7 +706,8 @@ def test_expiry_discount_receipts_and_telegram_status(session):
 def test_ensure_categories_and_purge_demo_data(session):
     from app.seed import seed_database, ensure_default_categories
     cats = ensure_default_categories(session)
-    assert len(cats) == 10
+    assert len(cats) >= 11
+    assert any("Tamaki" in k for k in cats)
 
     stats = seed_database(session, target_sku_count=30)
 
@@ -737,6 +738,119 @@ def test_ensure_categories_and_purge_demo_data(session):
     barcodes = {p.barcode for p in remaining}
     assert "4780007778889" in barcodes
     assert not any(b.startswith("460700000") for b in barcodes)
+
+
+def test_uz_tax_profile_tobacco_datamatrix_and_report(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Configure Uzbekistan taxpayer profile with strict tobacco DataMatrix check & VAT 12%
+    res_prof = client.put(
+        "/api/v1/tax/profile",
+        json={
+            "legal_name": "YaTT Shoxrux Tamaki",
+            "inn_stir": "123456789",
+            "tax_regime": "VAT_12",
+            "tax_rate_percent": 12.0,
+            "tobacco_license_note": "Soliq tamaki yig'imi 2026 to'langan",
+            "strict_tobacco_marking": True,
+        },
+        headers=headers,
+    )
+    assert res_prof.status_code == 200
+    assert res_prof.json()["profile"]["inn_stir"] == "123456789"
+
+    # 2. Create tobacco product with 17-digit IKPU & VAT 12%
+    res_prod = client.post(
+        "/api/v1/products",
+        json={
+            "barcode": "4606203099999",
+            "name": "Winston Blue KS",
+            "purchase_price": 22000,
+            "sale_price": 28000,
+            "stock_quantity": 20,
+            "ikpu_code": "02402001001000001",
+            "vat_rate": 12.0,
+            "is_tobacco": True,
+            "requires_marking": True,
+        },
+        headers=headers,
+    )
+    assert res_prod.status_code == 200
+    tob_prod = res_prod.json()
+    assert tob_prod["ikpu_valid"] is True
+    assert tob_prod["is_tobacco"] is True
+    assert tob_prod["requires_marking"] is True
+
+    # 3. Scanning GS1 DataMatrix matches pack GTIN and extracts marking_code
+    from urllib.parse import quote
+    dm_raw = "010460620309999921PACK001\x1d93AB12"
+    res_dm = client.get(f"/api/v1/products/barcode/{quote(dm_raw)}", headers=headers)
+    assert res_dm.status_code == 200
+    dm_data = res_dm.json()
+    assert dm_data["id"] == tob_prod["id"]
+    assert dm_data["detected_marking_code"] == "010460620309999921PACK00193AB12"
+    assert dm_data["marking_already_sold"] is False
+
+    # 4. Strict mode blocks tobacco checkout without DataMatrix
+    res_block = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [{"product_id": tob_prod["id"], "quantity": 1}],
+            "payment_method": "CARD",
+        },
+        headers=headers,
+    )
+    assert res_block.status_code == 400
+
+    # 5. Checkout with DataMatrix succeeds and computes VAT 12%
+    res_ok = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [{"product_id": tob_prod["id"], "quantity": 1, "marking_code": dm_data["detected_marking_code"]}],
+            "payment_method": "CARD",
+        },
+        headers=headers,
+    )
+    assert res_ok.status_code == 200
+    chk = res_ok.json()
+    assert chk["vat_amount"] == round(28000 * 12.0 / 112.0, 2)
+    assert chk["tax_profile"]["inn_stir"] == "123456789"
+    assert chk["items"][0]["marking_code"] == "010460620309999921PACK00193AB12"
+
+    # 6. Selling the exact same DataMatrix pack a second time is rejected (409)
+    res_dup = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [{"product_id": tob_prod["id"], "quantity": 1, "marking_code": dm_data["detected_marking_code"]}],
+            "payment_method": "CARD",
+        },
+        headers=headers,
+    )
+    assert res_dup.status_code == 409
+
+    # 7. Switch to IP Turnover 1% and verify tax report + tobacco ledger + CSV + MXIK search
+    client.put("/api/v1/tax/profile", json={"tax_regime": "TURNOVER_1", "tax_rate_percent": 1.0}, headers=headers)
+    res_rep = client.get("/api/v1/tax/report?period=today", headers=headers)
+    assert res_rep.status_code == 200
+    rep = res_rep.json()
+    assert rep["summary"]["net_taxable_revenue"] >= 28000.0
+    assert rep["summary"]["estimated_tax_due"] == round(rep["summary"]["net_taxable_revenue"] * 0.01, 2)
+    assert rep["tobacco_and_marking"]["tobacco_units_sold"] == 1.0
+    assert rep["tobacco_and_marking"]["marked_with_datamatrix_count"] == 1
+    assert rep["tobacco_and_marking"]["missing_datamatrix_count"] == 0
+    assert len(rep["tobacco_and_marking"]["marking_ledger"]) == 1
+    assert any(r["ikpu_code"] == "02402001001000001" for r in rep["ikpu_breakdown"])
+
+    res_csv = client.get("/api/v1/tax/export-csv?period=today", headers=headers)
+    assert res_csv.status_code == 200
+    assert "02402001001000001" in res_csv.text
+    assert "010460620309999921PACK00193AB12" in res_csv.text
+
+    res_mxik = client.get("/api/v1/tax/mxik-search?q=02402", headers=headers)
+    assert res_mxik.status_code == 200
+    assert len(res_mxik.json()["items"]) >= 1
+
 
 
 

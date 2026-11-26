@@ -90,10 +90,31 @@ def init_db() -> None:
             except Exception:
                 pass
 
-    # Safe expiry_date & discount_amount column migrations
+    # Safe expiry_date, discount_amount & Uzbekistan Soliq/Tax column migrations
     for tbl, col, pg_def, sq_def in [
         ("product", "expiry_date", "VARCHAR(32)", "VARCHAR(32)"),
+        ("product", "ikpu_code", "VARCHAR(32)", "VARCHAR(32)"),
+        ("product", "package_code", "VARCHAR(32)", "VARCHAR(32)"),
+        ("product", "vat_rate", "DOUBLE PRECISION DEFAULT 0", "REAL DEFAULT 0"),
+        ("product", "requires_marking", "BOOLEAN DEFAULT FALSE", "BOOLEAN DEFAULT 0"),
+        ("product", "is_tobacco", "BOOLEAN DEFAULT FALSE", "BOOLEAN DEFAULT 0"),
         ("sale", "discount_amount", "DOUBLE PRECISION DEFAULT 0", "REAL DEFAULT 0"),
+        ("sale", "vat_amount", "DOUBLE PRECISION DEFAULT 0", "REAL DEFAULT 0"),
+        ("sale", "fiscal_status", "VARCHAR(32) DEFAULT 'INTERNAL'", "VARCHAR(32) DEFAULT 'INTERNAL'"),
+        ("sale", "fiscal_sign", "VARCHAR(128)", "VARCHAR(128)"),
+        ("sale", "fiscal_receipt_url", "VARCHAR(512)", "VARCHAR(512)"),
+        ("saleitem", "ikpu_code", "VARCHAR(32)", "VARCHAR(32)"),
+        ("saleitem", "package_code", "VARCHAR(32)", "VARCHAR(32)"),
+        ("saleitem", "vat_rate", "DOUBLE PRECISION DEFAULT 0", "REAL DEFAULT 0"),
+        ("saleitem", "vat_amount", "DOUBLE PRECISION DEFAULT 0", "REAL DEFAULT 0"),
+        ("saleitem", "marking_code", "VARCHAR(255)", "VARCHAR(255)"),
+        ("saleitem", "is_tobacco", "BOOLEAN DEFAULT FALSE", "BOOLEAN DEFAULT 0"),
+        ("storeoutlet", "legal_name", "VARCHAR(255)", "VARCHAR(255)"),
+        ("storeoutlet", "inn_stir", "VARCHAR(32)", "VARCHAR(32)"),
+        ("storeoutlet", "tax_regime", "VARCHAR(32) DEFAULT 'TURNOVER_1'", "VARCHAR(32) DEFAULT 'TURNOVER_1'"),
+        ("storeoutlet", "tax_rate_percent", "DOUBLE PRECISION DEFAULT 1.0", "REAL DEFAULT 1.0"),
+        ("storeoutlet", "kkm_serial", "VARCHAR(128)", "VARCHAR(128)"),
+        ("storeoutlet", "tobacco_license_note", "VARCHAR(255)", "VARCHAR(255)"),
     ]:
         try:
             with engine.connect() as conn:

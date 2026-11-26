@@ -22,14 +22,16 @@ from ..models import (
     SaleRefund, SaleRefundItem, StoreOutlet
 )
 from ..auth import get_current_user, require_role
+from ..services.uz_tax import parse_gs1_datamatrix, compute_line_vat, get_tax_profile, mask_marking_code
 
 router = APIRouter(prefix="/pos", tags=["POS"])
 
 
 class CartItemRequest(BaseModel):
     product_id: Optional[int] = Field(default=None, gt=0, description="Product ID / ID товара")
-    barcode: Optional[str] = Field(default=None, max_length=64)
+    barcode: Optional[str] = Field(default=None, max_length=255)
     name: Optional[str] = Field(default=None, max_length=255)
+    marking_code: Optional[str] = Field(default=None, max_length=255, description="Asl Belgisi GS1 DataMatrix")
     quantity: float = Field(default=1.0, gt=0, le=10000, description="Quantity / Количество")
 
 class CheckoutRequest(BaseModel):
@@ -41,6 +43,7 @@ class CheckoutRequest(BaseModel):
     debt_amount: float = Field(default=0.0, ge=0, le=1_000_000_000_000)
     debtor_id: Optional[int] = Field(default=None, gt=0)
     due_date: Optional[str] = Field(default=None, max_length=32)
+    store_id: Optional[int] = Field(default=None, gt=0)
 
 
 class HeldCart(BaseModel):
@@ -103,22 +106,39 @@ def checkout(
     due_date = data.due_date
 
     payment_method = PaymentMethod[payment_method_str]
+    tax_profile = get_tax_profile(session)
+    strict_marking = bool(tax_profile.get("strict_tobacco_marking", False))
+    outlet = session.get(StoreOutlet, data.store_id) if data.store_id else None
 
     # Calculate total from items and decrement stock
     total = 0.0
     processed_items = []
+    seen_markings = set()
     for item in items:
         product_id = item.get("product_id")
         quantity = float(item["quantity"])
+        raw_marking = (item.get("marking_code") or "").strip() or None
+        raw_barcode = (item.get("barcode") or "").strip()
+        if not raw_marking and raw_barcode:
+            dm_in_bc = parse_gs1_datamatrix(raw_barcode)
+            if dm_in_bc:
+                raw_marking = dm_in_bc["marking_code"]
 
         product = None
         if isinstance(product_id, int):
             product = session.get(Product, product_id)
-        if not product and item.get("barcode"):
-            raw_barcode = str(item["barcode"]).strip()
+        if not product and raw_barcode:
             product = session.exec(select(Product).where(
                 Product.barcode == raw_barcode, Product.is_active == True
             )).first()
+            if not product:
+                dm = parse_gs1_datamatrix(raw_barcode)
+                if dm:
+                    raw_marking = raw_marking or dm["marking_code"]
+                    product = session.exec(select(Product).where(
+                        Product.barcode.in_(dm["barcode_candidates"]),
+                        Product.is_active == True,
+                    )).first()
             # Support 13-digit scale weight barcodes with prefix 20 or 21 (e.g. 2100123015004 -> 1.500 kg)
             if not product and len(raw_barcode) == 13 and raw_barcode[:2] in ("20", "21"):
                 plu_prefix = raw_barcode[:7]
@@ -134,6 +154,37 @@ def checkout(
                         pass
         if not product:
             raise HTTPException(status_code=404, detail=f"Product ID {product_id} topilmadi")
+
+        is_marked_product = bool(getattr(product, "is_tobacco", False) or getattr(product, "requires_marking", False))
+        if raw_marking:
+            dm_clean = parse_gs1_datamatrix(raw_marking)
+            clean_marking = dm_clean["marking_code"] if dm_clean else raw_marking[:240]
+            if clean_marking in seen_markings:
+                raise HTTPException(status_code=409, detail="Bu DataMatrix markirovka kodi chekda takrorlandi / Дубликат DataMatrix в одном чеке")
+            seen_markings.add(clean_marking)
+            # Verify DataMatrix has not already been sold and unreturned
+            prior_sales = session.exec(select(SaleItem).where(SaleItem.marking_code == clean_marking)).all()
+            for ps in prior_sales:
+                refs = session.exec(select(SaleRefund).where(SaleRefund.sale_id == ps.sale_id)).all()
+                ret_qty = 0.0
+                if refs:
+                    ref_its = session.exec(select(SaleRefundItem).where(
+                        SaleRefundItem.refund_id.in_([r.id for r in refs]),
+                        SaleRefundItem.product_id == ps.product_id,
+                    )).all()
+                    ret_qty = sum(ri.quantity for ri in ref_its)
+                if ret_qty < ps.quantity:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"{product.name}: DataMatrix markirovka avval sotilgan! / Этот код маркировки уже продан!",
+                    )
+        else:
+            clean_marking = None
+            if is_marked_product and strict_marking:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{product.name}: Tamaki tovari uchun DataMatrix (Asl Belgisi) kodini skanerlang! / Отсканируйте DataMatrix пачки!",
+                )
 
         if quantity > product.stock_quantity:
             raise HTTPException(status_code=409, detail=f"Insufficient stock for {product.name}")
@@ -152,11 +203,23 @@ def checkout(
             "purchase_price": product.purchase_price,
             "total_price": item_total,
             "previous_stock": previous_stock,
+            "marking_code": clean_marking,
+            "is_tobacco": is_marked_product,
+            "ikpu_code": getattr(product, "ikpu_code", None),
+            "package_code": getattr(product, "package_code", None),
+            "vat_rate": float(getattr(product, "vat_rate", 0.0) or 0.0),
         })
 
     gross_total = round(total, 2)
     discount_amount = round(min(float(data.discount_amount or 0.0), gross_total), 2)
     total = round(max(0.0, gross_total - discount_amount), 2)
+    net_factor = (total / gross_total) if gross_total > 0 else 1.0
+    tax_regime = tax_profile.get("tax_regime", "TURNOVER_1")
+    total_vat_amount = 0.0
+    for pi in processed_items:
+        net_line = round(pi["total_price"] * net_factor, 2)
+        pi["vat_amount"] = compute_line_vat(net_line, pi["vat_rate"], tax_regime)
+        total_vat_amount = round(total_vat_amount + pi["vat_amount"], 2)
 
     # Validate payment method amounts
     change_given = 0.0
@@ -213,6 +276,8 @@ def checkout(
         receipt_number=receipt_number,
         total_amount=total,
         discount_amount=discount_amount,
+        vat_amount=total_vat_amount,
+        fiscal_status="INTERNAL",
         payment_method=payment_method,
         cash_received=cash_received,
         change_given=change_given,
@@ -221,6 +286,7 @@ def checkout(
         debtor_id=debtor.id if debtor else None,
         cashier_id=current_user.id if current_user else None,
         shift_id=active_shift.id if active_shift else None,
+        store_id=outlet.id if outlet else None,
         created_at=utc_now()
     )
     session.add(sale)
@@ -247,7 +313,13 @@ def checkout(
             quantity=p_item["quantity"],
             purchase_price=p_item["purchase_price"],
             unit_price=p_item["unit_price"],
-            total_price=p_item["total_price"]
+            total_price=p_item["total_price"],
+            ikpu_code=p_item["ikpu_code"],
+            package_code=p_item["package_code"],
+            vat_rate=p_item["vat_rate"],
+            vat_amount=p_item["vat_amount"],
+            marking_code=p_item["marking_code"],
+            is_tobacco=p_item["is_tobacco"],
         )
         session.add(s_item)
 
@@ -288,6 +360,8 @@ def checkout(
         "receipt_number": sale.receipt_number,
         "gross_total": gross_total,
         "discount_amount": discount_amount,
+        "vat_amount": total_vat_amount,
+        "fiscal_status": sale.fiscal_status,
         "total_amount": sale.total_amount,
         "payment_method": sale.payment_method.value,
         "amount_paid": round(total - debt_amount, 2),
@@ -297,13 +371,26 @@ def checkout(
         "debt_amount": debt_amount,
         "debtor_name": debtor_name,
         "status": "completed",
+        "tax_profile": {
+            "legal_name": (outlet.legal_name if outlet and outlet.legal_name else tax_profile.get("legal_name")) or "",
+            "inn_stir": (outlet.inn_stir if outlet and outlet.inn_stir else tax_profile.get("inn_stir")) or "",
+            "kkm_serial": (outlet.kkm_serial if outlet and outlet.kkm_serial else tax_profile.get("kkm_serial")) or "",
+            "tax_regime": tax_regime,
+            "address": (outlet.address if outlet and outlet.address else tax_profile.get("address")) or "",
+        },
         "items": [
             {
                 "product_id": pi["product"].id,
                 "product_name": pi["product"].name,
                 "quantity": pi["quantity"],
                 "unit_price": pi["unit_price"],
-                "total_price": pi["total_price"]
+                "total_price": pi["total_price"],
+                "ikpu_code": pi["ikpu_code"],
+                "vat_rate": pi["vat_rate"],
+                "vat_amount": pi["vat_amount"],
+                "marking_code": pi["marking_code"],
+                "masked_marking_code": mask_marking_code(pi["marking_code"]),
+                "is_tobacco": pi["is_tobacco"],
             }
             for pi in processed_items
         ],
@@ -552,6 +639,14 @@ def list_recent_receipts(
         items_by_sale.setdefault(it.sale_id, []).append(it)
     refunded_sale_ids = {r.sale_id for r in refunds}
 
+    tax_profile = get_tax_profile(session)
+    tax_meta = {
+        "legal_name": tax_profile.get("legal_name") or "",
+        "inn_stir": tax_profile.get("inn_stir") or "",
+        "kkm_serial": tax_profile.get("kkm_serial") or "",
+        "tax_regime": tax_profile.get("tax_regime", "TURNOVER_1"),
+        "address": tax_profile.get("address") or "",
+    }
     out = []
     for s in sales:
         s_items = items_by_sale.get(s.id, [])
@@ -560,6 +655,9 @@ def list_recent_receipts(
             "receipt_number": s.receipt_number,
             "total_amount": s.total_amount,
             "discount_amount": getattr(s, "discount_amount", 0.0) or 0.0,
+            "vat_amount": getattr(s, "vat_amount", 0.0) or 0.0,
+            "fiscal_status": getattr(s, "fiscal_status", "INTERNAL"),
+            "tax_profile": tax_meta,
             "payment_method": s.payment_method.value,
             "cash_received": s.cash_received,
             "change_given": s.change_given,
@@ -577,6 +675,12 @@ def list_recent_receipts(
                     "quantity": it.quantity,
                     "unit_price": it.unit_price,
                     "total_price": it.total_price,
+                    "ikpu_code": getattr(it, "ikpu_code", None),
+                    "vat_rate": getattr(it, "vat_rate", 0.0) or 0.0,
+                    "vat_amount": getattr(it, "vat_amount", 0.0) or 0.0,
+                    "marking_code": getattr(it, "marking_code", None),
+                    "masked_marking_code": mask_marking_code(getattr(it, "marking_code", None)),
+                    "is_tobacco": bool(getattr(it, "is_tobacco", False)),
                 }
                 for it in s_items
             ],
@@ -612,12 +716,22 @@ def get_receipt_details(
 
     discount_amt = float(getattr(sale, "discount_amount", 0.0) or 0.0)
     gross_amt = round(sale.total_amount + discount_amt, 2)
+    tax_profile = get_tax_profile(session)
 
     return {
         "id": sale.id,
         "receipt_number": sale.receipt_number,
         "gross_total": gross_amt,
         "discount_amount": discount_amt,
+        "vat_amount": float(getattr(sale, "vat_amount", 0.0) or 0.0),
+        "fiscal_status": getattr(sale, "fiscal_status", "INTERNAL"),
+        "tax_profile": {
+            "legal_name": tax_profile.get("legal_name") or "",
+            "inn_stir": tax_profile.get("inn_stir") or "",
+            "kkm_serial": tax_profile.get("kkm_serial") or "",
+            "tax_regime": tax_profile.get("tax_regime", "TURNOVER_1"),
+            "address": tax_profile.get("address") or "",
+        },
         "total_amount": sale.total_amount,
         "payment_method": sale.payment_method.value,
         "cash_received": sale.cash_received,
@@ -634,6 +748,12 @@ def get_receipt_details(
                 "quantity": it.quantity,
                 "unit_price": it.unit_price,
                 "total_price": it.total_price,
+                "ikpu_code": getattr(it, "ikpu_code", None),
+                "vat_rate": getattr(it, "vat_rate", 0.0) or 0.0,
+                "vat_amount": getattr(it, "vat_amount", 0.0) or 0.0,
+                "marking_code": getattr(it, "marking_code", None),
+                "masked_marking_code": mask_marking_code(getattr(it, "marking_code", None)),
+                "is_tobacco": bool(getattr(it, "is_tobacco", False)),
                 "refundable_quantity": max(0.0, it.quantity - already_refunded_qty.get(it.product_id, 0.0)),
             }
             for it in items
@@ -884,6 +1004,14 @@ async def scan_barcode_from_image(
 
     product = session.exec(select(Product).where(Product.barcode == barcode_text)).first()
     detected_weight = None
+    detected_marking_code = None
+    if not product:
+        dm = parse_gs1_datamatrix(barcode_text)
+        if dm:
+            detected_marking_code = dm["marking_code"]
+            product = session.exec(
+                select(Product).where(Product.barcode.in_(dm["barcode_candidates"]), Product.is_active == True)
+            ).first()
     if not product and len(barcode_text) == 13 and barcode_text[:2] in ("20", "21"):
         plu_prefix = barcode_text[:7]
         product = session.exec(select(Product).where(Product.barcode == plu_prefix, Product.is_active == True)).first()
@@ -905,7 +1033,11 @@ async def scan_barcode_from_image(
             "stock_quantity": product.stock_quantity,
             "unit": product.unit,
             "category_id": product.category_id,
+            "ikpu_code": getattr(product, "ikpu_code", None),
+            "is_tobacco": bool(getattr(product, "is_tobacco", False)),
+            "requires_marking": bool(getattr(product, "requires_marking", False)),
             "detected_weight": detected_weight,
+            "detected_marking_code": detected_marking_code,
         }
 
     return {
