@@ -1,4 +1,4 @@
-const CACHE_NAME = 'grocery-pos-v8';
+const CACHE_NAME = 'grocery-pos-v9';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',

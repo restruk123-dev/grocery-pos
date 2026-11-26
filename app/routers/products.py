@@ -65,6 +65,7 @@ def _serialize_product(
         "vat_rate": float(getattr(product, "vat_rate", 0.0) or 0.0),
         "requires_marking": bool(getattr(product, "requires_marking", False)),
         "is_tobacco": bool(getattr(product, "is_tobacco", False)),
+        "marking_group": getattr(product, "marking_group", "NONE") or ("TOBACCO" if getattr(product, "is_tobacco", False) else "NONE"),
         "is_expired": is_expired,
         "is_expiring_soon": is_expiring_soon,
         "days_to_expiry": days_to_expiry,
@@ -94,6 +95,7 @@ class ProductCreate(BaseModel):
     vat_rate: float = Field(default=0.0, ge=-1.0, le=30.0)
     requires_marking: bool = Field(default=False)
     is_tobacco: bool = Field(default=False)
+    marking_group: str = Field(default="NONE", max_length=32)
     is_quick: bool = Field(default=False)
 
 class ProductUpdate(BaseModel):
@@ -111,6 +113,7 @@ class ProductUpdate(BaseModel):
     vat_rate: Optional[float] = Field(default=None, ge=-1.0, le=30.0)
     requires_marking: Optional[bool] = None
     is_tobacco: Optional[bool] = None
+    marking_group: Optional[str] = Field(default=None, max_length=32)
     is_quick: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -145,6 +148,7 @@ def list_products(
     low_stock_only: bool = Query(False, description="Faqat oz qolgan tovarlar / Только товары с остатком ниже минимального"),
     expiring_soon_only: bool = Query(False, description="Muddati yaqinlashgan tovarlar (7 kun) / Скоро истекает срок"),
     tobacco_only: bool = Query(False, description="Faqat tamaki / markirovka tovarlari"),
+    marked_only: bool = Query(False, description="Barcha markirovkali tovarlar (tamaki, suv, ichimlik, pivo)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=2000),
     current_user: User = Depends(get_current_user),
@@ -172,8 +176,8 @@ def list_products(
         cutoff = (datetime.now(TZ_TASHKENT).date() + timedelta(days=7)).isoformat()
         query = query.where(Product.expiry_date != None, Product.expiry_date != "", Product.expiry_date <= cutoff)
 
-    if tobacco_only:
-        query = query.where(or_(Product.is_tobacco == True, Product.requires_marking == True))
+    if tobacco_only or marked_only:
+        query = query.where(or_(Product.is_tobacco == True, Product.requires_marking == True, Product.marking_group != "NONE"))
 
     # Get total count efficiently without loading full records into memory
     count_query = select(func.count()).select_from(query.subquery())
@@ -222,7 +226,7 @@ def get_quick_products(
 CSV_COLUMNS = [
     "barcode", "name", "sale_price", "purchase_price", "stock_quantity",
     "unit", "category_name", "min_stock_alert", "is_quick",
-    "ikpu_code", "package_code", "vat_rate", "is_tobacco", "requires_marking",
+    "ikpu_code", "package_code", "vat_rate", "is_tobacco", "requires_marking", "marking_group",
 ]
 MAX_CATALOG_IMPORT_BYTES = 5 * 1024 * 1024
 MAX_CATALOG_IMPORT_ROWS = 10_000
@@ -276,6 +280,7 @@ def export_catalog_csv(
             "vat_rate": getattr(product, "vat_rate", 0.0) or 0.0,
             "is_tobacco": "true" if getattr(product, "is_tobacco", False) else "false",
             "requires_marking": "true" if getattr(product, "requires_marking", False) else "false",
+            "marking_group": _spreadsheet_safe_text(getattr(product, "marking_group", "NONE") or "NONE"),
         })
     return Response(
         content="\ufeff" + output.getvalue(),
@@ -347,7 +352,14 @@ async def import_catalog_csv(
                 row_errors.append({"line": line_number, "error": "is_quick must be true or false"})
                 continue
             tob_val = row.get("is_tobacco", "false").lower() in {"true", "1", "yes"}
-            mark_val = tob_val or (row.get("requires_marking", "false").lower() in {"true", "1", "yes"})
+            raw_mg = (row.get("marking_group") or "").strip().upper()
+            if raw_mg not in {"NONE", "TOBACCO", "BEVERAGES", "BEER_ALCOHOL", "OTHER"}:
+                raw_mg = "TOBACCO" if tob_val else "NONE"
+            elif tob_val:
+                raw_mg = "TOBACCO"
+            mark_val = tob_val or (raw_mg != "NONE") or (row.get("requires_marking", "false").lower() in {"true", "1", "yes"})
+            if mark_val and raw_mg == "NONE":
+                raw_mg = "OTHER"
             try:
                 vat_val = float(row.get("vat_rate") or 0.0)
             except (TypeError, ValueError):
@@ -365,6 +377,7 @@ async def import_catalog_csv(
                 "vat_rate": vat_val,
                 "is_tobacco": tob_val,
                 "requires_marking": mark_val,
+                "marking_group": raw_mg,
             })
     except csv.Error as exc:
         raise HTTPException(status_code=400, detail=f"Invalid CSV: {exc}") from exc
@@ -534,6 +547,12 @@ def create_product(
             existing.vat_rate = data.vat_rate
             existing.is_tobacco = bool(data.is_tobacco)
             existing.requires_marking = bool(data.requires_marking or data.is_tobacco)
+            mg = (data.marking_group or "NONE").upper()
+            if data.is_tobacco:
+                mg = "TOBACCO"
+            elif existing.requires_marking and mg == "NONE":
+                mg = "OTHER"
+            existing.marking_group = mg
             existing.is_quick = data.is_quick
             session.add(existing)
             session.commit()
@@ -552,6 +571,9 @@ def create_product(
     product_data["package_code"] = (product_data.get("package_code") or "").strip() or None
     if product_data.get("is_tobacco"):
         product_data["requires_marking"] = True
+        product_data["marking_group"] = "TOBACCO"
+    elif product_data.get("requires_marking") and (product_data.get("marking_group") or "NONE") == "NONE":
+        product_data["marking_group"] = "OTHER"
 
     product = Product(**product_data)
     session.add(product)
@@ -594,6 +616,9 @@ def update_product(
         update_data["package_code"] = val.strip() if val and val.strip() else None
     if update_data.get("is_tobacco"):
         update_data["requires_marking"] = True
+        update_data["marking_group"] = "TOBACCO"
+    elif update_data.get("requires_marking") and not update_data.get("marking_group") and getattr(product, "marking_group", "NONE") == "NONE":
+        update_data["marking_group"] = "OTHER"
 
     for key, val in update_data.items():
         setattr(product, key, val)

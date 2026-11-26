@@ -14,8 +14,9 @@ from ..models import (
 )
 from ..auth import require_role
 from ..services.uz_tax import (
-    TAX_REGIMES, compute_line_vat, get_tax_profile, save_tax_profile,
-    validate_ikpu, mask_marking_code, search_mxik_catalog
+    TAX_REGIMES, MARKING_GROUPS, compute_line_vat, get_tax_profile, save_tax_profile,
+    validate_ikpu, mask_marking_code, search_mxik_catalog,
+    build_ofd_receipt_payload, send_receipt_to_ofd_gateway, generate_qr_svg
 )
 from ..services.telegram_bot import send_document, _get_owner_chat_id
 
@@ -93,8 +94,11 @@ class TaxProfileUpdate(BaseModel):
     address: Optional[str] = Field(default=None, max_length=300)
     kkm_serial: Optional[str] = Field(default=None, max_length=128)
     ofd_gateway_name: Optional[str] = Field(default=None, max_length=128)
+    ofd_gateway_url: Optional[str] = Field(default=None, max_length=512)
+    ofd_api_token: Optional[str] = Field(default=None, max_length=512)
     tobacco_license_note: Optional[str] = Field(default=None, max_length=255)
     strict_tobacco_marking: Optional[bool] = None
+    strict_beverage_marking: Optional[bool] = None
     store_id: Optional[int] = Field(default=None, gt=0)
 
 
@@ -187,17 +191,21 @@ def build_tax_report_data(
     regime = profile["tax_regime"]
     rate = float(profile.get("tax_rate_percent") or 1.0)
 
-    # Catalog IKPU & Tobacco readiness check
+    # Catalog IKPU, PackageCode & Marking readiness check across ALL store products (grocery + tobacco)
     with_valid_ikpu = 0
+    with_package_code = 0
     missing_ikpu_sample: List[Dict[str, Any]] = []
     tobacco_sku_count = 0
     marking_required_count = 0
     for p in all_products:
         ikpu = getattr(p, "ikpu_code", None)
+        pkg = (getattr(p, "package_code", None) or "").strip()
         if validate_ikpu(ikpu):
             with_valid_ikpu += 1
         elif len(missing_ikpu_sample) < 15:
             missing_ikpu_sample.append({"id": p.id, "name": p.name, "barcode": p.barcode})
+        if pkg:
+            with_package_code += 1
         if getattr(p, "is_tobacco", False):
             tobacco_sku_count += 1
         if getattr(p, "requires_marking", False) or getattr(p, "is_tobacco", False):
@@ -252,9 +260,14 @@ def build_tax_report_data(
         grp["gross_revenue"] = round(grp["gross_revenue"] + it.total_price, 2)
         grp["vat_amount"] = round(grp["vat_amount"] + item_vat, 2)
 
-        is_tob = bool(getattr(it, "is_tobacco", False) or (prod and (getattr(prod, "is_tobacco", False) or getattr(prod, "requires_marking", False))) or getattr(it, "marking_code", None))
-        if is_tob:
-            grp["is_tobacco"] = True
+        is_tob = bool(getattr(it, "is_tobacco", False) or (prod and getattr(prod, "is_tobacco", False)))
+        m_group = getattr(it, "marking_group", None) or (getattr(prod, "marking_group", None) if prod else None) or ("TOBACCO" if is_tob else "NONE")
+        is_marked = bool(is_tob or m_group != "NONE" or (prod and getattr(prod, "requires_marking", False)) or getattr(it, "marking_code", None))
+        if is_marked:
+            if m_group == "NONE":
+                m_group = "TOBACCO" if is_tob else "OTHER"
+            if is_tob or m_group == "TOBACCO":
+                grp["is_tobacco"] = True
             tobacco_sales_lines += 1
             tobacco_units_sold = round(tobacco_units_sold + it.quantity, 3)
             tobacco_revenue = round(tobacco_revenue + it.total_price, 2)
@@ -272,6 +285,8 @@ def build_tax_report_data(
                 "sold_at": _to_tashkent(sale.created_at).strftime("%Y-%m-%d %H:%M") if sale else "",
                 "product_name": it.product_name,
                 "ikpu_code": None if ikpu_key == "NO_IKPU" else ikpu_key,
+                "marking_group": m_group,
+                "marking_group_label": MARKING_GROUPS.get(m_group, m_group),
                 "marking_code": mc,
                 "masked_code": mask_marking_code(mc),
                 "has_datamatrix": bool(mc),
@@ -358,6 +373,22 @@ def build_tax_report_data(
             "detail_uz": "Tamaki nuqtasi uchun chakana savdo ruxsatnomasi va mahalliy yig'im to'langanligini tekshiring (18+).",
         })
 
+    total_sku = len(all_products)
+    inn_ok = bool((profile.get("inn_stir") or "").strip()) and bool((profile.get("legal_name") or "").strip())
+    ikpu_pct = round((with_valid_ikpu / total_sku) * 100.0, 1) if total_sku > 0 else 100.0
+    pkg_pct = round((with_package_code / total_sku) * 100.0, 1) if total_sku > 0 else 100.0
+    ofd_ok = bool(profile.get("ofd_configured")) and internal_only_count == 0
+    dm_pct = round((marked_with_dm / tobacco_sales_lines) * 100.0, 1) if tobacco_sales_lines > 0 else 100.0
+    dm_ok = missing_dm == 0 and len(duplicate_markings) == 0
+
+    compliance_checklist = [
+        {"key": "requisites", "ok": inn_ok, "label_uz": "YaTT/MChJ va STIR (INN)", "label_ru": "ИП/ООО и ИНН (СТИР)", "detail": profile.get("inn_stir") or "Не указан"},
+        {"key": "ikpu", "ok": total_sku == 0 or with_valid_ikpu == total_sku, "label_uz": "17 xonali IKPU (MXIK)", "label_ru": "ИКПУ (17 цифр) на товарах", "detail": f"{with_valid_ikpu}/{total_sku} ({ikpu_pct}%)"},
+        {"key": "package", "ok": total_sku == 0 or with_package_code == total_sku, "label_uz": "Qadoq kodi (PackageCode)", "label_ru": "Код упаковки (ОФД)", "detail": f"{with_package_code}/{total_sku} ({pkg_pct}%)"},
+        {"key": "marking", "ok": dm_ok, "label_uz": "DataMatrix (Tamaki/Suv/Pivo)", "label_ru": "DataMatrix (Табак/Вода/Пиво)", "detail": f"{dm_pct}% (пропусков: {missing_dm})"},
+        {"key": "ofd", "ok": ofd_ok, "label_uz": "Onlayn-KKM / OFD (FM)", "label_ru": "Онлайн-ККМ / ОФД (ФМ)", "detail": f"ОФД: {fiscalized_count}, внутр.: {internal_only_count}"},
+    ]
+
     return {
         "period": period,
         "period_label": period_label,
@@ -382,22 +413,26 @@ def build_tax_report_data(
         "fiscal_summary": {
             "fiscalized_count": fiscalized_count,
             "internal_only_count": internal_only_count,
+            "ofd_configured": bool(profile.get("ofd_configured")),
         },
         "catalog_compliance": {
-            "total_active_sku": len(all_products),
+            "total_active_sku": total_sku,
             "with_valid_ikpu": with_valid_ikpu,
-            "missing_ikpu_count": max(0, len(all_products) - with_valid_ikpu),
+            "with_package_code": with_package_code,
+            "ikpu_coverage_pct": ikpu_pct,
+            "missing_ikpu_count": max(0, total_sku - with_valid_ikpu),
             "missing_ikpu_sample": missing_ikpu_sample,
             "tobacco_sku_count": tobacco_sku_count,
             "marking_required_count": marking_required_count,
         },
+        "compliance_checklist": compliance_checklist,
         "tobacco_and_marking": {
             "tobacco_sales_lines": tobacco_sales_lines,
             "tobacco_units_sold": tobacco_units_sold,
             "tobacco_revenue": tobacco_revenue,
             "marked_with_datamatrix_count": marked_with_dm,
             "missing_datamatrix_count": missing_dm,
-            "datamatrix_coverage_pct": round((marked_with_dm / tobacco_sales_lines) * 100.0, 1) if tobacco_sales_lines > 0 else 100.0,
+            "datamatrix_coverage_pct": dm_pct,
             "duplicate_marking_codes": duplicate_markings,
             "marking_ledger": marking_ledger[:200],
         },
@@ -581,3 +616,70 @@ async def send_tax_report_telegram(
         caption=f"🏛️ Налоговый отчёт Soliq + Табачка ({r['period_label']})",
     )
     return {"status": "sent", "message": "Soliq hisoboti Telegramga yuborildi / Налоговый отчёт отправлен в Telegram"}
+
+
+@router.get("/ofd-payload/{receipt_number}", response_model=dict)
+def get_receipt_ofd_payload(
+    receipt_number: str,
+    current_user: User = Depends(require_role([UserRole.OWNER, UserRole.CASHIER])),
+    session: Session = Depends(get_session),
+):
+    """Build exact PKM №943 / OFD JSON payload (tiyins, SPIC/IKPU, PackageCode, DataMatrix) for any receipt."""
+    sale = session.exec(select(Sale).where(Sale.receipt_number == receipt_number)).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Chek topilmadi / Чек не найден")
+
+    sale_items = session.exec(select(SaleItem).where(SaleItem.sale_id == sale.id)).all()
+    outlet = session.get(StoreOutlet, sale.store_id) if sale.store_id else None
+    profile = get_tax_profile(session, include_secret=False)
+    payload = build_ofd_receipt_payload(sale, sale_items, profile, outlet=outlet, is_refund=False)
+
+    return {
+        "receipt_number": sale.receipt_number,
+        "fiscal_status": getattr(sale, "fiscal_status", "INTERNAL"),
+        "fiscal_sign": getattr(sale, "fiscal_sign", None),
+        "fiscal_receipt_url": getattr(sale, "fiscal_receipt_url", None),
+        "fiscal_qr_svg": generate_qr_svg(getattr(sale, "fiscal_receipt_url", None)),
+        "ofd_configured": bool(profile.get("ofd_configured")),
+        "ofd_payload": payload,
+    }
+
+
+@router.post("/fiscalize/{receipt_number}", response_model=dict)
+def push_receipt_to_ofd(
+    receipt_number: str,
+    current_user: User = Depends(require_role([UserRole.OWNER, UserRole.CASHIER])),
+    session: Session = Depends(get_session),
+):
+    """Send or retry sending a receipt to the configured OFD / Online-KKM FM gateway."""
+    sale = session.exec(select(Sale).where(Sale.receipt_number == receipt_number)).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Chek topilmadi / Чек не найден")
+
+    sale_items = session.exec(select(SaleItem).where(SaleItem.sale_id == sale.id)).all()
+    outlet = session.get(StoreOutlet, sale.store_id) if sale.store_id else None
+    raw_profile = get_tax_profile(session, include_secret=True)
+    masked_profile = get_tax_profile(session, include_secret=False)
+    payload = build_ofd_receipt_payload(sale, sale_items, masked_profile, outlet=outlet, is_refund=False)
+
+    result = send_receipt_to_ofd_gateway(payload, raw_profile)
+    if result.get("fiscalized"):
+        sale.fiscal_status = "FISCALIZED"
+        if result.get("fiscal_sign"):
+            sale.fiscal_sign = result["fiscal_sign"]
+        if result.get("fiscal_receipt_url"):
+            sale.fiscal_receipt_url = result["fiscal_receipt_url"]
+        session.add(sale)
+        session.commit()
+        session.refresh(sale)
+
+    return {
+        "ok": bool(result.get("fiscalized")),
+        "receipt_number": sale.receipt_number,
+        "fiscal_status": getattr(sale, "fiscal_status", "INTERNAL"),
+        "fiscal_sign": getattr(sale, "fiscal_sign", None),
+        "fiscal_receipt_url": getattr(sale, "fiscal_receipt_url", None),
+        "fiscal_qr_svg": generate_qr_svg(getattr(sale, "fiscal_receipt_url", None)),
+        "error": result.get("error"),
+        "ofd_payload": payload,
+    }

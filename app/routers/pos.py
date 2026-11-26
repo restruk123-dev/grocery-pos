@@ -22,7 +22,10 @@ from ..models import (
     SaleRefund, SaleRefundItem, StoreOutlet
 )
 from ..auth import get_current_user, require_role
-from ..services.uz_tax import parse_gs1_datamatrix, compute_line_vat, get_tax_profile, mask_marking_code
+from ..services.uz_tax import (
+    parse_gs1_datamatrix, compute_line_vat, get_tax_profile,
+    mask_marking_code, build_ofd_receipt_payload, send_receipt_to_ofd_gateway, generate_qr_svg
+)
 
 router = APIRouter(prefix="/pos", tags=["POS"])
 
@@ -106,8 +109,9 @@ def checkout(
     due_date = data.due_date
 
     payment_method = PaymentMethod[payment_method_str]
-    tax_profile = get_tax_profile(session)
-    strict_marking = bool(tax_profile.get("strict_tobacco_marking", False))
+    tax_profile = get_tax_profile(session, include_secret=True)
+    strict_tobacco = bool(tax_profile.get("strict_tobacco_marking", False))
+    strict_beverage = bool(tax_profile.get("strict_beverage_marking", False))
     outlet = session.get(StoreOutlet, data.store_id) if data.store_id else None
 
     # Calculate total from items and decrement stock
@@ -155,7 +159,9 @@ def checkout(
         if not product:
             raise HTTPException(status_code=404, detail=f"Product ID {product_id} topilmadi")
 
-        is_marked_product = bool(getattr(product, "is_tobacco", False) or getattr(product, "requires_marking", False))
+        is_tob = bool(getattr(product, "is_tobacco", False))
+        is_marked_product = bool(is_tob or getattr(product, "requires_marking", False))
+        prod_marking_group = getattr(product, "marking_group", "NONE") or ("TOBACCO" if is_tob else ("OTHER" if is_marked_product else "NONE"))
         if raw_marking:
             dm_clean = parse_gs1_datamatrix(raw_marking)
             clean_marking = dm_clean["marking_code"] if dm_clean else raw_marking[:240]
@@ -180,10 +186,15 @@ def checkout(
                     )
         else:
             clean_marking = None
-            if is_marked_product and strict_marking:
+            if is_tob and strict_tobacco:
                 raise HTTPException(
                     status_code=400,
                     detail=f"{product.name}: Tamaki tovari uchun DataMatrix (Asl Belgisi) kodini skanerlang! / Отсканируйте DataMatrix пачки!",
+                )
+            if not is_tob and is_marked_product and strict_beverage:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{product.name}: Ichimlik / alkogol markirovka kodini (DataMatrix) skanerlang! / Отсканируйте DataMatrix напитка/алкоголя!",
                 )
 
         if quantity > product.stock_quantity:
@@ -204,7 +215,8 @@ def checkout(
             "total_price": item_total,
             "previous_stock": previous_stock,
             "marking_code": clean_marking,
-            "is_tobacco": is_marked_product,
+            "is_tobacco": is_tob,
+            "marking_group": prod_marking_group,
             "ikpu_code": getattr(product, "ikpu_code", None),
             "package_code": getattr(product, "package_code", None),
             "vat_rate": float(getattr(product, "vat_rate", 0.0) or 0.0),
@@ -304,6 +316,7 @@ def checkout(
         session.add(active_shift)
 
     # 2. CREATE SALE ITEMS AND STOCK MOVEMENTS FOR AUDIT AND COGS
+    created_sale_items = []
     for p_item in processed_items:
         prod = p_item["product"]
         s_item = SaleItem(
@@ -320,8 +333,10 @@ def checkout(
             vat_amount=p_item["vat_amount"],
             marking_code=p_item["marking_code"],
             is_tobacco=p_item["is_tobacco"],
+            marking_group=p_item["marking_group"],
         )
         session.add(s_item)
+        created_sale_items.append(s_item)
 
         stock_mv = StockMovement(
             product_id=prod.id,
@@ -352,16 +367,30 @@ def checkout(
         )
         session.add(debt_tx)
 
+    # Optional automatic OFD/Virtual KKM gateway fiscalization if configured
+    if tax_profile.get("ofd_gateway_url"):
+        ofd_payload = build_ofd_receipt_payload(sale, created_sale_items, tax_profile, outlet=outlet, is_refund=False)
+        ofd_res = send_receipt_to_ofd_gateway(ofd_payload, tax_profile)
+        if ofd_res.get("fiscalized"):
+            sale.fiscal_status = "FISCALIZED"
+            sale.fiscal_sign = ofd_res.get("fiscal_sign")
+            sale.fiscal_receipt_url = ofd_res.get("fiscal_receipt_url")
+            session.add(sale)
+
     session.commit()
     session.refresh(sale)
 
     return {
         "id": sale.id,
         "receipt_number": sale.receipt_number,
+        "shift_id": sale.shift_id,
         "gross_total": gross_total,
         "discount_amount": discount_amount,
         "vat_amount": total_vat_amount,
         "fiscal_status": sale.fiscal_status,
+        "fiscal_sign": sale.fiscal_sign,
+        "fiscal_receipt_url": sale.fiscal_receipt_url,
+        "fiscal_qr_svg": generate_qr_svg(sale.fiscal_receipt_url),
         "total_amount": sale.total_amount,
         "payment_method": sale.payment_method.value,
         "amount_paid": round(total - debt_amount, 2),
@@ -381,16 +410,20 @@ def checkout(
         "items": [
             {
                 "product_id": pi["product"].id,
+                "barcode": pi["product"].barcode,
+                "unit": pi["product"].unit,
                 "product_name": pi["product"].name,
                 "quantity": pi["quantity"],
                 "unit_price": pi["unit_price"],
                 "total_price": pi["total_price"],
                 "ikpu_code": pi["ikpu_code"],
+                "package_code": pi["package_code"],
                 "vat_rate": pi["vat_rate"],
                 "vat_amount": pi["vat_amount"],
                 "marking_code": pi["marking_code"],
                 "masked_marking_code": mask_marking_code(pi["marking_code"]),
                 "is_tobacco": pi["is_tobacco"],
+                "marking_group": pi["marking_group"],
             }
             for pi in processed_items
         ],
@@ -647,16 +680,23 @@ def list_recent_receipts(
         "tax_regime": tax_profile.get("tax_regime", "TURNOVER_1"),
         "address": tax_profile.get("address") or "",
     }
+    product_ids = list({it.product_id for it in items})
+    prods_map = {p.id: p for p in session.exec(select(Product).where(Product.id.in_(product_ids))).all()} if product_ids else {}
     out = []
     for s in sales:
         s_items = items_by_sale.get(s.id, [])
+        qr_url = getattr(s, "fiscal_receipt_url", None)
         out.append({
             "id": s.id,
             "receipt_number": s.receipt_number,
+            "shift_id": s.shift_id,
             "total_amount": s.total_amount,
             "discount_amount": getattr(s, "discount_amount", 0.0) or 0.0,
             "vat_amount": getattr(s, "vat_amount", 0.0) or 0.0,
             "fiscal_status": getattr(s, "fiscal_status", "INTERNAL"),
+            "fiscal_sign": getattr(s, "fiscal_sign", None),
+            "fiscal_receipt_url": qr_url,
+            "fiscal_qr_svg": generate_qr_svg(qr_url),
             "tax_profile": tax_meta,
             "payment_method": s.payment_method.value,
             "cash_received": s.cash_received,
@@ -671,16 +711,20 @@ def list_recent_receipts(
             "items": [
                 {
                     "product_id": it.product_id,
+                    "barcode": prods_map.get(it.product_id).barcode if prods_map.get(it.product_id) else None,
+                    "unit": prods_map.get(it.product_id).unit if prods_map.get(it.product_id) else "dona",
                     "product_name": it.product_name,
                     "quantity": it.quantity,
                     "unit_price": it.unit_price,
                     "total_price": it.total_price,
                     "ikpu_code": getattr(it, "ikpu_code", None),
+                    "package_code": getattr(it, "package_code", None),
                     "vat_rate": getattr(it, "vat_rate", 0.0) or 0.0,
                     "vat_amount": getattr(it, "vat_amount", 0.0) or 0.0,
                     "marking_code": getattr(it, "marking_code", None),
                     "masked_marking_code": mask_marking_code(getattr(it, "marking_code", None)),
                     "is_tobacco": bool(getattr(it, "is_tobacco", False)),
+                    "marking_group": getattr(it, "marking_group", "NONE"),
                 }
                 for it in s_items
             ],
@@ -717,14 +761,21 @@ def get_receipt_details(
     discount_amt = float(getattr(sale, "discount_amount", 0.0) or 0.0)
     gross_amt = round(sale.total_amount + discount_amt, 2)
     tax_profile = get_tax_profile(session)
+    qr_url = getattr(sale, "fiscal_receipt_url", None)
+    p_ids = list({it.product_id for it in items})
+    p_map = {p.id: p for p in session.exec(select(Product).where(Product.id.in_(p_ids))).all()} if p_ids else {}
 
     return {
         "id": sale.id,
         "receipt_number": sale.receipt_number,
+        "shift_id": sale.shift_id,
         "gross_total": gross_amt,
         "discount_amount": discount_amt,
         "vat_amount": float(getattr(sale, "vat_amount", 0.0) or 0.0),
         "fiscal_status": getattr(sale, "fiscal_status", "INTERNAL"),
+        "fiscal_sign": getattr(sale, "fiscal_sign", None),
+        "fiscal_receipt_url": qr_url,
+        "fiscal_qr_svg": generate_qr_svg(qr_url),
         "tax_profile": {
             "legal_name": tax_profile.get("legal_name") or "",
             "inn_stir": tax_profile.get("inn_stir") or "",
@@ -744,16 +795,20 @@ def get_receipt_details(
         "items": [
             {
                 "product_id": it.product_id,
+                "barcode": p_map.get(it.product_id).barcode if p_map.get(it.product_id) else None,
+                "unit": p_map.get(it.product_id).unit if p_map.get(it.product_id) else "dona",
                 "product_name": it.product_name,
                 "quantity": it.quantity,
                 "unit_price": it.unit_price,
                 "total_price": it.total_price,
                 "ikpu_code": getattr(it, "ikpu_code", None),
+                "package_code": getattr(it, "package_code", None),
                 "vat_rate": getattr(it, "vat_rate", 0.0) or 0.0,
                 "vat_amount": getattr(it, "vat_amount", 0.0) or 0.0,
                 "marking_code": getattr(it, "marking_code", None),
                 "masked_marking_code": mask_marking_code(getattr(it, "marking_code", None)),
                 "is_tobacco": bool(getattr(it, "is_tobacco", False)),
+                "marking_group": getattr(it, "marking_group", "NONE"),
                 "refundable_quantity": max(0.0, it.quantity - already_refunded_qty.get(it.product_id, 0.0)),
             }
             for it in items

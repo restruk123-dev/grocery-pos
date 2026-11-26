@@ -852,6 +852,135 @@ def test_uz_tax_profile_tobacco_datamatrix_and_report(session):
     assert len(res_mxik.json()["items"]) >= 1
 
 
+def test_uz_grocery_and_tobacco_100pct_compliance(session):
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Configure OFD token + strict beverage marking; verify secret masking
+    res_prof = client.put(
+        "/api/v1/tax/profile",
+        json={
+            "legal_name": "YaTT Grocery & Tobacco",
+            "inn_stir": "301234567",
+            "tax_regime": "TURNOVER_1",
+            "tax_rate_percent": 1.0,
+            "kkm_serial": "UZ-KKM-009911",
+            "ofd_api_token": "super-secret-ofd-token-123",
+            "strict_tobacco_marking": True,
+            "strict_beverage_marking": True,
+        },
+        headers=headers,
+    )
+    assert res_prof.status_code == 200
+    prof_get = client.get("/api/v1/tax/profile", headers=headers).json()["profile"]
+    assert prof_get["has_ofd_token"] is True
+    assert "ofd_api_token" not in prof_get
+
+    # 2. Grocery beverage (PKM №631) with PackageCode, IKPU & marking_group=BEVERAGES
+    res_bev = client.post(
+        "/api/v1/products",
+        json={
+            "barcode": "4780000112233",
+            "name": "Coca-Cola 1.5L",
+            "purchase_price": 9000,
+            "sale_price": 12000,
+            "stock_quantity": 24,
+            "ikpu_code": "02202001001000000",
+            "package_code": "1501337",
+            "vat_rate": 0.0,
+            "is_tobacco": False,
+            "requires_marking": True,
+            "marking_group": "BEVERAGES",
+        },
+        headers=headers,
+    )
+    assert res_bev.status_code == 200
+    bev = res_bev.json()
+    assert bev["package_code"] == "1501337"
+    assert bev["marking_group"] == "BEVERAGES"
+
+    # marked_only filter lists beverage product
+    res_list = client.get("/api/v1/products?marked_only=true", headers=headers)
+    assert res_list.status_code == 200
+    assert any(p["id"] == bev["id"] for p in res_list.json()["items"])
+
+    # Strict beverage marking blocks sale without DataMatrix
+    res_blk = client.post(
+        "/api/v1/pos/checkout",
+        json={"items": [{"product_id": bev["id"], "quantity": 1}], "payment_method": "CASH", "cash_received": 12000},
+        headers=headers,
+    )
+    assert res_blk.status_code == 400
+
+    # Sale with GS1 DataMatrix succeeds
+    bev_dm = "010478000011223321BEVDM00193XY12"
+    res_sale = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [{"product_id": bev["id"], "quantity": 1, "marking_code": bev_dm}],
+            "payment_method": "CASH",
+            "cash_received": 15000,
+        },
+        headers=headers,
+    )
+    assert res_sale.status_code == 200
+    sale_data = res_sale.json()
+    assert sale_data["items"][0]["package_code"] == "1501337"
+    assert sale_data["items"][0]["marking_group"] == "BEVERAGES"
+    receipt_no = sale_data["receipt_number"]
+
+    # 3. Inspect PKM №943 OFD JSON payload (sums in tiyins)
+    res_ofd = client.get(f"/api/v1/tax/ofd-payload/{receipt_no}", headers=headers)
+    assert res_ofd.status_code == 200
+    ofd = res_ofd.json()["ofd_payload"]
+    assert ofd["SellerINN"] == "301234567"
+    assert ofd["KKMSerial"] == "UZ-KKM-009911"
+    assert ofd["ReceivedCash"] == 1200000
+    assert ofd["Items"][0]["SPIC"] == "02202001001000000"
+    assert ofd["Items"][0]["PackageCode"] == "1501337"
+    assert ofd["Items"][0]["Price"] == 1200000
+    assert ofd["Items"][0]["MarkingCode"] == bev_dm
+
+    # Fiscalize endpoint fails gracefully when gateway URL is not set
+    res_fisc = client.post(f"/api/v1/tax/fiscalize/{receipt_no}", headers=headers)
+    assert res_fisc.status_code == 200
+    assert res_fisc.json()["ok"] is False
+
+    # 4. Tax report includes 5-point readiness checklist and marking group label
+    rep = client.get("/api/v1/tax/report?period=today", headers=headers).json()
+    keys = {c["key"] for c in rep["compliance_checklist"]}
+    assert keys == {"requisites", "ikpu", "package", "marking", "ofd"}
+    assert rep["catalog_compliance"]["with_package_code"] >= 1
+    assert any(m["marking_group"] == "BEVERAGES" for m in rep["tobacco_and_marking"]["marking_ledger"])
+
+    # 5. Debt repayment returns PKM №943 CREDIT_REPAYMENT receipt fields
+    res_deb = client.post("/api/v1/debts/debtors", json={"full_name": "Nasiya Testov", "phone": "+998901234567"}, headers=headers)
+    deb_id = res_deb.json()["id"]
+    res_chk_debt = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [{"product_id": bev["id"], "quantity": 1, "marking_code": "010478000011223321BEVDM00293XY12"}],
+            "payment_method": "DEBT",
+            "debt_amount": 12000,
+            "debtor_id": deb_id,
+        },
+        headers=headers,
+    )
+    assert res_chk_debt.status_code == 200
+    res_pay = client.post(
+        f"/api/v1/debts/debtors/{deb_id}/pay",
+        json={"amount": 5000, "note": "Qarz to'lovi"},
+        headers=headers,
+    )
+    assert res_pay.status_code == 200
+    pay_json = res_pay.json()
+    assert pay_json["payment_receipt_type"] == "CREDIT_REPAYMENT"
+    assert pay_json["previous_balance"] == 12000.0
+    assert pay_json["amount_paid"] == 5000.0
+    assert pay_json["new_balance"] == 7000.0
+    assert pay_json["tax_profile"]["inn_stir"] == "301234567"
+
+
 
 
 

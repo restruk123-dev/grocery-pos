@@ -201,7 +201,8 @@ def pay_debt(
 
     now_utc = datetime.now(timezone.utc)
     amount = round(data.amount, 2)
-    new_balance = round(debtor.balance - amount, 2)
+    previous_balance = round(debtor.balance or 0.0, 2)
+    new_balance = round(previous_balance - amount, 2)
     debtor.balance = new_balance
     if data.due_date:
         debtor.due_date = data.due_date
@@ -221,11 +222,24 @@ def pay_debt(
     session.commit()
     session.refresh(tx)
 
+    from ..services.uz_tax import get_tax_profile
+    tax_profile = get_tax_profile(session)
+
     return {
         "message": f"To'lov qabul qilindi: {amount} so'm / Оплата {amount} успешно принята",
         "debtor_id": debtor.id,
+        "debtor_name": debtor.full_name,
+        "previous_balance": previous_balance,
+        "amount_paid": amount,
         "new_balance": debtor.balance,
-        "transaction_id": tx.id
+        "transaction_id": tx.id,
+        "paid_at": now_utc.isoformat(),
+        "cashier_name": current_user.full_name,
+        "payment_receipt_type": "CREDIT_REPAYMENT",
+        "tax_profile": {
+            "legal_name": tax_profile.get("legal_name") or "",
+            "inn_stir": tax_profile.get("inn_stir") or "",
+        },
     }
 
 @router.post("/debtors/{debtor_id}/add-debt", response_model=dict)

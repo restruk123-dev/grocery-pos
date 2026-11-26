@@ -718,8 +718,12 @@ function SettingsModal({
     tax_rate_percent: '1',
     address: '',
     kkm_serial: '',
+    ofd_gateway_url: '',
+    ofd_api_token: '',
+    has_ofd_token: false,
     tobacco_license_note: '',
-    strict_tobacco_marking: false
+    strict_tobacco_marking: false,
+    strict_beverage_marking: false
   });
   const [savingTax, setSavingTax] = useState(false);
   useEffect(() => {
@@ -742,8 +746,12 @@ function SettingsModal({
             tax_rate_percent: String(d.profile.tax_rate_percent ?? '1'),
             address: d.profile.address || '',
             kkm_serial: d.profile.kkm_serial || '',
+            ofd_gateway_url: d.profile.ofd_gateway_url || '',
+            ofd_api_token: '',
+            has_ofd_token: Boolean(d.profile.has_ofd_token),
             tobacco_license_note: d.profile.tobacco_license_note || '',
-            strict_tobacco_marking: Boolean(d.profile.strict_tobacco_marking)
+            strict_tobacco_marking: Boolean(d.profile.strict_tobacco_marking),
+            strict_beverage_marking: Boolean(d.profile.strict_beverage_marking)
           });
         }
       }).catch(() => {});
@@ -752,20 +760,37 @@ function SettingsModal({
   const saveTaxProfile = async () => {
     setSavingTax(true);
     try {
+      const payload = {
+        legal_name: taxProfile.legal_name,
+        inn_stir: taxProfile.inn_stir,
+        tax_regime: taxProfile.tax_regime,
+        tax_rate_percent: Number(taxProfile.tax_rate_percent) || 0,
+        address: taxProfile.address,
+        kkm_serial: taxProfile.kkm_serial,
+        ofd_gateway_url: taxProfile.ofd_gateway_url,
+        tobacco_license_note: taxProfile.tobacco_license_note,
+        strict_tobacco_marking: Boolean(taxProfile.strict_tobacco_marking),
+        strict_beverage_marking: Boolean(taxProfile.strict_beverage_marking),
+        store_id: activeStoreId ? Number(activeStoreId) : null
+      };
+      if (taxProfile.ofd_api_token && taxProfile.ofd_api_token.trim()) {
+        payload.ofd_api_token = taxProfile.ofd_api_token.trim();
+      }
       const res = await fetch(`${API_BASE}/tax/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...taxProfile,
-          tax_rate_percent: Number(taxProfile.tax_rate_percent) || 0,
-          store_id: activeStoreId ? Number(activeStoreId) : null
-        })
+        body: JSON.stringify(payload)
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.detail || 'Xatolik');
+      setTaxProfile(p => ({
+        ...p,
+        ofd_api_token: '',
+        has_ofd_token: Boolean(d?.profile?.has_ofd_token)
+      }));
       notify(lang === 'uz' ? 'Soliq profili saqlandi!' : 'Налоговый профиль сохранён!');
       setShowTaxProfile(false);
     } catch (err) {
@@ -1059,6 +1084,26 @@ function SettingsModal({
       tobacco_license_note: e.target.value
     })),
     className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-1.5"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "url",
+    placeholder: lang === "uz" ? "OFD / Virtual KKM URL (ixtiyoriy)" : "URL шлюза ОФД / Virtual KKM (опц.)",
+    value: taxProfile.ofd_gateway_url,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      ofd_gateway_url: e.target.value
+    })),
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono"
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    placeholder: taxProfile.has_ofd_token ? lang === "uz" ? "🟢 Token saqlangan (almashtirish...)" : "🟢 Токен сохранён (заменить...)" : lang === "uz" ? "OFD API Token (ixtiyoriy)" : "API-токен ОФД (опц.)",
+    value: taxProfile.ofd_api_token,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      ofd_api_token: e.target.value
+    })),
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono"
   })), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer text-[11px] font-bold text-indigo-950 dark:text-indigo-200"
   }, /*#__PURE__*/React.createElement("input", {
@@ -1069,7 +1114,19 @@ function SettingsModal({
       strict_tobacco_marking: e.target.checked
     })),
     className: "rounded text-indigo-600"
-  }), /*#__PURE__*/React.createElement("span", null, "🚬 ", lang === "uz" ? "Kassada tamaki uchun DataMatrix skaneri majburiy" : "На кассе требовать скан DataMatrix для табака")), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("span", null, "🚬 ", lang === "uz" ? "Kassada tamaki uchun DataMatrix skaneri majburiy" : "На кассе требовать скан DataMatrix для табака")), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 cursor-pointer text-[11px] font-bold text-cyan-950 dark:text-cyan-200"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: taxProfile.strict_beverage_marking,
+    onChange: e => setTaxProfile(p => ({
+      ...p,
+      strict_beverage_marking: e.target.checked
+    })),
+    className: "rounded text-cyan-600"
+  }), /*#__PURE__*/React.createElement("span", null, "🥤 ", lang === "uz" ? "Suv, ichimlik va pivo uchun DataMatrix skaneri majburiy (VMQ №631)" : "Требовать DataMatrix для воды, напитков и пива (ПКМ №631)")), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-indigo-700 dark:text-indigo-300 leading-snug bg-white/70 dark:bg-slate-900/60 p-2 rounded-xl border border-indigo-100 dark:border-indigo-900"
+  }, "⚠️ ", lang === "uz" ? "VMQ №943 bo'yicha qonuniy fiskal chek uchun sertifikatlangan OFD/FM shlyuzi (E-POS, Multikassa, Arca) ulanishi shart." : "По ПКМ №943 для полной юридической фискализации подключите сертифицированный шлюз ОФД/ФМ (E-POS, Multikassa, Arca)."), /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: savingTax,
     onClick: saveTaxProfile,
@@ -1180,17 +1237,21 @@ function TaxProductFields({
   lang = 'uz',
   ikpuCode,
   setIkpuCode,
+  packageCode,
+  setPackageCode,
   vatRate,
   setVatRate,
   isTobacco,
   setIsTobacco,
   requiresMarking,
   setRequiresMarking,
+  markingGroup = 'NONE',
+  setMarkingGroup,
   productName = ''
 }) {
   const [searching, setSearching] = useState(false);
   const [hints, setHints] = useState([]);
-  const [showTax, setShowTax] = useState(Boolean(ikpuCode || isTobacco || requiresMarking || Number(vatRate) > 0));
+  const [showTax, setShowTax] = useState(Boolean(ikpuCode || packageCode || isTobacco || requiresMarking || markingGroup && markingGroup !== 'NONE' || Number(vatRate) > 0));
   const runMxikSearch = async () => {
     setSearching(true);
     try {
@@ -1222,7 +1283,10 @@ function TaxProductFields({
       setIsTobacco(checked);
       if (checked) {
         setRequiresMarking(true);
+        if (setMarkingGroup) setMarkingGroup('TOBACCO');
         setShowTax(true);
+      } else if (markingGroup === 'TOBACCO' && setMarkingGroup) {
+        setMarkingGroup('NONE');
       }
     },
     className: "w-4 h-4 rounded text-amber-600"
@@ -1230,7 +1294,7 @@ function TaxProductFields({
     type: "button",
     onClick: () => setShowTax(!showTax),
     className: "text-[11px] font-bold text-indigo-600 dark:text-indigo-400"
-  }, "🏛️ ", lang === 'uz' ? "IKPU / QQS" : "ИКПУ / НДС", " ", showTax ? '▲' : '▼')), showTax && /*#__PURE__*/React.createElement("div", {
+  }, "🏛️ ", lang === 'uz' ? "IKPU / Qadoq / QQS" : "ИКПУ / Упак. / НДС", " ", showTax ? '▲' : '▼')), showTax && /*#__PURE__*/React.createElement("div", {
     className: "space-y-1.5 pt-1.5 border-t border-slate-200 dark:border-slate-700"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1.5 items-center"
@@ -1255,7 +1319,41 @@ function TaxProductFields({
     value: "12"
   }, "12% НДС"), /*#__PURE__*/React.createElement("option", {
     value: "-1"
-  }, "Без НДС"))), /*#__PURE__*/React.createElement("label", {
+  }, "Без НДС"))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: lang === 'uz' ? "Qadoq kodi (PackageCode)" : "Код упаковки (PackageCode)",
+    value: packageCode || '',
+    onChange: e => setPackageCode && setPackageCode(e.target.value.trim().slice(0, 32)),
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-[11px] font-mono"
+  }), /*#__PURE__*/React.createElement("select", {
+    value: markingGroup || (isTobacco ? 'TOBACCO' : 'NONE'),
+    onChange: e => {
+      const mg = e.target.value;
+      if (setMarkingGroup) setMarkingGroup(mg);
+      if (mg === 'TOBACCO') {
+        setIsTobacco(true);
+        setRequiresMarking(true);
+      } else if (mg !== 'NONE') {
+        setIsTobacco(false);
+        setRequiresMarking(true);
+      } else {
+        setIsTobacco(false);
+      }
+    },
+    className: "bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] font-bold"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "NONE"
+  }, lang === 'uz' ? "Markirovkasiz" : "Без маркировки"), /*#__PURE__*/React.createElement("option", {
+    value: "TOBACCO"
+  }, "🚬 ", lang === 'uz' ? "Tamaki (18+)" : "Табак / стики"), /*#__PURE__*/React.createElement("option", {
+    value: "BEVERAGES"
+  }, "🥤 ", lang === 'uz' ? "Suv va ichimliklar" : "Вода и напитки"), /*#__PURE__*/React.createElement("option", {
+    value: "BEER_ALCOHOL"
+  }, "🍺 ", lang === 'uz' ? "Pivo / Alkogol" : "Пиво / Алкоголь"), /*#__PURE__*/React.createElement("option", {
+    value: "OTHER"
+  }, "🏷️ ", lang === 'uz' ? "Boshqa markirovka" : "Прочее Asl Belgisi"))), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-600 dark:text-slate-300"
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
@@ -1269,12 +1367,18 @@ function TaxProductFields({
     type: "button",
     onClick: () => {
       setIkpuCode(h.mxik);
+      if (setPackageCode && h.package_code) setPackageCode(h.package_code);
+      if (h.marking_group && h.marking_group !== 'NONE') {
+        setRequiresMarking(true);
+        if (setMarkingGroup) setMarkingGroup(h.marking_group);
+        setIsTobacco(h.marking_group === 'TOBACCO');
+      }
       setHints([]);
     },
     className: "w-full text-left px-2 py-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-[10px] flex justify-between gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "truncate"
-  }, h.name), /*#__PURE__*/React.createElement("span", {
+  }, h.name, h.package_code ? ` [${h.package_code}]` : ''), /*#__PURE__*/React.createElement("span", {
     className: "font-mono font-bold text-indigo-600 shrink-0"
   }, h.mxik))))));
 }
@@ -1301,9 +1405,11 @@ function EditProductModal({
   const [stockQuantity, setStockQuantity] = useState(String(product.stock_quantity ?? "0"));
   const [expiryDate, setExpiryDate] = useState(product.expiry_date || "");
   const [ikpuCode, setIkpuCode] = useState(product.ikpu_code || "");
+  const [packageCode, setPackageCode] = useState(product.package_code || "");
   const [vatRate, setVatRate] = useState(Number(product.vat_rate ?? 0));
   const [isTobacco, setIsTobacco] = useState(Boolean(product.is_tobacco));
   const [requiresMarking, setRequiresMarking] = useState(Boolean(product.requires_marking));
+  const [markingGroup, setMarkingGroup] = useState(product.marking_group || (product.is_tobacco ? "TOBACCO" : "NONE"));
   const [isQuick, setIsQuick] = useState(Boolean(product.is_quick));
   const [loading, setLoading] = useState(false);
   const pNum = Number(purchasePrice) || 0;
@@ -1343,9 +1449,11 @@ function EditProductModal({
         stock_quantity: Number(stockQuantity) || 0,
         expiry_date: expiryDate.trim() || null,
         ikpu_code: ikpuCode.trim() || null,
+        package_code: packageCode.trim() || null,
         vat_rate: Number(vatRate) || 0,
         is_tobacco: Boolean(isTobacco),
-        requires_marking: Boolean(requiresMarking || isTobacco),
+        requires_marking: Boolean(requiresMarking || isTobacco || markingGroup && markingGroup !== "NONE"),
+        marking_group: isTobacco ? "TOBACCO" : markingGroup || "NONE",
         is_quick: Boolean(isQuick)
       };
       const res = await fetch(`${API_BASE}/products/${product.id}`, {
@@ -1474,12 +1582,16 @@ function EditProductModal({
     lang: lang,
     ikpuCode: ikpuCode,
     setIkpuCode: setIkpuCode,
+    packageCode: packageCode,
+    setPackageCode: setPackageCode,
     vatRate: vatRate,
     setVatRate: setVatRate,
     isTobacco: isTobacco,
     setIsTobacco: setIsTobacco,
     requiresMarking: requiresMarking,
     setRequiresMarking: setRequiresMarking,
+    markingGroup: markingGroup,
+    setMarkingGroup: setMarkingGroup,
     productName: name
   }), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer pt-1"
@@ -2863,9 +2975,11 @@ function CreateProductModal({
   const [stockQuantity, setStockQuantity] = useState('1');
   const [expiryDate, setExpiryDate] = useState('');
   const [ikpuCode, setIkpuCode] = useState('');
+  const [packageCode, setPackageCode] = useState('');
   const [vatRate, setVatRate] = useState(0);
   const [isTobacco, setIsTobacco] = useState(false);
   const [requiresMarking, setRequiresMarking] = useState(false);
+  const [markingGroup, setMarkingGroup] = useState('NONE');
   const [isQuick, setIsQuick] = useState(false);
   const [cameraActive, setCameraActive] = useState(Boolean(autoScanOnMount && !initialBarcode));
   const [voiceActive, setVoiceActive] = useState(false);
@@ -2965,9 +3079,11 @@ function CreateProductModal({
           stock_quantity: Number(stockQuantity) || 0,
           expiry_date: expiryDate.trim() || null,
           ikpu_code: ikpuCode.trim() || null,
+          package_code: packageCode.trim() || null,
           vat_rate: Number(vatRate) || 0,
           is_tobacco: Boolean(isTobacco),
-          requires_marking: Boolean(requiresMarking || isTobacco),
+          requires_marking: Boolean(requiresMarking || isTobacco || markingGroup && markingGroup !== 'NONE'),
+          marking_group: isTobacco ? 'TOBACCO' : markingGroup || 'NONE',
           is_quick: Boolean(isQuick)
         })
       });
@@ -2988,6 +3104,10 @@ function CreateProductModal({
         setStockQuantity('1');
         setExpiryDate('');
         setIkpuCode('');
+        setPackageCode('');
+        setIsTobacco(false);
+        setRequiresMarking(false);
+        setMarkingGroup('NONE');
         setIsQuick(false);
         setCameraActive(true);
       } else {
@@ -3161,12 +3281,16 @@ function CreateProductModal({
     lang: lang,
     ikpuCode: ikpuCode,
     setIkpuCode: setIkpuCode,
+    packageCode: packageCode,
+    setPackageCode: setPackageCode,
     vatRate: vatRate,
     setVatRate: setVatRate,
     isTobacco: isTobacco,
     setIsTobacco: setIsTobacco,
     requiresMarking: requiresMarking,
     setRequiresMarking: setRequiresMarking,
+    markingGroup: markingGroup,
+    setMarkingGroup: setMarkingGroup,
     productName: name
   }), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200 pt-1"
@@ -4609,11 +4733,13 @@ function ReceiptModal({
     className: "font-black text-sm"
   }, "🛒 ", receipt.tax_profile?.legal_name || "GroceryStore POS"), receipt.tax_profile?.inn_stir && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-600"
-  }, "STIR/ИНН: ", receipt.tax_profile.inn_stir), receipt.tax_profile?.address && /*#__PURE__*/React.createElement("div", {
+  }, "STIR/ИНН: ", receipt.tax_profile.inn_stir), receipt.tax_profile?.kkm_serial && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-500"
+  }, "KKM/FM: ", receipt.tax_profile.kkm_serial), receipt.tax_profile?.address && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-500"
   }, receipt.tax_profile.address), /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-slate-600"
-  }, receipt.receipt_number), /*#__PURE__*/React.createElement("div", {
+  }, receipt.receipt_number, receipt.shift_id ? ` • Smena #${receipt.shift_id}` : ''), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-500"
   }, new Date(receipt.created_at || Date.now()).toLocaleString()), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-500"
@@ -4626,11 +4752,11 @@ function ReceiptModal({
     className: "flex-1 min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-bold truncate"
-  }, it.is_tobacco ? '🚬 ' : '', it.product_name), /*#__PURE__*/React.createElement("div", {
+  }, it.is_tobacco ? '🚬 ' : it.marking_group === 'BEVERAGES' ? '🥤 ' : it.marking_group === 'BEER_ALCOHOL' ? '🍺 ' : '', it.product_name), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-500"
-  }, it.quantity, " x ", formatMoney(it.unit_price)), it.ikpu_code && /*#__PURE__*/React.createElement("div", {
+  }, it.quantity, " ", it.unit || 'dona', " x ", formatMoney(it.unit_price), Number(it.vat_rate) > 0 ? ` • QQS ${it.vat_rate}% (${formatMoney(it.vat_amount)})` : ''), (it.ikpu_code || it.package_code || it.barcode) && /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-slate-400"
-  }, "IKPU: ", it.ikpu_code), (it.masked_marking_code || it.marking_code) && /*#__PURE__*/React.createElement("div", {
+  }, it.ikpu_code ? `IKPU:${it.ikpu_code} ` : '', it.package_code ? `Qadoq:${it.package_code} ` : '', it.barcode ? `GTIN:${it.barcode}` : ''), (it.masked_marking_code || it.marking_code) && /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-emerald-700 font-bold"
   }, "DM: ", it.masked_marking_code || it.marking_code)), /*#__PURE__*/React.createElement("div", {
     className: "font-bold whitespace-nowrap"
@@ -4652,9 +4778,17 @@ function ReceiptModal({
     className: "flex justify-between text-[11px] font-bold"
   }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Qaytim:' : 'Сдача:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.change_given))), receipt.debt_amount > 0 && /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[11px] font-bold text-amber-700"
-  }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Qarzga:' : 'В долг:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.debt_amount), " (", receipt.debtor_name, ")"))), /*#__PURE__*/React.createElement("div", {
-    className: "text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-0.5"
-  }, /*#__PURE__*/React.createElement("div", null, lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, lang === 'uz' ? 'Qarzga:' : 'В долг:'), /*#__PURE__*/React.createElement("span", null, formatMoney(receipt.debt_amount), " (", receipt.debtor_name, ")")), receipt.payment_method === 'DEBT' && /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-amber-700 bg-amber-50 p-1.5 rounded-lg leading-tight"
+  }, "🧾 ", lang === 'uz' ? "Nasiya cheki (to'lov vaqtida qarz so'ndirish cheki uriladi)" : "Чек отгрузки в долг / рассрочку (при оплате пробивается чек погашения)")), /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-1"
+  }, receipt.fiscal_qr_svg && /*#__PURE__*/React.createElement("img", {
+    src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(receipt.fiscal_qr_svg)}`,
+    alt: "Soliq QR",
+    className: "w-24 h-24 mx-auto border border-slate-200 rounded-lg p-1 bg-white"
+  }), receipt.fiscal_sign && /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-600 font-bold"
+  }, "FM belgi: ", receipt.fiscal_sign), /*#__PURE__*/React.createElement("div", null, lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"), /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-slate-400"
   }, receipt.fiscal_status === 'FISCALIZED' ? 'OFD / Soliq fiskal cheki' : lang === 'uz' ? 'Ichki hisob cheki (Fiskal modul / OFD ulanmagan)' : 'Внутренний учётный чек (Без ФМ / ОФД)')))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 shrink-0"
@@ -9012,7 +9146,20 @@ function AnalyticsScreen({
     className: "py-16 text-center text-xs text-slate-400"
   }, t.processing) : /*#__PURE__*/React.createElement("div", {
     className: "space-y-2.5 text-xs"
-  }, safeArray(taxReport.warnings).length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, safeArray(taxReport.compliance_checklist).length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5"
+  }, "🛡️ ", lang === 'uz' ? 'Soliq va Asl Belgisi tayyorlik tekshiruvi (100%)' : 'Чек-лист соответствия закону РУз (ПКМ №943 / №631)'), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5"
+  }, safeArray(taxReport.compliance_checklist).map(chk => /*#__PURE__*/React.createElement("div", {
+    key: chk.key,
+    className: `flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border text-[11px] ${chk.ok ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold truncate"
+  }, chk.ok ? '✅' : '⚠️', " ", lang === 'uz' ? chk.label_uz : chk.label_ru), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-[10px] shrink-0 opacity-85"
+  }, chk.detail))))), safeArray(taxReport.warnings).length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "space-y-1.5"
   }, safeArray(taxReport.warnings).map((w, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
@@ -9043,29 +9190,38 @@ function AnalyticsScreen({
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-slate-500 font-semibold"
-  }, "🏛️ IKPU (MXIK) ", lang === 'uz' ? 'holati' : 'база'), /*#__PURE__*/React.createElement("div", {
+  }, "🏛️ IKPU & ", lang === 'uz' ? 'Qadoq' : 'Упаковка'), /*#__PURE__*/React.createElement("div", {
     className: "text-base sm:text-lg font-black font-mono mt-0.5"
   }, taxReport.catalog_compliance.with_valid_ikpu, " / ", taxReport.catalog_compliance.total_active_sku), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-amber-600 font-bold"
-  }, taxReport.catalog_compliance.missing_ikpu_count, " ", lang === 'uz' ? 'ta IKPU kodsiz' : 'без ИКПУ')), /*#__PURE__*/React.createElement("div", {
+  }, taxReport.catalog_compliance.missing_ikpu_count, " ", lang === 'uz' ? 'IKPUsiz' : 'без ИКПУ', " • 📦 ", taxReport.catalog_compliance.with_package_code ?? 0)), /*#__PURE__*/React.createElement("div", {
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-slate-500 font-semibold"
-  }, "🚬 ", lang === 'uz' ? 'Tamaki / DataMatrix' : 'Табачка / Маркировка'), /*#__PURE__*/React.createElement("div", {
+  }, "🏷️ ", lang === 'uz' ? 'Markirovka (Asl Belgisi)' : 'Маркировка (DataMatrix)'), /*#__PURE__*/React.createElement("div", {
     className: "text-base sm:text-lg font-black font-mono mt-0.5"
-  }, taxReport.tobacco_and_marking.tobacco_units_sold, " ", lang === 'uz' ? 'quti' : 'пачек'), /*#__PURE__*/React.createElement("div", {
+  }, taxReport.tobacco_and_marking.tobacco_units_sold, " ", lang === 'uz' ? 'dona' : 'шт/пач'), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-bold text-emerald-600"
-  }, taxReport.tobacco_and_marking.datamatrix_coverage_pct, "% DataMatrix • ", formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)))), /*#__PURE__*/React.createElement("div", {
+  }, taxReport.tobacco_and_marking.datamatrix_coverage_pct, "% DM • ", formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)))), safeArray(taxReport.catalog_compliance.missing_ikpu_sample).length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-2xl p-2.5 space-y-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-bold text-amber-800 dark:text-amber-300"
+  }, "⚠️ ", lang === 'uz' ? "IKPU (17 raqam) kiritilmagan tovarlar (223-modda 1% jarima xavfi):" : "Товары без 17-значного ИКПУ (риск штрафа 1% по ст. 223 НК):"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1"
+  }, safeArray(taxReport.catalog_compliance.missing_ikpu_sample).map(p => /*#__PURE__*/React.createElement("span", {
+    key: p.id,
+    className: "px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[10px] font-medium"
+  }, p.name, " (", p.barcode, ")")))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-bold"
-  }, "🚬 ", lang === 'uz' ? 'Tamaki va DataMatrix jurnali (Asl Belgisi)' : 'Табачка и маркировка (Asl Belgisi DataMatrix)'), /*#__PURE__*/React.createElement("span", {
+  }, "🏷️ ", lang === 'uz' ? 'Asl Belgisi DataMatrix (Tamaki • Suv • Ichimlik • Pivo)' : 'Маркировка Asl Belgisi (Табак • Вода • Напитки • Пиво)'), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-mono text-slate-400"
   }, "DM ✓ ", taxReport.tobacco_and_marking.marked_with_datamatrix_count, " / ✗ ", taxReport.tobacco_and_marking.missing_datamatrix_count)), safeArray(taxReport.tobacco_and_marking.marking_ledger).length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "text-center py-4 text-slate-400"
-  }, lang === 'uz' ? "Tanlangan davrda tamaki/markirovka sotuvi yo'q" : 'За период продаж табака/маркировки нет') : /*#__PURE__*/React.createElement("div", {
+  }, lang === 'uz' ? "Tanlangan davrda markirovkali tovar sotuvi yo'q" : 'За период продаж маркированных товаров нет') : /*#__PURE__*/React.createElement("div", {
     className: "divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto"
   }, safeArray(taxReport.tobacco_and_marking.marking_ledger).slice(0, 50).map((m, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
@@ -9074,7 +9230,9 @@ function AnalyticsScreen({
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-bold truncate"
-  }, m.product_name, " ", m.is_returned ? '↩️' : ''), /*#__PURE__*/React.createElement("div", {
+  }, m.product_name, " ", m.is_returned ? '↩️' : '', m.marking_group_label && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"
+  }, m.marking_group_label)), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-mono text-slate-400 truncate"
   }, m.sold_at, " • ", m.receipt_number, " • ", m.has_datamatrix ? `DM: ${m.masked_code}` : '⚠️ БЕЗ DATAMATRIX')), /*#__PURE__*/React.createElement("div", {
     className: "text-right font-mono shrink-0"

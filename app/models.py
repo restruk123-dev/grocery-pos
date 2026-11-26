@@ -112,6 +112,7 @@ class Product(SQLModel, table=True):
     vat_rate: float = Field(default=0.0)                        # 0.0, 12.0, or -1.0 (Without VAT)
     requires_marking: bool = Field(default=False)               # Asl Belgisi DataMatrix required
     is_tobacco: bool = Field(default=False)                     # Tobacco / 18+ compliance flag
+    marking_group: str = Field(default="NONE")                  # NONE, TOBACCO, BEVERAGES, BEER_ALCOHOL, OTHER
     is_quick: bool = Field(default=False)       # Быстрый товар для кассы (без штрихкода)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utc_now)
@@ -174,6 +175,7 @@ class SaleItem(SQLModel, table=True):
     vat_amount: float = Field(default=0.0)
     marking_code: Optional[str] = Field(default=None, index=True)  # GS1 DataMatrix (Asl Belgisi)
     is_tobacco: bool = Field(default=False)
+    marking_group: str = Field(default="NONE")
 
 class Supplier(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

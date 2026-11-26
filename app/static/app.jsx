@@ -677,8 +677,12 @@ function SettingsModal({
     tax_rate_percent: '1',
     address: '',
     kkm_serial: '',
+    ofd_gateway_url: '',
+    ofd_api_token: '',
+    has_ofd_token: false,
     tobacco_license_note: '',
-    strict_tobacco_marking: false
+    strict_tobacco_marking: false,
+    strict_beverage_marking: false
   });
   const [savingTax, setSavingTax] = useState(false);
 
@@ -699,8 +703,12 @@ function SettingsModal({
               tax_rate_percent: String(d.profile.tax_rate_percent ?? '1'),
               address: d.profile.address || '',
               kkm_serial: d.profile.kkm_serial || '',
+              ofd_gateway_url: d.profile.ofd_gateway_url || '',
+              ofd_api_token: '',
+              has_ofd_token: Boolean(d.profile.has_ofd_token),
               tobacco_license_note: d.profile.tobacco_license_note || '',
-              strict_tobacco_marking: Boolean(d.profile.strict_tobacco_marking)
+              strict_tobacco_marking: Boolean(d.profile.strict_tobacco_marking),
+              strict_beverage_marking: Boolean(d.profile.strict_beverage_marking)
             });
           }
         })
@@ -711,17 +719,30 @@ function SettingsModal({
   const saveTaxProfile = async () => {
     setSavingTax(true);
     try {
+      const payload = {
+        legal_name: taxProfile.legal_name,
+        inn_stir: taxProfile.inn_stir,
+        tax_regime: taxProfile.tax_regime,
+        tax_rate_percent: Number(taxProfile.tax_rate_percent) || 0,
+        address: taxProfile.address,
+        kkm_serial: taxProfile.kkm_serial,
+        ofd_gateway_url: taxProfile.ofd_gateway_url,
+        tobacco_license_note: taxProfile.tobacco_license_note,
+        strict_tobacco_marking: Boolean(taxProfile.strict_tobacco_marking),
+        strict_beverage_marking: Boolean(taxProfile.strict_beverage_marking),
+        store_id: activeStoreId ? Number(activeStoreId) : null
+      };
+      if (taxProfile.ofd_api_token && taxProfile.ofd_api_token.trim()) {
+        payload.ofd_api_token = taxProfile.ofd_api_token.trim();
+      }
       const res = await fetch(`${API_BASE}/tax/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          ...taxProfile,
-          tax_rate_percent: Number(taxProfile.tax_rate_percent) || 0,
-          store_id: activeStoreId ? Number(activeStoreId) : null
-        })
+        body: JSON.stringify(payload)
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.detail || 'Xatolik');
+      setTaxProfile(p => ({ ...p, ofd_api_token: '', has_ofd_token: Boolean(d?.profile?.has_ofd_token) }));
       notify(lang === 'uz' ? 'Soliq profili saqlandi!' : 'Налоговый профиль сохранён!');
       setShowTaxProfile(false);
     } catch (err) {
@@ -941,10 +962,21 @@ function SettingsModal({
                     <input type="text" placeholder={lang === "uz" ? "KKM / FM seriya (ixtiyoriy)" : "Серийник ККМ / ФМ (опц.)"} value={taxProfile.kkm_serial} onChange={(e) => setTaxProfile(p => ({ ...p, kkm_serial: e.target.value }))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono" />
                     <input type="text" placeholder={lang === "uz" ? "Tamaki ruxsatnomasi / yig'im" : "Сбор/разрешение на табак"} value={taxProfile.tobacco_license_note} onChange={(e) => setTaxProfile(p => ({ ...p, tobacco_license_note: e.target.value }))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs" />
                   </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <input type="url" placeholder={lang === "uz" ? "OFD / Virtual KKM URL (ixtiyoriy)" : "URL шлюза ОФД / Virtual KKM (опц.)"} value={taxProfile.ofd_gateway_url} onChange={(e) => setTaxProfile(p => ({ ...p, ofd_gateway_url: e.target.value }))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono" />
+                    <input type="password" placeholder={taxProfile.has_ofd_token ? (lang === "uz" ? "🟢 Token saqlangan (almashtirish...)" : "🟢 Токен сохранён (заменить...)") : (lang === "uz" ? "OFD API Token (ixtiyoriy)" : "API-токен ОФД (опц.)")} value={taxProfile.ofd_api_token} onChange={(e) => setTaxProfile(p => ({ ...p, ofd_api_token: e.target.value }))} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono" />
+                  </div>
                   <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-indigo-950 dark:text-indigo-200">
                     <input type="checkbox" checked={taxProfile.strict_tobacco_marking} onChange={(e) => setTaxProfile(p => ({ ...p, strict_tobacco_marking: e.target.checked }))} className="rounded text-indigo-600" />
                     <span>🚬 {lang === "uz" ? "Kassada tamaki uchun DataMatrix skaneri majburiy" : "На кассе требовать скан DataMatrix для табака"}</span>
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-cyan-950 dark:text-cyan-200">
+                    <input type="checkbox" checked={taxProfile.strict_beverage_marking} onChange={(e) => setTaxProfile(p => ({ ...p, strict_beverage_marking: e.target.checked }))} className="rounded text-cyan-600" />
+                    <span>🥤 {lang === "uz" ? "Suv, ichimlik va pivo uchun DataMatrix skaneri majburiy (VMQ №631)" : "Требовать DataMatrix для воды, напитков и пива (ПКМ №631)"}</span>
+                  </label>
+                  <div className="text-[10px] text-indigo-700 dark:text-indigo-300 leading-snug bg-white/70 dark:bg-slate-900/60 p-2 rounded-xl border border-indigo-100 dark:border-indigo-900">
+                    ⚠️ {lang === "uz" ? "VMQ №943 bo'yicha qonuniy fiskal chek uchun sertifikatlangan OFD/FM shlyuzi (E-POS, Multikassa, Arca) ulanishi shart." : "По ПКМ №943 для полной юридической фискализации подключите сертифицированный шлюз ОФД/ФМ (E-POS, Multikassa, Arca)."}
+                  </div>
                   <button type="button" disabled={savingTax} onClick={saveTaxProfile} className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs">
                     {savingTax ? "..." : (lang === "uz" ? "Soliq profilini saqlash" : "Сохранить налоговый профиль")}
                   </button>
@@ -1041,10 +1073,18 @@ function SettingsModal({
 }
 
 // ------------------- REUSABLE UZBEKISTAN TAX & TOBACCO PRODUCT FIELDS -------------------
-function TaxProductFields({ token, lang = 'uz', ikpuCode, setIkpuCode, vatRate, setVatRate, isTobacco, setIsTobacco, requiresMarking, setRequiresMarking, productName = '' }) {
+function TaxProductFields({
+  token, lang = 'uz', ikpuCode, setIkpuCode,
+  packageCode, setPackageCode,
+  vatRate, setVatRate,
+  isTobacco, setIsTobacco,
+  requiresMarking, setRequiresMarking,
+  markingGroup = 'NONE', setMarkingGroup,
+  productName = ''
+}) {
   const [searching, setSearching] = useState(false);
   const [hints, setHints] = useState([]);
-  const [showTax, setShowTax] = useState(Boolean(ikpuCode || isTobacco || requiresMarking || Number(vatRate) > 0));
+  const [showTax, setShowTax] = useState(Boolean(ikpuCode || packageCode || isTobacco || requiresMarking || (markingGroup && markingGroup !== 'NONE') || Number(vatRate) > 0));
 
   const runMxikSearch = async () => {
     setSearching(true);
@@ -1074,7 +1114,10 @@ function TaxProductFields({ token, lang = 'uz', ikpuCode, setIkpuCode, vatRate, 
               setIsTobacco(checked);
               if (checked) {
                 setRequiresMarking(true);
+                if (setMarkingGroup) setMarkingGroup('TOBACCO');
                 setShowTax(true);
+              } else if (markingGroup === 'TOBACCO' && setMarkingGroup) {
+                setMarkingGroup('NONE');
               }
             }}
             className="w-4 h-4 rounded text-amber-600"
@@ -1082,7 +1125,7 @@ function TaxProductFields({ token, lang = 'uz', ikpuCode, setIkpuCode, vatRate, 
           <span>🚬 {lang === 'uz' ? "Tamaki / 18+ (DataMatrix)" : "Табак / 18+ (DataMatrix)"}</span>
         </label>
         <button type="button" onClick={() => setShowTax(!showTax)} className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
-          🏛️ {lang === 'uz' ? "IKPU / QQS" : "ИКПУ / НДС"} {showTax ? '▲' : '▼'}
+          🏛️ {lang === 'uz' ? "IKPU / Qadoq / QQS" : "ИКПУ / Упак. / НДС"} {showTax ? '▲' : '▼'}
         </button>
       </div>
 
@@ -1105,6 +1148,38 @@ function TaxProductFields({ token, lang = 'uz', ikpuCode, setIkpuCode, vatRate, 
               <option value="-1">Без НДС</option>
             </select>
           </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <input
+              type="text"
+              placeholder={lang === 'uz' ? "Qadoq kodi (PackageCode)" : "Код упаковки (PackageCode)"}
+              value={packageCode || ''}
+              onChange={(e) => setPackageCode && setPackageCode(e.target.value.trim().slice(0, 32))}
+              className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-[11px] font-mono"
+            />
+            <select
+              value={markingGroup || (isTobacco ? 'TOBACCO' : 'NONE')}
+              onChange={(e) => {
+                const mg = e.target.value;
+                if (setMarkingGroup) setMarkingGroup(mg);
+                if (mg === 'TOBACCO') {
+                  setIsTobacco(true);
+                  setRequiresMarking(true);
+                } else if (mg !== 'NONE') {
+                  setIsTobacco(false);
+                  setRequiresMarking(true);
+                } else {
+                  setIsTobacco(false);
+                }
+              }}
+              className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2 py-1.5 text-[11px] font-bold"
+            >
+              <option value="NONE">{lang === 'uz' ? "Markirovkasiz" : "Без маркировки"}</option>
+              <option value="TOBACCO">🚬 {lang === 'uz' ? "Tamaki (18+)" : "Табак / стики"}</option>
+              <option value="BEVERAGES">🥤 {lang === 'uz' ? "Suv va ichimliklar" : "Вода и напитки"}</option>
+              <option value="BEER_ALCOHOL">🍺 {lang === 'uz' ? "Pivo / Alkogol" : "Пиво / Алкоголь"}</option>
+              <option value="OTHER">🏷️ {lang === 'uz' ? "Boshqa markirovka" : "Прочее Asl Belgisi"}</option>
+            </select>
+          </div>
           <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-600 dark:text-slate-300">
             <input type="checkbox" checked={Boolean(requiresMarking)} onChange={(e) => setRequiresMarking(e.target.checked)} className="rounded text-indigo-600" />
             <span>🏷️ {lang === 'uz' ? "Majburiy markirovka (Asl Belgisi DataMatrix)" : "Обязательная маркировка (Asl Belgisi DataMatrix)"}</span>
@@ -1115,10 +1190,19 @@ function TaxProductFields({ token, lang = 'uz', ikpuCode, setIkpuCode, vatRate, 
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => { setIkpuCode(h.mxik); setHints([]); }}
+                  onClick={() => {
+                    setIkpuCode(h.mxik);
+                    if (setPackageCode && h.package_code) setPackageCode(h.package_code);
+                    if (h.marking_group && h.marking_group !== 'NONE') {
+                      setRequiresMarking(true);
+                      if (setMarkingGroup) setMarkingGroup(h.marking_group);
+                      setIsTobacco(h.marking_group === 'TOBACCO');
+                    }
+                    setHints([]);
+                  }}
                   className="w-full text-left px-2 py-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-[10px] flex justify-between gap-2"
                 >
-                  <span className="truncate">{h.name}</span>
+                  <span className="truncate">{h.name}{h.package_code ? ` [${h.package_code}]` : ''}</span>
                   <span className="font-mono font-bold text-indigo-600 shrink-0">{h.mxik}</span>
                 </button>
               ))}
@@ -1143,9 +1227,11 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
   const [stockQuantity, setStockQuantity] = useState(String(product.stock_quantity ?? "0"));
   const [expiryDate, setExpiryDate] = useState(product.expiry_date || "");
   const [ikpuCode, setIkpuCode] = useState(product.ikpu_code || "");
+  const [packageCode, setPackageCode] = useState(product.package_code || "");
   const [vatRate, setVatRate] = useState(Number(product.vat_rate ?? 0));
   const [isTobacco, setIsTobacco] = useState(Boolean(product.is_tobacco));
   const [requiresMarking, setRequiresMarking] = useState(Boolean(product.requires_marking));
+  const [markingGroup, setMarkingGroup] = useState(product.marking_group || (product.is_tobacco ? "TOBACCO" : "NONE"));
   const [isQuick, setIsQuick] = useState(Boolean(product.is_quick));
   const [loading, setLoading] = useState(false);
 
@@ -1189,9 +1275,11 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
         stock_quantity: Number(stockQuantity) || 0,
         expiry_date: expiryDate.trim() || null,
         ikpu_code: ikpuCode.trim() || null,
+        package_code: packageCode.trim() || null,
         vat_rate: Number(vatRate) || 0,
         is_tobacco: Boolean(isTobacco),
-        requires_marking: Boolean(requiresMarking || isTobacco),
+        requires_marking: Boolean(requiresMarking || isTobacco || (markingGroup && markingGroup !== "NONE")),
+        marking_group: isTobacco ? "TOBACCO" : (markingGroup || "NONE"),
         is_quick: Boolean(isQuick)
       };
       const res = await fetch(`${API_BASE}/products/${product.id}`, {
@@ -1288,12 +1376,16 @@ function EditProductModal({ token, product, categories: propCategories, onClose,
             lang={lang}
             ikpuCode={ikpuCode}
             setIkpuCode={setIkpuCode}
+            packageCode={packageCode}
+            setPackageCode={setPackageCode}
             vatRate={vatRate}
             setVatRate={setVatRate}
             isTobacco={isTobacco}
             setIsTobacco={setIsTobacco}
             requiresMarking={requiresMarking}
             setRequiresMarking={setRequiresMarking}
+            markingGroup={markingGroup}
+            setMarkingGroup={setMarkingGroup}
             productName={name}
           />
 
@@ -2751,9 +2843,11 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
   const [stockQuantity, setStockQuantity] = useState('1');
   const [expiryDate, setExpiryDate] = useState('');
   const [ikpuCode, setIkpuCode] = useState('');
+  const [packageCode, setPackageCode] = useState('');
   const [vatRate, setVatRate] = useState(0);
   const [isTobacco, setIsTobacco] = useState(false);
   const [requiresMarking, setRequiresMarking] = useState(false);
+  const [markingGroup, setMarkingGroup] = useState('NONE');
   const [isQuick, setIsQuick] = useState(false);
   const [cameraActive, setCameraActive] = useState(Boolean(autoScanOnMount && !initialBarcode));
   const [voiceActive, setVoiceActive] = useState(false);
@@ -2848,9 +2942,11 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
           stock_quantity: Number(stockQuantity) || 0,
           expiry_date: expiryDate.trim() || null,
           ikpu_code: ikpuCode.trim() || null,
+          package_code: packageCode.trim() || null,
           vat_rate: Number(vatRate) || 0,
           is_tobacco: Boolean(isTobacco),
-          requires_marking: Boolean(requiresMarking || isTobacco),
+          requires_marking: Boolean(requiresMarking || isTobacco || (markingGroup && markingGroup !== 'NONE')),
+          marking_group: isTobacco ? 'TOBACCO' : (markingGroup || 'NONE'),
           is_quick: Boolean(isQuick)
         })
       });
@@ -2869,6 +2965,10 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
         setStockQuantity('1');
         setExpiryDate('');
         setIkpuCode('');
+        setPackageCode('');
+        setIsTobacco(false);
+        setRequiresMarking(false);
+        setMarkingGroup('NONE');
         setIsQuick(false);
         setCameraActive(true);
       } else {
@@ -3051,12 +3151,16 @@ function CreateProductModal({ token, initialBarcode = '', autoScanOnMount = fals
             lang={lang}
             ikpuCode={ikpuCode}
             setIkpuCode={setIkpuCode}
+            packageCode={packageCode}
+            setPackageCode={setPackageCode}
             vatRate={vatRate}
             setVatRate={setVatRate}
             isTobacco={isTobacco}
             setIsTobacco={setIsTobacco}
             requiresMarking={requiresMarking}
             setRequiresMarking={setRequiresMarking}
+            markingGroup={markingGroup}
+            setMarkingGroup={setMarkingGroup}
             productName={name}
           />
 
@@ -4496,10 +4600,15 @@ function ReceiptModal({ receipt, onClose, t }) {
               {receipt.tax_profile?.inn_stir && (
                 <div className="text-[10px] text-slate-600">STIR/ИНН: {receipt.tax_profile.inn_stir}</div>
               )}
+              {receipt.tax_profile?.kkm_serial && (
+                <div className="text-[10px] text-slate-500">KKM/FM: {receipt.tax_profile.kkm_serial}</div>
+              )}
               {receipt.tax_profile?.address && (
                 <div className="text-[10px] text-slate-500">{receipt.tax_profile.address}</div>
               )}
-              <div className="text-[11px] text-slate-600">{receipt.receipt_number}</div>
+              <div className="text-[11px] text-slate-600">
+                {receipt.receipt_number}{receipt.shift_id ? ` • Smena #${receipt.shift_id}` : ''}
+              </div>
               <div className="text-[10px] text-slate-500">{new Date(receipt.created_at || Date.now()).toLocaleString()}</div>
               <div className="text-[10px] text-slate-500">Kassir: {receipt.cashier_name || 'Kassir'}</div>
             </div>
@@ -4508,10 +4617,20 @@ function ReceiptModal({ receipt, onClose, t }) {
               {safeArray(receipt.items).map((it, idx) => (
                 <div key={idx} className="py-1.5 flex justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold truncate">{it.is_tobacco ? '🚬 ' : ''}{it.product_name}</div>
-                    <div className="text-[10px] text-slate-500">{it.quantity} x {formatMoney(it.unit_price)}</div>
-                    {it.ikpu_code && (
-                      <div className="text-[9px] text-slate-400">IKPU: {it.ikpu_code}</div>
+                    <div className="font-bold truncate">
+                      {it.is_tobacco ? '🚬 ' : (it.marking_group === 'BEVERAGES' ? '🥤 ' : (it.marking_group === 'BEER_ALCOHOL' ? '🍺 ' : ''))}
+                      {it.product_name}
+                    </div>
+                    <div className="text-[10px] text-slate-500">
+                      {it.quantity} {it.unit || 'dona'} x {formatMoney(it.unit_price)}
+                      {Number(it.vat_rate) > 0 ? ` • QQS ${it.vat_rate}% (${formatMoney(it.vat_amount)})` : ''}
+                    </div>
+                    {(it.ikpu_code || it.package_code || it.barcode) && (
+                      <div className="text-[9px] text-slate-400">
+                        {it.ikpu_code ? `IKPU:${it.ikpu_code} ` : ''}
+                        {it.package_code ? `Qadoq:${it.package_code} ` : ''}
+                        {it.barcode ? `GTIN:${it.barcode}` : ''}
+                      </div>
                     )}
                     {(it.masked_marking_code || it.marking_code) && (
                       <div className="text-[9px] text-emerald-700 font-bold">DM: {it.masked_marking_code || it.marking_code}</div>
@@ -4561,8 +4680,23 @@ function ReceiptModal({ receipt, onClose, t }) {
                   <span>{formatMoney(receipt.debt_amount)} ({receipt.debtor_name})</span>
                 </div>
               )}
+              {receipt.payment_method === 'DEBT' && (
+                <div className="text-[9px] text-amber-700 bg-amber-50 p-1.5 rounded-lg leading-tight">
+                  🧾 {lang === 'uz' ? "Nasiya cheki (to'lov vaqtida qarz so'ndirish cheki uriladi)" : "Чек отгрузки в долг / рассрочку (при оплате пробивается чек погашения)"}
+                </div>
+              )}
             </div>
-            <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-0.5">
+            <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-dashed border-slate-300 space-y-1">
+              {receipt.fiscal_qr_svg && (
+                <img
+                  src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(receipt.fiscal_qr_svg)}`}
+                  alt="Soliq QR"
+                  className="w-24 h-24 mx-auto border border-slate-200 rounded-lg p-1 bg-white"
+                />
+              )}
+              {receipt.fiscal_sign && (
+                <div className="text-[9px] text-slate-600 font-bold">FM belgi: {receipt.fiscal_sign}</div>
+              )}
               <div>{lang === 'uz' ? "Xaridingiz uchun rahmat!" : "Спасибо за покупку!"}</div>
               <div className="text-[9px] text-slate-400">
                 {receipt.fiscal_status === 'FISCALIZED'
@@ -8269,6 +8403,23 @@ function AnalyticsScreen({ token, notify, t }) {
           <div className="py-16 text-center text-xs text-slate-400">{t.processing}</div>
         ) : (
           <div className="space-y-2.5 text-xs">
+            {/* 5-point Soliq & Asl Belgisi Readiness Checklist */}
+            {safeArray(taxReport.compliance_checklist).length > 0 && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5">
+                <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
+                  🛡️ {lang === 'uz' ? 'Soliq va Asl Belgisi tayyorlik tekshiruvi (100%)' : 'Чек-лист соответствия закону РУз (ПКМ №943 / №631)'}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                  {safeArray(taxReport.compliance_checklist).map((chk) => (
+                    <div key={chk.key} className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border text-[11px] ${chk.ok ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'}`}>
+                      <span className="font-bold truncate">{chk.ok ? '✅' : '⚠️'} {lang === 'uz' ? chk.label_uz : chk.label_ru}</span>
+                      <span className="font-mono text-[10px] shrink-0 opacity-85">{chk.detail}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Warnings / Soliq Audit */}
             {safeArray(taxReport.warnings).length > 0 && (
               <div className="space-y-1.5">
@@ -8294,35 +8445,55 @@ function AnalyticsScreen({ token, notify, t }) {
                 <div className="text-[10px] text-slate-400">{lang === 'uz' ? `Topshirish: oyning ${taxReport.summary.filing_deadline_day}-sanasi` : `Срок сдачи: до ${taxReport.summary.filing_deadline_day}-го`}</div>
               </div>
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
-                <div className="text-[11px] text-slate-500 font-semibold">🏛️ IKPU (MXIK) {lang === 'uz' ? 'holati' : 'база'}</div>
+                <div className="text-[11px] text-slate-500 font-semibold">🏛️ IKPU &amp; {lang === 'uz' ? 'Qadoq' : 'Упаковка'}</div>
                 <div className="text-base sm:text-lg font-black font-mono mt-0.5">{taxReport.catalog_compliance.with_valid_ikpu} / {taxReport.catalog_compliance.total_active_sku}</div>
-                <div className="text-[10px] text-amber-600 font-bold">{taxReport.catalog_compliance.missing_ikpu_count} {lang === 'uz' ? 'ta IKPU kodsiz' : 'без ИКПУ'}</div>
+                <div className="text-[10px] text-amber-600 font-bold">
+                  {taxReport.catalog_compliance.missing_ikpu_count} {lang === 'uz' ? 'IKPUsiz' : 'без ИКПУ'} • 📦 {taxReport.catalog_compliance.with_package_code ?? 0}
+                </div>
               </div>
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3">
-                <div className="text-[11px] text-slate-500 font-semibold">🚬 {lang === 'uz' ? 'Tamaki / DataMatrix' : 'Табачка / Маркировка'}</div>
-                <div className="text-base sm:text-lg font-black font-mono mt-0.5">{taxReport.tobacco_and_marking.tobacco_units_sold} {lang === 'uz' ? 'quti' : 'пачек'}</div>
-                <div className="text-[10px] font-bold text-emerald-600">{taxReport.tobacco_and_marking.datamatrix_coverage_pct}% DataMatrix • {formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)}</div>
+                <div className="text-[11px] text-slate-500 font-semibold">🏷️ {lang === 'uz' ? 'Markirovka (Asl Belgisi)' : 'Маркировка (DataMatrix)'}</div>
+                <div className="text-base sm:text-lg font-black font-mono mt-0.5">{taxReport.tobacco_and_marking.tobacco_units_sold} {lang === 'uz' ? 'dona' : 'шт/пач'}</div>
+                <div className="text-[10px] font-bold text-emerald-600">{taxReport.tobacco_and_marking.datamatrix_coverage_pct}% DM • {formatMoney(taxReport.tobacco_and_marking.tobacco_revenue)}</div>
               </div>
             </div>
 
-            {/* Tobacco & Asl Belgisi DataMatrix Ledger */}
+            {safeArray(taxReport.catalog_compliance.missing_ikpu_sample).length > 0 && (
+              <div className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-2xl p-2.5 space-y-1">
+                <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300">
+                  ⚠️ {lang === 'uz' ? "IKPU (17 raqam) kiritilmagan tovarlar (223-modda 1% jarima xavfi):" : "Товары без 17-значного ИКПУ (риск штрафа 1% по ст. 223 НК):"}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {safeArray(taxReport.catalog_compliance.missing_ikpu_sample).map((p) => (
+                    <span key={p.id} className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[10px] font-medium">
+                      {p.name} ({p.barcode})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* All Asl Belgisi DataMatrix Ledger (Tobacco, Water, Beverages, Beer) */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold">🚬 {lang === 'uz' ? 'Tamaki va DataMatrix jurnali (Asl Belgisi)' : 'Табачка и маркировка (Asl Belgisi DataMatrix)'}</h3>
+                <h3 className="font-bold">🏷️ {lang === 'uz' ? 'Asl Belgisi DataMatrix (Tamaki • Suv • Ichimlik • Pivo)' : 'Маркировка Asl Belgisi (Табак • Вода • Напитки • Пиво)'}</h3>
                 <span className="text-[10px] font-mono text-slate-400">
                   DM ✓ {taxReport.tobacco_and_marking.marked_with_datamatrix_count} / ✗ {taxReport.tobacco_and_marking.missing_datamatrix_count}
                 </span>
               </div>
               {safeArray(taxReport.tobacco_and_marking.marking_ledger).length === 0 ? (
                 <div className="text-center py-4 text-slate-400">
-                  {lang === 'uz' ? "Tanlangan davrda tamaki/markirovka sotuvi yo'q" : 'За период продаж табака/маркировки нет'}
+                  {lang === 'uz' ? "Tanlangan davrda markirovkali tovar sotuvi yo'q" : 'За период продаж маркированных товаров нет'}
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
                   {safeArray(taxReport.tobacco_and_marking.marking_ledger).slice(0, 50).map((m, i) => (
                     <div key={i} className="py-1.5 flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold truncate">{m.product_name} {m.is_returned ? '↩️' : ''}</div>
+                        <div className="font-bold truncate">
+                          {m.product_name} {m.is_returned ? '↩️' : ''}
+                          {m.marking_group_label && <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">{m.marking_group_label}</span>}
+                        </div>
                         <div className="text-[10px] font-mono text-slate-400 truncate">
                           {m.sold_at} • {m.receipt_number} • {m.has_datamatrix ? `DM: ${m.masked_code}` : '⚠️ БЕЗ DATAMATRIX'}
                         </div>
