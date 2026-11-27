@@ -1854,6 +1854,7 @@ function App() {
     setCurrentShift(null);
     localStorage.removeItem('pos_token');
     localStorage.removeItem('pos_user');
+    try { localStorage.removeItem('pos_active_cart'); } catch (e) {}
   };
 
   useEffect(() => {
@@ -4555,12 +4556,16 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
   const cashDue = method === 'CASH' ? finalTotal : method === 'MIXED' ? Math.max(0, finalTotal - cardNum - debtNum) : 0;
   const changeAmount = (method === 'CASH' || method === 'MIXED') ? Math.max(0, cashNum - cashDue) : 0;
 
+  const submitLockRef = useRef(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     if ((method === 'DEBT' || (method === 'MIXED' && debtNum > 0)) && !selectedDebtorId) {
       notify(lang === 'uz' ? "Qarzga berish uchun mijozni tanlang!" : "Выберите клиента для записи в долг!", 'error');
       return;
     }
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const activeStoreId = (() => { try { return localStorage.getItem('pos_store_id') || ''; } catch (e) { return ''; } })();
@@ -4595,6 +4600,7 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
       playAudioCue('error');
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -4917,14 +4923,17 @@ function PayDebtModal({ token, lang = 'uz', debtor, onClose, onSuccess, notify, 
   const [amount, setAmount] = useState(debtor.balance > 0 ? String(debtor.balance) : '');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     const num = Number(amount);
     if (!(num > 0)) {
       notify(lang === 'uz' ? "To'lov summasini kiriting" : "Введите сумму оплаты", 'error');
       return;
     }
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}/pay`, {
@@ -4940,6 +4949,7 @@ function PayDebtModal({ token, lang = 'uz', debtor, onClose, onSuccess, notify, 
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5017,6 +5027,7 @@ function AddDebtModal({ token, lang = 'uz', debtor, onClose, onSuccess, notify, 
   const [dueDate, setDueDate] = useState(debtor.due_date || '');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
 
   const setQuickDue = (days) => {
     const d = new Date(Date.now() + days * 86400000);
@@ -5025,11 +5036,13 @@ function AddDebtModal({ token, lang = 'uz', debtor, onClose, onSuccess, notify, 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     const num = Number(amount);
     if (!(num > 0)) {
       notify(lang === 'uz' ? "Qarz summasini kiriting" : "Введите сумму долга", 'error');
       return;
     }
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}/add-debt`, {
@@ -5048,6 +5061,7 @@ function AddDebtModal({ token, lang = 'uz', debtor, onClose, onSuccess, notify, 
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5382,8 +5396,17 @@ function CreateInvoiceModal({ token, lang = 'uz', suppliers, catalogSample, onCl
   const [supplierId, setSupplierId] = useState(suppliers?.[0]?.id ? String(suppliers[0].id) : '');
   const [paidAmount, setPaidAmount] = useState('0');
   const [note, setNote] = useState('');
+  const [skuFilter, setSkuFilter] = useState('');
   const [items, setItems] = useState([{ product_id: '', product_name: '', quantity: '1', purchase_price: '' }]);
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
+
+  const filteredCatalog = useMemo(() => {
+    const all = safeArray(catalogSample);
+    const q = skuFilter.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter(p => (p.name || '').toLowerCase().includes(q) || (p.barcode || '').includes(q));
+  }, [catalogSample, skuFilter]);
 
   const addRow = () => setItems(prev => [...prev, { product_id: '', product_name: '', quantity: '1', purchase_price: '' }]);
   const removeRow = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
@@ -5406,6 +5429,7 @@ function CreateInvoiceModal({ token, lang = 'uz', suppliers, catalogSample, onCl
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     if (!supplierId) {
       notify(lang === 'uz' ? "Ta'minotchini tanlang" : "Выберите поставщика", 'error');
       return;
@@ -5422,6 +5446,7 @@ function CreateInvoiceModal({ token, lang = 'uz', suppliers, catalogSample, onCl
       notify(lang === 'uz' ? "Kamida 1 ta tovar kiriting" : "Добавьте хотя бы 1 товар", 'error');
       return;
     }
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/suppliers/invoices`, {
@@ -5440,6 +5465,7 @@ function CreateInvoiceModal({ token, lang = 'uz', suppliers, catalogSample, onCl
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5463,21 +5489,30 @@ function CreateInvoiceModal({ token, lang = 'uz', suppliers, catalogSample, onCl
             </div>
             <div>
               <label className="block text-xs font-bold mb-1">{lang === 'uz' ? "To'langan summa (so'm):" : "Оплачено сразу (сум):"}</label>
-              <input type="number" min="0" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
+              <input type="number" min="0" step="any" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold">{lang === 'uz' ? "Tovarlar ro'yxati:" : "Список товаров:"}</span>
-              <button type="button" onClick={addRow} className="text-xs font-bold text-emerald-600 hover:underline">+ {lang === 'uz' ? "Qator qo'shish" : "Добавить строку"}</button>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold shrink-0">{lang === 'uz' ? "Tovarlar ro'yxati:" : "Список товаров:"}</span>
+              {safeArray(catalogSample).length > 8 && (
+                <input
+                  type="text"
+                  value={skuFilter}
+                  onChange={(e) => setSkuFilter(e.target.value)}
+                  placeholder={lang === 'uz' ? "Ro'yxatdan izlash..." : "Фильтр товаров..."}
+                  className="flex-1 max-w-[180px] bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-[11px]"
+                />
+              )}
+              <button type="button" onClick={addRow} className="text-xs font-bold text-emerald-600 hover:underline shrink-0">+ {lang === 'uz' ? "Qator qo'shish" : "Добавить строку"}</button>
             </div>
             {items.map((row, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-1.5 items-center bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="col-span-5">
                   <select value={row.product_id} onChange={(e) => updateRow(idx, 'product_id', e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-[11px] mb-1">
                     <option value="">{lang === 'uz' ? '-- Yoki yangi nom --' : '-- Новый товар --'}</option>
-                    {safeArray(catalogSample).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {filteredCatalog.slice(0, 200).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                   {!row.product_id && (
                     <input type="text" placeholder={lang === 'uz' ? "Yangi tovar nomi" : "Название товара"} value={row.product_name} onChange={(e) => updateRow(idx, 'product_name', e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-[11px]" />
@@ -5487,7 +5522,7 @@ function CreateInvoiceModal({ token, lang = 'uz', suppliers, catalogSample, onCl
                   <input type="number" step="any" min="0.01" placeholder="Soni" value={row.quantity} onChange={(e) => updateRow(idx, 'quantity', e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-center" />
                 </div>
                 <div className="col-span-3">
-                  <input type="number" min="0" placeholder="Kirim narx" value={row.purchase_price} onChange={(e) => updateRow(idx, 'purchase_price', e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono" />
+                  <input type="number" min="0" step="any" placeholder="Kirim narx" value={row.purchase_price} onChange={(e) => updateRow(idx, 'purchase_price', e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono" />
                 </div>
                 <div className="col-span-1 text-center">
                   {items.length > 1 && <button type="button" onClick={() => removeRow(idx)} className="text-rose-500 font-bold">✕</button>}
@@ -5514,11 +5549,14 @@ function CreateInvoiceModal({ token, lang = 'uz', suppliers, catalogSample, onCl
 function PayInvoiceModal({ token, lang = 'uz', invoice, onClose, onSuccess, notify, t }) {
   const [amount, setAmount] = useState(String(invoice.debt_to_supplier || 0));
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     const num = Number(amount);
     if (!(num > 0)) return;
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/suppliers/invoices/${invoice.id}/pay`, {
@@ -5532,6 +5570,7 @@ function PayInvoiceModal({ token, lang = 'uz', invoice, onClose, onSuccess, noti
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5815,7 +5854,28 @@ function RefundModal({ token, onClose, onPrintReceipt, notify, lang = 'uz', onRe
     await selectReceiptByNumber(receiptNum);
   };
 
+  const refundSubmitLockRef = useRef(false);
+
+  const groupedRefundItems = useMemo(() => {
+    const map = {};
+    safeArray(receiptData?.items).forEach((it) => {
+      if (!map[it.product_id]) {
+        map[it.product_id] = {
+          product_id: it.product_id,
+          product_name: it.product_name,
+          quantity: 0,
+          unit_price: it.unit_price,
+          refundable_quantity: 0,
+        };
+      }
+      map[it.product_id].quantity = Math.round((map[it.product_id].quantity + Number(it.quantity || 0)) * 1000) / 1000;
+      map[it.product_id].refundable_quantity = Math.round((map[it.product_id].refundable_quantity + Number(it.refundable_quantity || 0)) * 1000) / 1000;
+    });
+    return Object.values(map);
+  }, [receiptData]);
+
   const handleRefund = async () => {
+    if (refundSubmitLockRef.current) return;
     const itemsToReturn = Object.entries(returnQtys)
       .filter(([_, q]) => Number(q) > 0)
       .map(([pid, q]) => ({ product_id: Number(pid), quantity: Number(q), reason: reason || 'Mijoz qaytardi' }));
@@ -5823,6 +5883,7 @@ function RefundModal({ token, onClose, onPrintReceipt, notify, lang = 'uz', onRe
       notify(lang === 'uz' ? "Qaytariladigan tovar miqdorini kiriting" : "Укажите количество для возврата", 'error');
       return;
     }
+    refundSubmitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/pos/refund`, {
@@ -5843,6 +5904,7 @@ function RefundModal({ token, onClose, onPrintReceipt, notify, lang = 'uz', onRe
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      refundSubmitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5914,14 +5976,14 @@ function RefundModal({ token, onClose, onPrintReceipt, notify, lang = 'uz', onRe
                 </div>
               </div>
 
-              {safeArray(receiptData.items).map(it => (
+              {groupedRefundItems.map(it => (
                 <div key={it.product_id} className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 text-xs">
                   <div className="min-w-0 flex-1">
                     <div className="font-bold truncate">{it.product_name}</div>
                     <div className="text-[11px] text-slate-500">{it.quantity} x {formatMoney(it.unit_price)} ({lang === 'uz' ? 'Mumkin:' : 'Дост:'} {it.refundable_quantity})</div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button type="button" onClick={() => setReturnQtys(prev => ({ ...prev, [it.product_id]: it.refundable_quantity }))} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-bold">Hammasi</button>
+                    <button type="button" onClick={() => setReturnQtys(prev => ({ ...prev, [it.product_id]: it.refundable_quantity }))} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-bold">{lang === 'uz' ? 'Hammasi' : 'Все'}</button>
                     <input
                       type="number"
                       min="0"
@@ -6176,7 +6238,20 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      return safeArray(JSON.parse(localStorage.getItem('pos_active_cart') || '[]'));
+    } catch (e) {
+      return [];
+    }
+  });
+  const directSubmitLockRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pos_active_cart', JSON.stringify(cart));
+    } catch (e) {}
+  }, [cart]);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [checkoutInitialMethod, setCheckoutInitialMethod] = useState('CASH');
   const [lastReceipt, setLastReceipt] = useState(null);
@@ -6288,35 +6363,42 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
 
   // Hotkeys for PC cashiers (F2, F3, F5, F6, F7, F12, Esc)
   useEffect(() => {
+    const anyModalOpen = checkoutModalOpen || scannerActive || parkedModalOpen || shiftModalOpen || refundModalOpen || priceCheckOpen || voiceAssistantOpen || voiceDebtOpen || Boolean(createProductOpen) || markingScanKey !== null;
     const handleKeyDown = (e) => {
       if (e.key === 'F2') {
+        if (anyModalOpen) return;
         e.preventDefault();
         if (searchInputRef.current) searchInputRef.current.focus();
       } else if (e.key === 'F3') {
+        if (anyModalOpen) return;
         e.preventDefault();
         setVoiceAssistantOpen(true);
       } else if (e.key === 'F5') {
+        if (anyModalOpen || directSubmitLockRef.current) return;
         e.preventDefault();
         if (cart.length > 0) handleDirectCheckout('CASH');
       } else if (e.key === 'F6') {
+        if (anyModalOpen || directSubmitLockRef.current) return;
         e.preventDefault();
         if (cart.length > 0) handleDirectCheckout('CARD');
       } else if (e.key === 'F7') {
+        if (anyModalOpen || directSubmitLockRef.current) return;
         e.preventDefault();
         if (cart.length > 0) handleDirectCheckout('DEBT');
       } else if (e.key === 'F12') {
+        if (anyModalOpen) return;
         e.preventDefault();
         if (cart.length > 0) setCheckoutModalOpen(true);
       } else if (e.key === 'Escape') {
         if (checkoutModalOpen) setCheckoutModalOpen(false);
         else if (scannerActive) setScannerActive(false);
         else if (parkedModalOpen) setParkedModalOpen(false);
-        else if (cart.length > 0) parkCurrentCart();
+        else if (!anyModalOpen && cart.length > 0) parkCurrentCart();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, cartTotal, checkoutModalOpen, scannerActive, parkedModalOpen, parkedCarts]);
+  }, [cart, cartTotal, checkoutModalOpen, scannerActive, parkedModalOpen, parkedCarts, shiftModalOpen, refundModalOpen, priceCheckOpen, voiceAssistantOpen, voiceDebtOpen, createProductOpen, markingScanKey]);
 
   const parkCurrentCart = () => {
     if (cart.length === 0) {
@@ -6357,6 +6439,9 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
     setCart(found.items);
     setSelectedCashReceived(null);
     setParkedModalOpen(false);
+    setSearch('');
+    setSelectedCategory(null);
+    setShowAllCatalog(false);
     notify(lang === 'uz' ? `Chek #${heldId} tiklandi` : `Чек #${heldId} восстановлен`, 'success');
   };
 
@@ -6454,7 +6539,10 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       sale_price: item.sale_price !== undefined ? item.sale_price : item.price,
       purchase_price: item.purchase_price !== undefined ? item.purchase_price : Math.round((item.sale_price || item.price) * 0.75),
       unit: item.unit || 'dona',
-      stock_quantity: item.stock_quantity !== undefined ? item.stock_quantity : 999
+      stock_quantity: item.stock_quantity !== undefined ? item.stock_quantity : 999,
+      is_tobacco: Boolean(item.is_tobacco),
+      requires_marking: Boolean(item.requires_marking || item.is_tobacco),
+      marking_group: item.marking_group || (item.is_tobacco ? 'TOBACCO' : 'NONE'),
     };
     addToCart(prod, 1.0);
     notify(`${item.name} (+1)`);
@@ -6516,12 +6604,13 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   };
 
   const handleDirectCheckout = async (paymentMethod) => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || directSubmitLockRef.current) return;
     if (paymentMethod === 'DEBT' || paymentMethod === 'MIXED') {
       setCheckoutInitialMethod(paymentMethod);
       setCheckoutModalOpen(true);
       return;
     }
+    directSubmitLockRef.current = true;
     setDirectLoading(true);
     try {
       const cashVal = paymentMethod === 'CASH' ? cashGiven : 0;
@@ -6571,6 +6660,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
       playAudioCue('error');
       notify(err.message, 'error');
     } finally {
+      directSubmitLockRef.current = false;
       setDirectLoading(false);
     }
   };

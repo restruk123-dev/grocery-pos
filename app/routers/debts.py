@@ -2,9 +2,10 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import update as sa_update
 from sqlmodel import Session, select, func, or_
 
-from ..database import get_session
+from ..database import get_session, sqlite_write_lock
 from ..models import Debtor, DebtTransaction, DebtTransactionType, User
 from ..auth import get_current_user
 from ..services.translit import get_search_variants
@@ -195,35 +196,45 @@ def pay_debt(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    debtor = session.get(Debtor, debtor_id)
-    if not debtor or not debtor.is_active:
-        raise HTTPException(status_code=404, detail="Qarzdor topilmadi / Должник не найден")
-
-    now_utc = datetime.now(timezone.utc)
+    uid = current_user.id
+    uname = current_user.full_name
     amount = round(data.amount, 2)
-    previous_balance = round(debtor.balance or 0.0, 2)
-    new_balance = round(previous_balance - amount, 2)
-    debtor.balance = new_balance
-    if data.due_date:
-        debtor.due_date = data.due_date
-    debtor.updated_at = now_utc
-    session.add(debtor)
+    now_utc = datetime.now(timezone.utc)
 
-    tx = DebtTransaction(
-        debtor_id=debtor.id,
-        amount=amount,
-        transaction_type=DebtTransactionType.DEBT_PAYMENT,
-        note=data.note or "Qarz to'lovi / Внесение оплаты долга",
-        due_date=data.due_date,
-        created_by_user_id=current_user.id,
-        created_at=now_utc
-    )
-    session.add(tx)
-    session.commit()
-    session.refresh(tx)
+    with sqlite_write_lock(session):
+        debtor = session.get(Debtor, debtor_id)
+        if not debtor or not debtor.is_active:
+            raise HTTPException(status_code=404, detail="Qarzdor topilmadi / Должник не найден")
 
-    from ..services.uz_tax import get_tax_profile
-    tax_profile = get_tax_profile(session)
+        update_vals = {
+            "balance": func.round(func.coalesce(Debtor.balance, 0.0) - amount, 2),
+            "updated_at": now_utc,
+        }
+        if data.due_date:
+            update_vals["due_date"] = data.due_date
+        session.exec(
+            sa_update(Debtor).where(Debtor.id == debtor_id).values(**update_vals)
+        )
+        session.flush()
+        session.refresh(debtor)
+        new_balance = round(float(debtor.balance or 0.0), 2)
+        previous_balance = round(new_balance + amount, 2)
+
+        tx = DebtTransaction(
+            debtor_id=debtor.id,
+            amount=amount,
+            transaction_type=DebtTransactionType.DEBT_PAYMENT,
+            note=data.note or "Qarz to'lovi / Внесение оплаты долга",
+            due_date=data.due_date,
+            created_by_user_id=uid,
+            created_at=now_utc
+        )
+        session.add(tx)
+        session.commit()
+        session.refresh(tx)
+
+        from ..services.uz_tax import get_tax_profile
+        tax_profile = get_tax_profile(session)
 
     return {
         "message": f"To'lov qabul qilindi: {amount} so'm / Оплата {amount} успешно принята",
@@ -231,10 +242,10 @@ def pay_debt(
         "debtor_name": debtor.full_name,
         "previous_balance": previous_balance,
         "amount_paid": amount,
-        "new_balance": debtor.balance,
+        "new_balance": new_balance,
         "transaction_id": tx.id,
         "paid_at": now_utc.isoformat(),
-        "cashier_name": current_user.full_name,
+        "cashier_name": uname,
         "payment_receipt_type": "CREDIT_REPAYMENT",
         "tax_profile": {
             "legal_name": tax_profile.get("legal_name") or "",
@@ -249,31 +260,39 @@ def add_debt(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    debtor = session.get(Debtor, debtor_id)
-    if not debtor or not debtor.is_active:
-        raise HTTPException(status_code=404, detail="Qarzdor topilmadi / Должник не найден")
-
-    now_utc = datetime.now(timezone.utc)
+    uid = current_user.id
     amount = round(data.amount, 2)
-    new_balance = round(debtor.balance + amount, 2)
-    debtor.balance = new_balance
-    if data.due_date:
-        debtor.due_date = data.due_date
-    debtor.updated_at = now_utc
-    session.add(debtor)
+    now_utc = datetime.now(timezone.utc)
 
-    tx = DebtTransaction(
-        debtor_id=debtor.id,
-        amount=amount,
-        transaction_type=DebtTransactionType.DEBT_INCREASE,
-        note=data.note or "Qo'shimcha qarz yozildi / Запись дополнительного долга",
-        due_date=data.due_date,
-        created_by_user_id=current_user.id,
-        created_at=now_utc
-    )
-    session.add(tx)
-    session.commit()
-    session.refresh(tx)
+    with sqlite_write_lock(session):
+        debtor = session.get(Debtor, debtor_id)
+        if not debtor or not debtor.is_active:
+            raise HTTPException(status_code=404, detail="Qarzdor topilmadi / Должник не найден")
+
+        update_vals = {
+            "balance": func.round(func.coalesce(Debtor.balance, 0.0) + amount, 2),
+            "updated_at": now_utc,
+        }
+        if data.due_date:
+            update_vals["due_date"] = data.due_date
+        session.exec(
+            sa_update(Debtor).where(Debtor.id == debtor_id).values(**update_vals)
+        )
+        session.flush()
+        session.refresh(debtor)
+
+        tx = DebtTransaction(
+            debtor_id=debtor.id,
+            amount=amount,
+            transaction_type=DebtTransactionType.DEBT_INCREASE,
+            note=data.note or "Qo'shimcha qarz yozildi / Запись дополнительного долга",
+            due_date=data.due_date,
+            created_by_user_id=uid,
+            created_at=now_utc
+        )
+        session.add(tx)
+        session.commit()
+        session.refresh(tx)
 
     return {
         "message": f"Qarz yozildi: {amount} so'm / Долг {amount} успешно зафиксирован",
@@ -289,57 +308,61 @@ def import_debt_batch(
     session: Session = Depends(get_session),
 ):
     """Atomically import reviewed notebook rows as debtors and debt transactions."""
+    uid = current_user.id
     now_utc = datetime.now(timezone.utc)
     created_count = 0
     updated_count = 0
-    try:
-        for row in data.items:
-            if row.debtor_id:
-                debtor = session.get(Debtor, row.debtor_id)
-                if not debtor or not debtor.is_active:
-                    raise HTTPException(status_code=400, detail=f"Должник не найден: {row.debtor_name or row.debtor_id}")
-                updated_count += 1
-            else:
-                name = (row.debtor_name or "").strip()
-                if len(name) < 2:
-                    raise HTTPException(status_code=400, detail="Для каждой строки укажите имя должника")
-                debtor = session.exec(
-                    select(Debtor).where(func.lower(Debtor.full_name) == name.lower(), Debtor.is_active == True)
-                ).first()
-                if debtor:
+    with sqlite_write_lock(session):
+        try:
+            for row in data.items:
+                if row.debtor_id:
+                    debtor = session.get(Debtor, row.debtor_id)
+                    if not debtor or not debtor.is_active:
+                        raise HTTPException(status_code=400, detail=f"Должник не найден: {row.debtor_name or row.debtor_id}")
                     updated_count += 1
                 else:
-                    debtor = Debtor(
-                        full_name=name,
-                        balance=0.0,
-                        is_active=True,
-                        created_at=now_utc,
-                        updated_at=now_utc,
-                    )
-                    session.add(debtor)
-                    session.flush()
-                    created_count += 1
+                    name = (row.debtor_name or "").strip()
+                    if len(name) < 2:
+                        raise HTTPException(status_code=400, detail="Для каждой строки укажите имя должника")
+                    debtor = session.exec(
+                        select(Debtor).where(func.lower(Debtor.full_name) == name.lower(), Debtor.is_active == True)
+                    ).first()
+                    if debtor:
+                        updated_count += 1
+                    else:
+                        debtor = Debtor(
+                            full_name=name,
+                            balance=0.0,
+                            is_active=True,
+                            created_at=now_utc,
+                            updated_at=now_utc,
+                        )
+                        session.add(debtor)
+                        session.flush()
+                        created_count += 1
 
-            debtor.balance = round(debtor.balance + row.amount, 2)
-            debtor.updated_at = now_utc
-            if row.due_date:
-                debtor.due_date = row.due_date
-            if row.note:
-                debtor.note = row.note.strip()
-            session.add(debtor)
-            session.add(DebtTransaction(
-                debtor_id=debtor.id,
-                amount=round(row.amount, 2),
-                transaction_type=DebtTransactionType.DEBT_INCREASE,
-                note=row.note or "Импорт из бумажной тетради",
-                due_date=row.due_date,
-                created_by_user_id=current_user.id,
-                created_at=now_utc,
-            ))
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
+                update_vals = {
+                    "balance": func.round(func.coalesce(Debtor.balance, 0.0) + round(row.amount, 2), 2),
+                    "updated_at": now_utc,
+                }
+                if row.due_date:
+                    update_vals["due_date"] = row.due_date
+                if row.note:
+                    update_vals["note"] = row.note.strip()
+                session.exec(sa_update(Debtor).where(Debtor.id == debtor.id).values(**update_vals))
+                session.add(DebtTransaction(
+                    debtor_id=debtor.id,
+                    amount=round(row.amount, 2),
+                    transaction_type=DebtTransactionType.DEBT_INCREASE,
+                    note=row.note or "Импорт из бумажной тетради",
+                    due_date=row.due_date,
+                    created_by_user_id=uid,
+                    created_at=now_utc,
+                ))
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
 
     return {"created_debtors": created_count, "updated_debtors": updated_count, "imported_rows": len(data.items)}
 

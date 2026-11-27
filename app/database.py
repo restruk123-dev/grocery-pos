@@ -1,5 +1,7 @@
 import os
-from typing import Generator
+import threading
+from contextlib import contextmanager
+from typing import Generator, Optional
 from sqlalchemy import event
 from sqlmodel import SQLModel, create_engine, Session
 from .config import settings
@@ -19,7 +21,7 @@ if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 if db_url.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+    connect_args = {"check_same_thread": False, "timeout": 30}
 
 engine = create_engine(
     db_url,
@@ -27,13 +29,37 @@ engine = create_engine(
     connect_args=connect_args
 )
 
+_SQLITE_WRITE_LOCK = threading.RLock()
+
+
+@contextmanager
+def sqlite_write_lock(session: Optional[Session] = None):
+    """Serialize SQLite write sections and refresh read snapshots to prevent SQLITE_BUSY and lost updates."""
+    use_lock = True
+    if session is not None:
+        try:
+            use_lock = (session.get_bind().dialect.name == "sqlite")
+        except Exception:
+            use_lock = db_url.startswith("sqlite")
+    if not use_lock:
+        yield
+        return
+    with _SQLITE_WRITE_LOCK:
+        # Close any stale read-only snapshot (e.g. from auth dependency) before reading/writing latest WAL state.
+        if session is not None and not (session.dirty or session.new or session.deleted):
+            try:
+                session.commit()
+            except Exception:
+                session.rollback()
+        yield
+
 if db_url.startswith("sqlite"):
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragmas(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.execute("PRAGMA busy_timeout=5000")
+            cursor.execute("PRAGMA busy_timeout=30000")
             if db_url != "sqlite:///:memory:":
                 cursor.execute("PRAGMA journal_mode=WAL")
                 cursor.execute("PRAGMA synchronous=NORMAL")

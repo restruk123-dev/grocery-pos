@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import update as sa_update, func
 from sqlmodel import Session, select
 
-from ..database import get_session
+from ..database import get_session, sqlite_write_lock
 from ..models import (
     Supplier, SupplierInvoice, SupplierInvoiceItem,
     Product, InvoiceStatus, User, UserRole,
@@ -190,10 +191,7 @@ def create_invoice(
     current_user: User = Depends(require_role([UserRole.OWNER])),
     session: Session = Depends(get_session)
 ):
-    supplier = session.get(Supplier, data.supplier_id)
-    if not supplier:
-        raise HTTPException(status_code=404, detail="Поставщик не найден")
-
+    uid = current_user.id if current_user else None
     if not data.items:
         raise HTTPException(status_code=400, detail="Накладная должна содержать хотя бы один товар")
 
@@ -212,78 +210,92 @@ def create_invoice(
     else:
         inv_status = InvoiceStatus.PENDING
 
-    invoice = SupplierInvoice(
-        invoice_number=inv_number,
-        supplier_id=supplier.id,
-        total_amount=total_amount,
-        paid_amount=paid,
-        status=inv_status,
-        note=data.note,
-        invoice_date=now_utc,
-        created_at=now_utc
-    )
+    with sqlite_write_lock(session):
+        supplier = session.get(Supplier, data.supplier_id)
+        if not supplier:
+            raise HTTPException(status_code=404, detail="Поставщик не найден")
 
-    try:
-        session.add(invoice)
-        session.flush()
+        invoice = SupplierInvoice(
+            invoice_number=inv_number,
+            supplier_id=supplier.id,
+            total_amount=total_amount,
+            paid_amount=paid,
+            status=inv_status,
+            note=data.note,
+            invoice_date=now_utc,
+            created_at=now_utc
+        )
 
-        for item in data.items:
-            product = None
-            if item.product_id:
-                product = session.get(Product, item.product_id)
-            if not product and item.barcode:
-                product = session.exec(select(Product).where(Product.barcode == item.barcode.strip(), Product.is_active == True)).first()
-            if not product and item.product_name:
-                product = session.exec(select(Product).where(Product.name == item.product_name.strip(), Product.is_active == True)).first()
+        try:
+            session.add(invoice)
+            session.flush()
 
-            if not product:
-                # Auto-create new product from invoice item
-                p_barcode = item.barcode.strip() if item.barcode else f"INT-{uuid.uuid4().hex[:6].upper()}"
-                p_name = item.product_name.strip() if item.product_name else f"Tovar ({p_barcode})"
-                s_price = round(item.purchase_price * 1.25, 2)
-                product = Product(
-                    barcode=p_barcode,
-                    name=p_name,
-                    purchase_price=item.purchase_price,
-                    sale_price=s_price,
-                    stock_quantity=0.0,
-                    unit="dona",
-                    is_active=True,
-                    created_at=now_utc,
-                    updated_at=now_utc
+            for item in data.items:
+                product = None
+                if item.product_id:
+                    product = session.get(Product, item.product_id)
+                if not product and item.barcode:
+                    product = session.exec(select(Product).where(Product.barcode == item.barcode.strip(), Product.is_active == True)).first()
+                if not product and item.product_name:
+                    product = session.exec(select(Product).where(Product.name == item.product_name.strip(), Product.is_active == True)).first()
+
+                if not product:
+                    # Auto-create new product from invoice item
+                    p_barcode = item.barcode.strip() if item.barcode else f"INT-{uuid.uuid4().hex[:6].upper()}"
+                    p_name = item.product_name.strip() if item.product_name else f"Tovar ({p_barcode})"
+                    s_price = round(item.purchase_price * 1.25, 2)
+                    product = Product(
+                        barcode=p_barcode,
+                        name=p_name,
+                        purchase_price=item.purchase_price,
+                        sale_price=s_price,
+                        stock_quantity=0.0,
+                        unit="dona",
+                        is_active=True,
+                        created_at=now_utc,
+                        updated_at=now_utc
+                    )
+                    session.add(product)
+                    session.flush()
+
+                session.exec(
+                    sa_update(Product)
+                    .where(Product.id == product.id)
+                    .values(
+                        stock_quantity=func.round(Product.stock_quantity + item.quantity, 3),
+                        purchase_price=item.purchase_price,
+                        updated_at=now_utc,
+                    )
                 )
-                session.add(product)
                 session.flush()
+                session.refresh(product)
+                new_stock = round(float(product.stock_quantity), 3)
+                prev_stock = round(new_stock - item.quantity, 3)
 
-            prev_stock = product.stock_quantity
-            product.stock_quantity = round(product.stock_quantity + item.quantity, 3)
-            product.purchase_price = item.purchase_price
-            product.updated_at = now_utc
-            session.add(product)
-            session.add(SupplierInvoiceItem(
-                invoice_id=invoice.id,
-                product_id=product.id,
-                quantity=item.quantity,
-                purchase_price=item.purchase_price,
-                total_price=round(item.quantity * item.purchase_price, 2),
-            ))
-            session.add(StockMovement(
-                product_id=product.id,
-                movement_type=StockMovementType.PURCHASE_INVOICE,
-                quantity_delta=item.quantity,
-                previous_stock=prev_stock,
-                new_stock=product.stock_quantity,
-                cost_price=item.purchase_price,
-                reference_id=invoice.invoice_number,
-                note=f"Yuk xati: {invoice.invoice_number}",
-                created_by_user_id=current_user.id if current_user else None,
-                created_at=now_utc,
-            ))
-        session.commit()
-        session.refresh(invoice)
-    except Exception:
-        session.rollback()
-        raise
+                session.add(SupplierInvoiceItem(
+                    invoice_id=invoice.id,
+                    product_id=product.id,
+                    quantity=item.quantity,
+                    purchase_price=item.purchase_price,
+                    total_price=round(item.quantity * item.purchase_price, 2),
+                ))
+                session.add(StockMovement(
+                    product_id=product.id,
+                    movement_type=StockMovementType.PURCHASE_INVOICE,
+                    quantity_delta=item.quantity,
+                    previous_stock=prev_stock,
+                    new_stock=new_stock,
+                    cost_price=item.purchase_price,
+                    reference_id=invoice.invoice_number,
+                    note=f"Yuk xati: {invoice.invoice_number}",
+                    created_by_user_id=uid,
+                    created_at=now_utc,
+                ))
+            session.commit()
+            session.refresh(invoice)
+        except Exception:
+            session.rollback()
+            raise
 
     debt = round(max(0.0, invoice.total_amount - invoice.paid_amount), 2)
     return {
@@ -303,19 +315,24 @@ def pay_invoice(
     current_user: User = Depends(require_role([UserRole.OWNER])),
     session: Session = Depends(get_session)
 ):
-    invoice = session.get(SupplierInvoice, invoice_id)
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Накладная не найдена")
+    with sqlite_write_lock(session):
+        invoice = session.get(SupplierInvoice, invoice_id)
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Накладная не найдена")
 
-    invoice.paid_amount = round(invoice.paid_amount + data.amount, 2)
-    if invoice.paid_amount >= invoice.total_amount:
-        invoice.status = InvoiceStatus.PAID
-    else:
-        invoice.status = InvoiceStatus.PARTIAL
-
-    session.add(invoice)
-    session.commit()
-    session.refresh(invoice)
+        session.exec(
+            sa_update(SupplierInvoice)
+            .where(SupplierInvoice.id == invoice_id)
+            .values(paid_amount=func.round(SupplierInvoice.paid_amount + data.amount, 2))
+        )
+        session.flush()
+        session.refresh(invoice)
+        new_status = InvoiceStatus.PAID if invoice.paid_amount >= invoice.total_amount else InvoiceStatus.PARTIAL
+        if invoice.status != new_status:
+            invoice.status = new_status
+            session.add(invoice)
+        session.commit()
+        session.refresh(invoice)
 
     return {
         "message": f"Оплата поставщику на сумму {data.amount} сохранена",

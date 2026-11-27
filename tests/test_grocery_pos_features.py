@@ -1031,7 +1031,7 @@ def test_full_e2e_store_workflow_0_to_100(session):
     assert client.get("/health").status_code == 200
     html_res = client.get("/")
     assert html_res.status_code == 200
-    assert "app.css?v=12" in html_res.text and "app.js?v=12" in html_res.text
+    assert "app.css?v=13" in html_res.text and "app.js?v=13" in html_res.text
 
     # 2. Multi-store & Tax Profile setup
     st_res = client.post("/api/v1/pos/stores", json={"name": "Markaziy Savdo", "store_type": "grocery"}, headers=headers)
@@ -1180,6 +1180,79 @@ def test_full_e2e_store_workflow_0_to_100(session):
     assert client.get("/api/v1/backup/info", headers=headers).status_code == 200
     assert client.get("/api/v1/backup/download", headers=headers).status_code == 200
     assert client.get("/api/v1/telegram/status", headers=headers).status_code == 200
+
+
+def test_discounted_multi_datamatrix_refund_and_oversell_guard(session):
+    """Peak-hour regression: returning multiple DataMatrix packs on discounted receipt and overselling check."""
+    token = create_access_token({"sub": "owner", "role": "owner"})
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create marked tobacco SKU with 2 packs in stock
+    p_tob = client.post(
+        "/api/v1/products",
+        json={
+            "name": "Kent Rush Pack",
+            "barcode": "4606203088881",
+            "purchase_price": 22000.0,
+            "sale_price": 28000.0,
+            "stock_quantity": 2.0,
+            "unit": "dona",
+            "ikpu_code": "02402001001000001",
+            "is_tobacco": True,
+            "requires_marking": True,
+        },
+        headers=headers,
+    ).json()
+
+    # Sell both packs in one receipt with a 6 000 discount (gross 56 000 -> paid 50 000)
+    chk = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [
+                {"product_id": p_tob["id"], "quantity": 1, "marking_code": "010460620308888121RUSH0193XY11"},
+                {"product_id": p_tob["id"], "quantity": 1, "marking_code": "010460620308888121RUSH0293XY22"},
+            ],
+            "discount_amount": 6000.0,
+            "payment_method": "CASH",
+            "cash_received": 50000.0,
+        },
+        headers=headers,
+    )
+    assert chk.status_code == 200
+    rc_no = chk.json()["receipt_number"]
+    assert chk.json()["total_amount"] == 50000.0
+
+    # Selling a 3rd pack when stock is 0 returns 409
+    chk_zero = client.post(
+        "/api/v1/pos/checkout",
+        json={
+            "items": [{"product_id": p_tob["id"], "quantity": 1, "marking_code": "010460620308888121RUSH0393XY33"}],
+            "payment_method": "CASH",
+            "cash_received": 30000.0,
+        },
+        headers=headers,
+    )
+    assert chk_zero.status_code == 409
+
+    # Receipt details report both lines accurately
+    det = client.get(f"/api/v1/pos/receipt/{rc_no}", headers=headers).json()
+    assert sum(it["refundable_quantity"] for it in det["items"]) == 2.0
+
+    # Full return of all 2 packs must succeed and refund ONLY the discounted 50 000 (not 56 000)
+    ref = client.post(
+        "/api/v1/pos/refund",
+        json={"receipt_number": rc_no, "items": [{"product_id": p_tob["id"], "quantity": 2}], "reason": "Full return"},
+        headers=headers,
+    )
+    assert ref.status_code == 200
+    assert ref.json()["total_refund_amount"] == 50000.0
+    assert ref.json()["cash_refunded"] == 50000.0
+
+    # Stock restored back to 2.0 and receipt shows fully refunded
+    det_after = client.get(f"/api/v1/pos/receipt/{rc_no}", headers=headers).json()
+    assert det_after["is_fully_refunded"] is True
+    prod_after = client.get("/api/v1/products/barcode/4606203088881", headers=headers).json()
+    assert prod_after["stock_quantity"] == 2.0
 
 
 

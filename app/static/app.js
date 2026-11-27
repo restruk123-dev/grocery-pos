@@ -2361,6 +2361,9 @@ function App() {
     setCurrentShift(null);
     localStorage.removeItem('pos_token');
     localStorage.removeItem('pos_user');
+    try {
+      localStorage.removeItem('pos_active_cart');
+    } catch (e) {}
   };
   useEffect(() => {
     const onUnauthorized = () => {
@@ -4976,12 +4979,15 @@ function CheckoutModal({
   const debtNum = Number(debtAmount) || 0;
   const cashDue = method === 'CASH' ? finalTotal : method === 'MIXED' ? Math.max(0, finalTotal - cardNum - debtNum) : 0;
   const changeAmount = method === 'CASH' || method === 'MIXED' ? Math.max(0, cashNum - cashDue) : 0;
+  const submitLockRef = useRef(false);
   const handleSubmit = async e => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     if ((method === 'DEBT' || method === 'MIXED' && debtNum > 0) && !selectedDebtorId) {
       notify(lang === 'uz' ? "Qarzga berish uchun mijozni tanlang!" : "Выберите клиента для записи в долг!", 'error');
       return;
     }
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const activeStoreId = (() => {
@@ -5025,6 +5031,7 @@ function CheckoutModal({
       playAudioCue('error');
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5374,13 +5381,16 @@ function PayDebtModal({
   const [amount, setAmount] = useState(debtor.balance > 0 ? String(debtor.balance) : '');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
   const handleSubmit = async e => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     const num = Number(amount);
     if (!(num > 0)) {
       notify(lang === 'uz' ? "To'lov summasini kiriting" : "Введите сумму оплаты", 'error');
       return;
     }
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}/pay`, {
@@ -5402,6 +5412,7 @@ function PayDebtModal({
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5484,17 +5495,20 @@ function AddDebtModal({
   const [dueDate, setDueDate] = useState(debtor.due_date || '');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
   const setQuickDue = days => {
     const d = new Date(Date.now() + days * 86400000);
     setDueDate(d.toISOString().split('T')[0]);
   };
   const handleSubmit = async e => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     const num = Number(amount);
     if (!(num > 0)) {
       notify(lang === 'uz' ? "Qarz summasini kiriting" : "Введите сумму долга", 'error');
       return;
     }
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/debts/debtors/${debtor.id}/add-debt`, {
@@ -5516,6 +5530,7 @@ function AddDebtModal({
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5892,6 +5907,7 @@ function CreateInvoiceModal({
   const [supplierId, setSupplierId] = useState(suppliers?.[0]?.id ? String(suppliers[0].id) : '');
   const [paidAmount, setPaidAmount] = useState('0');
   const [note, setNote] = useState('');
+  const [skuFilter, setSkuFilter] = useState('');
   const [items, setItems] = useState([{
     product_id: '',
     product_name: '',
@@ -5899,6 +5915,13 @@ function CreateInvoiceModal({
     purchase_price: ''
   }]);
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
+  const filteredCatalog = useMemo(() => {
+    const all = safeArray(catalogSample);
+    const q = skuFilter.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter(p => (p.name || '').toLowerCase().includes(q) || (p.barcode || '').includes(q));
+  }, [catalogSample, skuFilter]);
   const addRow = () => setItems(prev => [...prev, {
     product_id: '',
     product_name: '',
@@ -5926,6 +5949,7 @@ function CreateInvoiceModal({
   const totalAmount = items.reduce((s, r) => s + (Number(r.quantity) || 0) * (Number(r.purchase_price) || 0), 0);
   const handleSubmit = async e => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     if (!supplierId) {
       notify(lang === 'uz' ? "Ta'minotchini tanlang" : "Выберите поставщика", 'error');
       return;
@@ -5940,6 +5964,7 @@ function CreateInvoiceModal({
       notify(lang === 'uz' ? "Kamida 1 ta tovar kiriting" : "Добавьте хотя бы 1 товар", 'error');
       return;
     }
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/suppliers/invoices`, {
@@ -5961,6 +5986,7 @@ function CreateInvoiceModal({
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -5998,19 +6024,26 @@ function CreateInvoiceModal({
   }, lang === 'uz' ? "To'langan summa (so'm):" : "Оплачено сразу (сум):"), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
+    step: "any",
     value: paidAmount,
     onChange: e => setPaidAmount(e.target.value),
     className: "w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold"
   }))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between"
+    className: "flex items-center justify-between gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold"
-  }, lang === 'uz' ? "Tovarlar ro'yxati:" : "Список товаров:"), /*#__PURE__*/React.createElement("button", {
+    className: "text-xs font-bold shrink-0"
+  }, lang === 'uz' ? "Tovarlar ro'yxati:" : "Список товаров:"), safeArray(catalogSample).length > 8 && /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: skuFilter,
+    onChange: e => setSkuFilter(e.target.value),
+    placeholder: lang === 'uz' ? "Ro'yxatdan izlash..." : "Фильтр товаров...",
+    className: "flex-1 max-w-[180px] bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-[11px]"
+  }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: addRow,
-    className: "text-xs font-bold text-emerald-600 hover:underline"
+    className: "text-xs font-bold text-emerald-600 hover:underline shrink-0"
   }, "+ ", lang === 'uz' ? "Qator qo'shish" : "Добавить строку")), items.map((row, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
     className: "grid grid-cols-12 gap-1.5 items-center bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl border border-slate-200 dark:border-slate-700"
@@ -6022,7 +6055,7 @@ function CreateInvoiceModal({
     className: "w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-[11px] mb-1"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, lang === 'uz' ? '-- Yoki yangi nom --' : '-- Новый товар --'), safeArray(catalogSample).map(p => /*#__PURE__*/React.createElement("option", {
+  }, lang === 'uz' ? '-- Yoki yangi nom --' : '-- Новый товар --'), filteredCatalog.slice(0, 200).map(p => /*#__PURE__*/React.createElement("option", {
     key: p.id,
     value: p.id
   }, p.name))), !row.product_id && /*#__PURE__*/React.createElement("input", {
@@ -6046,6 +6079,7 @@ function CreateInvoiceModal({
   }, /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
+    step: "any",
     placeholder: "Kirim narx",
     value: row.purchase_price,
     onChange: e => updateRow(idx, 'purchase_price', e.target.value),
@@ -6083,10 +6117,13 @@ function PayInvoiceModal({
 }) {
   const [amount, setAmount] = useState(String(invoice.debt_to_supplier || 0));
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
   const handleSubmit = async e => {
     e.preventDefault();
+    if (submitLockRef.current) return;
     const num = Number(amount);
     if (!(num > 0)) return;
+    submitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/suppliers/invoices/${invoice.id}/pay`, {
@@ -6105,6 +6142,7 @@ function PayInvoiceModal({
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -6486,7 +6524,26 @@ function RefundModal({
     }
     await selectReceiptByNumber(receiptNum);
   };
+  const refundSubmitLockRef = useRef(false);
+  const groupedRefundItems = useMemo(() => {
+    const map = {};
+    safeArray(receiptData?.items).forEach(it => {
+      if (!map[it.product_id]) {
+        map[it.product_id] = {
+          product_id: it.product_id,
+          product_name: it.product_name,
+          quantity: 0,
+          unit_price: it.unit_price,
+          refundable_quantity: 0
+        };
+      }
+      map[it.product_id].quantity = Math.round((map[it.product_id].quantity + Number(it.quantity || 0)) * 1000) / 1000;
+      map[it.product_id].refundable_quantity = Math.round((map[it.product_id].refundable_quantity + Number(it.refundable_quantity || 0)) * 1000) / 1000;
+    });
+    return Object.values(map);
+  }, [receiptData]);
   const handleRefund = async () => {
+    if (refundSubmitLockRef.current) return;
     const itemsToReturn = Object.entries(returnQtys).filter(([_, q]) => Number(q) > 0).map(([pid, q]) => ({
       product_id: Number(pid),
       quantity: Number(q),
@@ -6496,6 +6553,7 @@ function RefundModal({
       notify(lang === 'uz' ? "Qaytariladigan tovar miqdorini kiriting" : "Укажите количество для возврата", 'error');
       return;
     }
+    refundSubmitLockRef.current = true;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/pos/refund`, {
@@ -6519,6 +6577,7 @@ function RefundModal({
     } catch (err) {
       notify(err.message, 'error');
     } finally {
+      refundSubmitLockRef.current = false;
       setLoading(false);
     }
   };
@@ -6597,7 +6656,7 @@ function RefundModal({
     className: "text-right font-mono font-bold"
   }, /*#__PURE__*/React.createElement("div", null, formatMoney(receiptData.total_amount)), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-400"
-  }, receiptData.payment_method))), safeArray(receiptData.items).map(it => /*#__PURE__*/React.createElement("div", {
+  }, receiptData.payment_method))), groupedRefundItems.map(it => /*#__PURE__*/React.createElement("div", {
     key: it.product_id,
     className: "p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
@@ -6615,7 +6674,7 @@ function RefundModal({
       [it.product_id]: it.refundable_quantity
     })),
     className: "px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-bold"
-  }, "Hammasi"), /*#__PURE__*/React.createElement("input", {
+  }, lang === 'uz' ? 'Hammasi' : 'Все'), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
     max: it.refundable_quantity,
@@ -6943,7 +7002,19 @@ function PosScreen({
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      return safeArray(JSON.parse(localStorage.getItem('pos_active_cart') || '[]'));
+    } catch (e) {
+      return [];
+    }
+  });
+  const directSubmitLockRef = useRef(false);
+  useEffect(() => {
+    try {
+      localStorage.setItem('pos_active_cart', JSON.stringify(cart));
+    } catch (e) {}
+  }, [cart]);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [checkoutInitialMethod, setCheckoutInitialMethod] = useState('CASH');
   const [lastReceipt, setLastReceipt] = useState(null);
@@ -7057,32 +7128,39 @@ function PosScreen({
 
   // Hotkeys for PC cashiers (F2, F3, F5, F6, F7, F12, Esc)
   useEffect(() => {
+    const anyModalOpen = checkoutModalOpen || scannerActive || parkedModalOpen || shiftModalOpen || refundModalOpen || priceCheckOpen || voiceAssistantOpen || voiceDebtOpen || Boolean(createProductOpen) || markingScanKey !== null;
     const handleKeyDown = e => {
       if (e.key === 'F2') {
+        if (anyModalOpen) return;
         e.preventDefault();
         if (searchInputRef.current) searchInputRef.current.focus();
       } else if (e.key === 'F3') {
+        if (anyModalOpen) return;
         e.preventDefault();
         setVoiceAssistantOpen(true);
       } else if (e.key === 'F5') {
+        if (anyModalOpen || directSubmitLockRef.current) return;
         e.preventDefault();
         if (cart.length > 0) handleDirectCheckout('CASH');
       } else if (e.key === 'F6') {
+        if (anyModalOpen || directSubmitLockRef.current) return;
         e.preventDefault();
         if (cart.length > 0) handleDirectCheckout('CARD');
       } else if (e.key === 'F7') {
+        if (anyModalOpen || directSubmitLockRef.current) return;
         e.preventDefault();
         if (cart.length > 0) handleDirectCheckout('DEBT');
       } else if (e.key === 'F12') {
+        if (anyModalOpen) return;
         e.preventDefault();
         if (cart.length > 0) setCheckoutModalOpen(true);
       } else if (e.key === 'Escape') {
-        if (checkoutModalOpen) setCheckoutModalOpen(false);else if (scannerActive) setScannerActive(false);else if (parkedModalOpen) setParkedModalOpen(false);else if (cart.length > 0) parkCurrentCart();
+        if (checkoutModalOpen) setCheckoutModalOpen(false);else if (scannerActive) setScannerActive(false);else if (parkedModalOpen) setParkedModalOpen(false);else if (!anyModalOpen && cart.length > 0) parkCurrentCart();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, cartTotal, checkoutModalOpen, scannerActive, parkedModalOpen, parkedCarts]);
+  }, [cart, cartTotal, checkoutModalOpen, scannerActive, parkedModalOpen, parkedCarts, shiftModalOpen, refundModalOpen, priceCheckOpen, voiceAssistantOpen, voiceDebtOpen, createProductOpen, markingScanKey]);
   const parkCurrentCart = () => {
     if (cart.length === 0) {
       notify(lang === 'uz' ? "Savat bo'sh" : "Корзина пуста", 'warn');
@@ -7131,6 +7209,9 @@ function PosScreen({
     setCart(found.items);
     setSelectedCashReceived(null);
     setParkedModalOpen(false);
+    setSearch('');
+    setSelectedCategory(null);
+    setShowAllCatalog(false);
     notify(lang === 'uz' ? `Chek #${heldId} tiklandi` : `Чек #${heldId} восстановлен`, 'success');
   };
   const removeParkedCart = heldId => {
@@ -7226,7 +7307,10 @@ function PosScreen({
       sale_price: item.sale_price !== undefined ? item.sale_price : item.price,
       purchase_price: item.purchase_price !== undefined ? item.purchase_price : Math.round((item.sale_price || item.price) * 0.75),
       unit: item.unit || 'dona',
-      stock_quantity: item.stock_quantity !== undefined ? item.stock_quantity : 999
+      stock_quantity: item.stock_quantity !== undefined ? item.stock_quantity : 999,
+      is_tobacco: Boolean(item.is_tobacco),
+      requires_marking: Boolean(item.requires_marking || item.is_tobacco),
+      marking_group: item.marking_group || (item.is_tobacco ? 'TOBACCO' : 'NONE')
     };
     addToCart(prod, 1.0);
     notify(`${item.name} (+1)`);
@@ -7280,12 +7364,13 @@ function PosScreen({
     setSelectedCashReceived(null);
   };
   const handleDirectCheckout = async paymentMethod => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || directSubmitLockRef.current) return;
     if (paymentMethod === 'DEBT' || paymentMethod === 'MIXED') {
       setCheckoutInitialMethod(paymentMethod);
       setCheckoutModalOpen(true);
       return;
     }
+    directSubmitLockRef.current = true;
     setDirectLoading(true);
     try {
       const cashVal = paymentMethod === 'CASH' ? cashGiven : 0;
@@ -7339,6 +7424,7 @@ function PosScreen({
       playAudioCue('error');
       notify(err.message, 'error');
     } finally {
+      directSubmitLockRef.current = false;
       setDirectLoading(false);
     }
   };

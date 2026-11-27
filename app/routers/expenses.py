@@ -2,9 +2,10 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import update as sa_update, func
 from sqlmodel import Session, select
 
-from ..database import get_session
+from ..database import get_session, sqlite_write_lock
 from ..models import (
     Expense, ExpenseCategory, Product, User, UserRole,
     StockMovement, StockMovementType
@@ -76,63 +77,77 @@ def create_expense(
     current_user: User = Depends(require_role([UserRole.OWNER])),
     session: Session = Depends(get_session)
 ):
+    uid = current_user.id
+    uname = current_user.full_name
     amount = data.amount
     prod_name = None
     now_utc = datetime.now(timezone.utc)
 
-    # Handle spoilage / списание порчи товара
-    if data.category == ExpenseCategory.SPOILAGE:
-        if not data.product_id or not data.spoilage_quantity or data.spoilage_quantity <= 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Для списания товара необходимо указать product_id и положительное количество spoilage_quantity"
+    with sqlite_write_lock(session):
+        try:
+            # Handle spoilage / списание порчи товара
+            if data.category == ExpenseCategory.SPOILAGE:
+                if not data.product_id or not data.spoilage_quantity or data.spoilage_quantity <= 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Для списания товара необходимо указать product_id и положительное количество spoilage_quantity"
+                    )
+                product = session.get(Product, data.product_id)
+                if not product:
+                    raise HTTPException(status_code=404, detail="Товар для списания не найден")
+
+                session.exec(
+                    sa_update(Product)
+                    .where(Product.id == data.product_id)
+                    .values(
+                        stock_quantity=func.round(Product.stock_quantity - data.spoilage_quantity, 3),
+                        updated_at=now_utc,
+                    )
+                )
+                session.flush()
+                session.refresh(product)
+                new_stock = round(float(product.stock_quantity), 3)
+                prev_stock = round(new_stock + data.spoilage_quantity, 3)
+                prod_name = product.name
+
+                # If amount not explicitly given, compute loss by purchase cost
+                if amount is None or amount == 0:
+                    amount = round(product.purchase_price * data.spoilage_quantity, 2)
+
+            if amount is None or amount <= 0:
+                raise HTTPException(status_code=400, detail="Сумма расхода должна быть больше 0")
+
+            expense = Expense(
+                category=data.category,
+                amount=round(amount, 2),
+                description=data.description.strip(),
+                product_id=data.product_id,
+                spoilage_quantity=data.spoilage_quantity,
+                expense_date=data.expense_date or now_utc,
+                created_by_user_id=uid,
+                created_at=now_utc
             )
-        product = session.get(Product, data.product_id)
-        if not product:
-            raise HTTPException(status_code=404, detail="Товар для списания не найден")
+            session.add(expense)
+            session.flush()
 
-        # Deduct spoiled stock from inventory
-        prev_stock = product.stock_quantity
-        product.stock_quantity = round(product.stock_quantity - data.spoilage_quantity, 3)
-        product.updated_at = now_utc
-        session.add(product)
-        prod_name = product.name
-
-        # If amount not explicitly given, compute loss by purchase cost
-        if amount is None or amount == 0:
-            amount = round(product.purchase_price * data.spoilage_quantity, 2)
-
-    if amount is None or amount <= 0:
-        raise HTTPException(status_code=400, detail="Сумма расхода должна быть больше 0")
-
-    expense = Expense(
-        category=data.category,
-        amount=round(amount, 2),
-        description=data.description.strip(),
-        product_id=data.product_id,
-        spoilage_quantity=data.spoilage_quantity,
-        expense_date=data.expense_date or now_utc,
-        created_by_user_id=current_user.id,
-        created_at=now_utc
-    )
-    session.add(expense)
-    session.flush()
-
-    if data.category == ExpenseCategory.SPOILAGE and data.product_id:
-        session.add(StockMovement(
-            product_id=data.product_id,
-            movement_type=StockMovementType.SPOILAGE,
-            quantity_delta=-data.spoilage_quantity,
-            previous_stock=prev_stock,
-            new_stock=product.stock_quantity,
-            cost_price=product.purchase_price,
-            reference_id=f"EXP-{expense.id}",
-            note=f"Hisobdan chiqarish / Списание: {data.description}",
-            created_by_user_id=current_user.id,
-            created_at=now_utc
-        ))
-    session.commit()
-    session.refresh(expense)
+            if data.category == ExpenseCategory.SPOILAGE and data.product_id:
+                session.add(StockMovement(
+                    product_id=data.product_id,
+                    movement_type=StockMovementType.SPOILAGE,
+                    quantity_delta=-data.spoilage_quantity,
+                    previous_stock=prev_stock,
+                    new_stock=new_stock,
+                    cost_price=product.purchase_price,
+                    reference_id=f"EXP-{expense.id}",
+                    note=f"Hisobdan chiqarish / Списание: {data.description}",
+                    created_by_user_id=uid,
+                    created_at=now_utc
+                ))
+            session.commit()
+            session.refresh(expense)
+        except Exception:
+            session.rollback()
+            raise
 
     return ExpenseResponse(
         id=expense.id,
@@ -144,7 +159,7 @@ def create_expense(
         spoilage_quantity=expense.spoilage_quantity,
         expense_date=expense.expense_date,
         created_at=expense.created_at,
-        created_by_name=current_user.full_name
+        created_by_name=uname
     )
 
 
