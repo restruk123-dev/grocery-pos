@@ -981,6 +981,207 @@ def test_uz_grocery_and_tobacco_100pct_compliance(session):
     assert pay_json["tax_profile"]["inn_stir"] == "301234567"
 
 
+def test_auth_refresh_and_expired_token_handling(session):
+    from app.config import settings
+
+    # Token lifetime extended to 7 days for active POS mobile terminals
+    assert settings.ACCESS_TOKEN_EXPIRE_MINUTES == 60 * 24 * 7
+
+    # Expired token triggers clean 401 on shift & voice-debt endpoints
+    expired = create_access_token({"sub": "owner", "role": "owner"}, expires_delta_seconds=-300)
+    exp_headers = {"Authorization": f"Bearer {expired}"}
+    assert client.get("/api/v1/pos/shift/current", headers=exp_headers).status_code == 401
+    assert client.post(
+        "/api/v1/pos/shift/open",
+        json={"initial_cash": 100000.0},
+        headers=exp_headers,
+    ).status_code == 401
+    assert client.post(
+        "/api/v1/ai/parse-debt-voice",
+        json={"speech_text": "Alisher 50 ming qarz", "language": "uz"},
+        headers=exp_headers,
+    ).status_code == 401
+    assert client.post(
+        "/api/v1/ai/voice-command",
+        json={"speech_text": "Bobur 30 ming qarz", "language": "uz"},
+        headers=exp_headers,
+    ).status_code == 401
+
+    # Fresh login -> /auth/me -> /auth/refresh produces working token
+    login = client.post("/api/v1/auth/token", json={"username": "owner", "password": "owner123"})
+    assert login.status_code == 200
+    tok = login.json()["access_token"]
+    h = {"Authorization": f"Bearer {tok}"}
+
+    me_res = client.get("/api/v1/auth/me", headers=h)
+    assert me_res.status_code == 200
+    assert me_res.json()["username"] == "owner"
+
+    ref_res = client.post("/api/v1/auth/refresh", headers=h)
+    assert ref_res.status_code == 200
+    ref_tok = ref_res.json()["access_token"]
+    assert client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {ref_tok}"}).status_code == 200
+
+
+def test_full_e2e_store_workflow_0_to_100(session):
+    # 1. Authenticate + verify PWA shell assets
+    login = client.post("/api/v1/auth/token", json={"username": "owner", "password": "owner123"})
+    assert login.status_code == 200
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    assert client.get("/health").status_code == 200
+    html_res = client.get("/")
+    assert html_res.status_code == 200
+    assert "app.css?v=12" in html_res.text and "app.js?v=12" in html_res.text
+
+    # 2. Multi-store & Tax Profile setup
+    st_res = client.post("/api/v1/pos/stores", json={"name": "Markaziy Savdo", "store_type": "grocery"}, headers=headers)
+    assert st_res.status_code == 200
+    assert len(client.get("/api/v1/pos/stores", headers=headers).json()) >= 1
+    assert client.put(
+        "/api/v1/tax/profile",
+        json={
+            "legal_name": "E2E Market LLC",
+            "inn_stir": "309876543",
+            "tax_regime": "TURNOVER_1",
+            "tax_rate_percent": 1.0,
+            "kkm_serial": "UZ-KKM-000777",
+            "strict_tobacco_marking": True,
+        },
+        headers=headers,
+    ).status_code == 200
+    assert client.get("/api/v1/tax/mxik-search?q=sut", headers=headers).status_code == 200
+
+    # 3. Cash shift open -> cash in -> cash out
+    assert client.get("/api/v1/pos/shift/current", headers=headers).json()["is_open"] is False
+    assert client.post("/api/v1/pos/shift/open", json={"initial_cash": 150000.0}, headers=headers).status_code == 200
+    assert client.post(
+        "/api/v1/pos/shift/cash-action",
+        json={"action_type": "CASH_IN", "amount": 50000.0, "reason": "Mayda"},
+        headers=headers,
+    ).status_code == 200
+    assert client.post(
+        "/api/v1/pos/shift/cash-action",
+        json={"action_type": "CASH_OUT", "amount": 20000.0, "reason": "Kuryer"},
+        headers=headers,
+    ).status_code == 200
+
+    # 4. Catalog create / edit / lookup / export + Supplier & Invoice kirish + Price tag
+    cats = client.get("/api/v1/products/categories/all", headers=headers).json()
+    cat_id = cats[0]["id"] if cats else None
+    p_res = client.post(
+        "/api/v1/products",
+        json={
+            "name": "Qatiq 1L",
+            "barcode": "4780001122334",
+            "category_id": cat_id,
+            "purchase_price": 9000.0,
+            "sale_price": 12000.0,
+            "stock_quantity": 20.0,
+            "unit": "dona",
+            "ikpu_code": "00401001001000000",
+            "is_quick": True,
+        },
+        headers=headers,
+    )
+    assert p_res.status_code == 200
+    prod_id = p_res.json()["id"]
+    assert client.put(f"/api/v1/products/{prod_id}", json={"sale_price": 12500.0}, headers=headers).status_code == 200
+    assert client.get("/api/v1/products/barcode/4780001122334", headers=headers).json()["sale_price"] == 12500.0
+    assert client.get("/api/v1/products/quick", headers=headers).status_code == 200
+    assert client.get("/api/v1/products/export-csv", headers=headers).status_code == 200
+
+    sup = client.post("/api/v1/suppliers", json={"name": "Sut Zavod #1", "phone": "+998901112233"}, headers=headers).json()
+    inv = client.post(
+        "/api/v1/suppliers/invoices",
+        json={
+            "supplier_id": sup["id"],
+            "items": [{"product_id": prod_id, "product_name": "Qatiq 1L", "quantity": 5, "purchase_price": 9000}],
+            "paid_amount": 20000,
+        },
+        headers=headers,
+    )
+    assert inv.status_code == 200
+    inv_id = inv.json()["invoice_id"]
+    assert client.post(f"/api/v1/suppliers/invoices/{inv_id}/pay", json={"amount": 25000}, headers=headers).status_code == 200
+    assert client.get(f"/api/v1/suppliers/{sup['id']}/reconciliation", headers=headers).status_code == 200
+
+    # 5. Inventory revision act create -> scan -> apply -> movements
+    act = client.post("/api/v1/inventory/act", json={"name": "Kunlik reviziya"}, headers=headers)
+    assert act.status_code == 200
+    act_id = act.json()["id"]
+    assert client.post(f"/api/v1/inventory/act/{act_id}/scan", json={"product_id": prod_id, "actual_quantity": 24.0}, headers=headers).status_code == 200
+    assert client.post(f"/api/v1/inventory/act/{act_id}/apply", headers=headers).status_code == 200
+    assert client.get("/api/v1/inventory/movements?limit=10", headers=headers).status_code == 200
+
+    # 6. POS Checkout (CASH + CARD + MIXED Debt) + Receipt + Partial Refund
+    chk_cash = client.post(
+        "/api/v1/pos/checkout",
+        json={"items": [{"product_id": prod_id, "quantity": 2}], "payment_method": "CASH", "cash_received": 30000.0},
+        headers=headers,
+    )
+    assert chk_cash.status_code == 200
+    receipt_no = chk_cash.json()["receipt_number"]
+    assert chk_cash.json()["change_given"] == 5000.0
+
+    chk_card = client.post(
+        "/api/v1/pos/checkout",
+        json={"items": [{"product_id": prod_id, "quantity": 1}], "payment_method": "CARD", "card_amount": 12500.0},
+        headers=headers,
+    )
+    assert chk_card.status_code == 200
+    assert len(client.get("/api/v1/pos/receipts", headers=headers).json()) >= 2
+    assert client.get(f"/api/v1/pos/receipt/{receipt_no}", headers=headers).status_code == 200
+    assert client.post(
+        "/api/v1/pos/refund",
+        json={"receipt_number": receipt_no, "items": [{"product_id": prod_id, "quantity": 1}], "reason": "Test qaytarish"},
+        headers=headers,
+    ).status_code == 200
+
+    # 7. Debts & AI Voice / Assistant / OCR endpoints (all authenticated)
+    deb = client.post("/api/v1/debts/debtors", json={"full_name": "Sardor Karimov", "phone": "+998917778899", "initial_debt": 40000.0}, headers=headers).json()
+    assert client.post(f"/api/v1/debts/debtors/{deb['id']}/add-debt", json={"amount": 10000.0, "note": "Non"}, headers=headers).status_code == 200
+    assert client.post(f"/api/v1/debts/debtors/{deb['id']}/pay", json={"amount": 15000.0, "note": "Qisman"}, headers=headers).status_code == 200
+    assert len(client.get(f"/api/v1/debts/debtors/{deb['id']}/history", headers=headers).json()) == 3
+    assert client.get("/api/v1/debts/summary", headers=headers).json()["total_outstanding_debt"] == 35000.0
+
+    vc_debt = client.post("/api/v1/ai/voice-command", json={"speech_text": "Sardorga 20 ming qarz yoz", "language": "uz"}, headers=headers)
+    assert vc_debt.status_code == 200
+    assert vc_debt.json()["action"] == "open_debt"
+    assert vc_debt.json()["data"]["amount"] == 20000.0
+
+    vc_fallback = client.post("/api/v1/ai/voice-command", json={"speech_text": "Bugungi savdo holati", "language": "uz"}, headers=headers)
+    assert vc_fallback.status_code == 200
+    assert "action" in vc_fallback.json()
+
+    assert client.post("/api/v1/ai/parse-debt-ocr", json={"raw_text": "Sardor 25000 non"}, headers=headers).status_code == 200
+    assert client.post("/api/v1/ai/parse-invoice-ocr", json={"raw_text": "Qatiq 10 x 9000"}, headers=headers).status_code == 200
+
+    # 8. Expenses, Price Tag (single + batch), Shift Close Z-Report, Analytics, Tax Report, Backup, Telegram status
+    assert client.post("/api/v1/expenses", json={"category": "UTILITIES", "amount": 15000.0, "description": "Suv"}, headers=headers).status_code == 200
+    pt_res = client.post("/api/v1/expenses/price-tag", json={"product_id": prod_id, "price": 12500.0, "quantity": 1}, headers=headers)
+    assert pt_res.status_code == 200
+    assert "Qatiq 1L" in pt_res.json()["template"]
+    assert client.post(
+        "/api/v1/expenses/price-tags/batch",
+        json={"products": [{"product_id": prod_id, "price": 12500.0, "quantity": 2}]},
+        headers=headers,
+    ).status_code == 200
+
+    close_res = client.post("/api/v1/pos/shift/close", json={"actual_cash": 192500.0, "note": "Ok"}, headers=headers)
+    assert close_res.status_code == 200
+    assert close_res.json()["status"] == "CLOSED"
+    assert len(client.get("/api/v1/pos/shift/history", headers=headers).json()) >= 1
+
+    assert client.get("/api/v1/analytics/dashboard?period=today", headers=headers).status_code == 200
+    assert client.get("/api/v1/ai/insights?period=month", headers=headers).status_code == 200
+    assert client.get("/api/v1/tax/report?period=today", headers=headers).json()["profile"]["inn_stir"] == "309876543"
+    assert client.get("/api/v1/tax/export-csv?period=today", headers=headers).status_code == 200
+    assert client.get(f"/api/v1/tax/ofd-payload/{receipt_no}", headers=headers).status_code == 200
+    assert client.get("/api/v1/backup/info", headers=headers).status_code == 200
+    assert client.get("/api/v1/backup/download", headers=headers).status_code == 200
+    assert client.get("/api/v1/telegram/status", headers=headers).status_code == 200
+
+
 
 
 

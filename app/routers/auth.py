@@ -125,6 +125,20 @@ def get_me(current_user: User = Depends(get_current_user)):
         role=current_user.role
     )
 
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_token(current_user: User = Depends(get_current_user)):
+    """Re-issue a fresh access token for an active authenticated POS session."""
+    access_token = create_access_token(
+        data={"sub": current_user.username, "role": current_user.role.value}
+    )
+    return TokenResponse(
+        access_token=access_token,
+        role=current_user.role,
+        username=current_user.username,
+        full_name=current_user.full_name,
+    )
+
 @router.get("/cashiers", response_model=list[dict])
 def list_cashiers(
     current_user: User = Depends(get_current_user),

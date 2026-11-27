@@ -2,6 +2,29 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 const API_BASE = '/api/v1';
 
+// Global 401 session interceptor: immediately catches expired/invalid JWTs across all screens & modals
+if (typeof window !== 'undefined' && !window.__posFetchWrapped) {
+  window.__posFetchWrapped = true;
+  const __origFetch = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    const res = await __origFetch(...args);
+    try {
+      const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+      if (
+        res && res.status === 401 &&
+        url.includes('/api/v1/') &&
+        !url.includes('/auth/token') &&
+        !url.includes('/auth/switch-cashier') &&
+        !url.includes('/auth/change-password') &&
+        !url.includes('/products/clear-catalog')
+      ) {
+        window.dispatchEvent(new CustomEvent('pos-unauthorized'));
+      }
+    } catch (e) {}
+    return res;
+  };
+}
+
 // Global fallback for lang
 var lang = (typeof localStorage !== 'undefined' && localStorage.getItem('pos_lang')) || 'uz';
 
@@ -1711,6 +1734,9 @@ function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
 
+  const toastTimerRef = useRef(null);
+  const lastVerifiedTokenRef = useRef(null);
+
   const loadShiftBadge = () => {
     if (!token) return;
     fetch(`${API_BASE}/pos/shift/current`, { headers: { Authorization: `Bearer ${token}` } })
@@ -1721,6 +1747,38 @@ function App() {
 
   useEffect(() => {
     loadShiftBadge();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || lastVerifiedTokenRef.current === token) return;
+    let cancelled = false;
+    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (r) => {
+        if (cancelled || !r.ok) return;
+        lastVerifiedTokenRef.current = token;
+        const me = await r.json();
+        if (!cancelled && me?.username) {
+          const freshUser = { username: me.username, full_name: me.full_name, role: me.role };
+          setUser(freshUser);
+          localStorage.setItem('pos_user', JSON.stringify(freshUser));
+        }
+        const refRes = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!cancelled && refRes.ok) {
+          const refData = await refRes.json();
+          if (refData?.access_token) {
+            lastVerifiedTokenRef.current = refData.access_token;
+            if (refData.access_token !== token) {
+              setToken(refData.access_token);
+              localStorage.setItem('pos_token', refData.access_token);
+            }
+          }
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [token]);
 
   useEffect(() => {
@@ -1776,10 +1834,12 @@ function App() {
 
   const notify = (message, type = 'success') => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3500);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setNotification(null), 4000);
   };
 
   const handleLogin = (newToken, newUser) => {
+    lastVerifiedTokenRef.current = newToken;
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('pos_token', newToken);
@@ -1788,6 +1848,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    lastVerifiedTokenRef.current = null;
     setToken(null);
     setUser(null);
     setCurrentShift(null);
@@ -1795,17 +1856,56 @@ function App() {
     localStorage.removeItem('pos_user');
   };
 
+  useEffect(() => {
+    const onUnauthorized = () => {
+      if (!localStorage.getItem('pos_token')) return;
+      handleLogout();
+      notify(
+        lang === 'uz'
+          ? 'Sessiya tugadi — tizimga qayta kiring'
+          : 'Сессия истекла — войдите снова',
+        'error'
+      );
+    };
+    window.addEventListener('pos-unauthorized', onUnauthorized);
+    return () => window.removeEventListener('pos-unauthorized', onUnauthorized);
+  }, [lang]);
+
+  const toastBanner = notification ? (
+    <div
+      className={`fixed top-3 right-3 left-3 sm:left-auto sm:min-w-[280px] sm:max-w-sm z-[80] px-4 py-3 rounded-2xl flex items-center gap-2.5 text-xs font-semibold ${
+        notification.type === 'error' ? 'atelier-toast-error' : 'atelier-toast-ok'
+      }`}
+    >
+      <span style={{ color: notification.type === 'error' ? '#FFFFFF' : (notification.type === 'warn' ? 'var(--warm-fg)' : 'var(--cta)') }} className="shrink-0">
+        <Icon name={notification.type === 'error' ? 'alert' : 'check'} size={16} />
+      </span>
+      <span className="flex-1 leading-snug break-words">{notification.message}</span>
+      <button
+        type="button"
+        onClick={() => setNotification(null)}
+        className="w-6 h-6 rounded-full flex items-center justify-center opacity-80 hover:opacity-100 shrink-0"
+        aria-label="Close"
+      >
+        <Icon name="close" size={13} />
+      </button>
+    </div>
+  ) : null;
+
   if (!token || !user) {
     return (
-      <LoginScreen
-        onLogin={handleLogin}
-        notify={notify}
-        t={t}
-        theme={theme}
-        toggleTheme={toggleTheme}
-        lang={lang}
-        toggleLang={toggleLang}
-      />
+      <>
+        {toastBanner}
+        <LoginScreen
+          onLogin={handleLogin}
+          notify={notify}
+          t={t}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          lang={lang}
+          toggleLang={toggleLang}
+        />
+      </>
     );
   }
 
@@ -1822,22 +1922,8 @@ function App() {
 
   return (
     <div className="app-viewport atelier-app transition-colors duration-200">
-      {/* Toast Notification */}
-      {notification && (
-        <div
-          style={{
-            backgroundColor: notification.type === 'error' ? 'var(--danger-bg)' : 'var(--bg-card)',
-            color: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--text-main)',
-            borderColor: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--border-strong)'
-          }}
-          className="fixed top-14 right-3 left-3 sm:left-auto sm:max-w-sm z-50 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 border text-xs font-semibold"
-        >
-          <span style={{ color: notification.type === 'error' ? 'var(--danger-fg)' : 'var(--cta)' }}>
-            <Icon name={notification.type === 'error' ? 'alert' : 'check'} size={16} />
-          </span>
-          <span className="truncate">{notification.message}</span>
-        </div>
-      )}
+      {/* Floating Opaque Toast Notification */}
+      {toastBanner}
 
       {networkModalOpen && <NetworkQrModal onClose={() => setNetworkModalOpen(false)} t={t} />}
       {shiftModalOpen && (
@@ -1903,7 +1989,7 @@ function App() {
             <button
               type="button"
               onClick={() => setCashierSwitchOpen(true)}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-full atelier-btn-soft flex items-center gap-1.5 truncate max-w-[125px] sm:max-w-none"
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-full atelier-btn-soft flex items-center gap-1 min-w-0 max-w-[115px] sm:max-w-none"
               title={lang === 'uz' ? "Kassirni almashtirish" : "Смена кассира"}
             >
               <Icon name="user" size={13} />
@@ -1917,7 +2003,7 @@ function App() {
                 color: currentShift?.is_open ? 'var(--accent-soft-fg)' : 'var(--warm-fg)',
                 borderColor: 'var(--border-hair)'
               }}
-              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-full border flex items-center gap-1.5 shrink-0"
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-full border flex items-center gap-1.5 shrink-0 whitespace-nowrap"
               title={lang === 'uz' ? "Kassa smenasi va Z-hisobot" : "Кассовая смена"}
             >
               <span
@@ -1927,7 +2013,7 @@ function App() {
               <span className="font-nums">
                 {currentShift?.is_open
                   ? formatMoney(currentShift.shift?.expected_cash || 0)
-                  : (lang === 'uz' ? 'Smena yopiq' : 'Открыть смену')}
+                  : (lang === 'uz' ? 'Smena' : 'Смена +')}
               </span>
             </button>
           </div>
@@ -4594,7 +4680,7 @@ function CheckoutModal({ token, total, cart, initialMethod = 'CASH', initialDisc
               <input
                 type="number"
                 min="0"
-                step="100"
+                step="any"
                 value={cashReceived}
                 onChange={(e) => setCashReceived(e.target.value)}
                 className="w-full atelier-input rounded-2xl px-3.5 py-2.5 font-nums font-bold text-lg"
@@ -4882,7 +4968,7 @@ function PayDebtModal({ token, lang = 'uz', debtor, onClose, onSuccess, notify, 
           <input
             type="number"
             min="1"
-            step="100"
+            step="any"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-800 border border-emerald-400 rounded-xl px-3 py-2.5 font-mono font-black text-lg text-emerald-600 dark:text-emerald-400"
@@ -4979,7 +5065,7 @@ function AddDebtModal({ token, lang = 'uz', debtor, onClose, onSuccess, notify, 
           <input
             type="number"
             min="1"
-            step="100"
+            step="any"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-800 border border-amber-400 rounded-xl px-3 py-2.5 font-mono font-black text-lg text-amber-600"
@@ -5462,7 +5548,7 @@ function PayInvoiceModal({ token, lang = 'uz', invoice, onClose, onSuccess, noti
         </div>
         <div>
           <label className="block text-xs font-bold mb-1">{lang === 'uz' ? "To'lov summasi (so'm):" : "Сумма оплаты:"}</label>
-          <input type="number" min="1" step="100" value={amount} onChange={(e) => setAmount(e.target.value)} required className="w-full bg-slate-50 dark:bg-slate-800 border border-emerald-400 rounded-xl px-3 py-2.5 font-mono font-black text-base text-emerald-600" />
+          <input type="number" min="1" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} required className="w-full bg-slate-50 dark:bg-slate-800 border border-emerald-400 rounded-xl px-3 py-2.5 font-mono font-black text-base text-emerald-600" />
         </div>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800">{t.cancelBtn || 'Bekor qilish'}</button>
@@ -5493,8 +5579,17 @@ function CashShiftModal({ token, onClose, notify, lang = 'uz', onShiftChange }) 
         const data = await res.json();
         setShiftInfo(data);
         if (data?.shift) setActualCash(String(data.shift.expected_cash));
+      } else {
+        let msg = lang === 'uz' ? 'Smena holatini yuklab bo‘lmadi' : 'Не удалось загрузить смену';
+        try {
+          const err = await res.json();
+          if (err?.detail) msg = err.detail;
+        } catch (e) {}
+        notify(msg, 'error');
       }
-    } catch (e) {}
+    } catch (e) {
+      notify(lang === 'uz' ? 'Server bilan aloqa yo‘q' : 'Нет связи с сервером', 'error');
+    }
     setLoading(false);
   };
 
@@ -6091,6 +6186,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
   const [showAllCatalog, setShowAllCatalog] = useState(false);
   const [priceCheckOpen, setPriceCheckOpen] = useState(false);
   const [voiceAssistantOpen, setVoiceAssistantOpen] = useState(false);
+  const [voiceDebtOpen, setVoiceDebtOpen] = useState(false);
   const [quickProducts, setQuickProducts] = useState([]);
   const [notFoundBarcode, setNotFoundBarcode] = useState(null);
   const [createProductOpen, setCreateProductOpen] = useState(false);
@@ -6518,21 +6614,21 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
         </form>
 
         {/* Subtle Secondary Utility Strip */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <button type="button" onClick={() => setVoiceAssistantOpen(true)} className="px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar">
+          <button type="button" onClick={() => setVoiceAssistantOpen(true)} className="px-2.5 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
             <Icon name="mic" size={12} /><span>{lang === 'uz' ? "Ovoz" : "Голос"}</span>
           </button>
-          <button type="button" onClick={() => setPriceCheckOpen(true)} className="px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
+          <button type="button" onClick={() => setPriceCheckOpen(true)} className="px-2.5 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
             <Icon name="tag" size={12} /><span>{lang === 'uz' ? "Narx?" : "Цена?"}</span>
           </button>
-          <button type="button" onClick={() => setRefundModalOpen(true)} className="px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
-            <Icon name="receipt" size={12} /><span>{lang === 'uz' ? "Chek / Vozvrat" : "Чеки / Возврат"}</span>
+          <button type="button" onClick={() => setRefundModalOpen(true)} className="px-2.5 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft flex items-center gap-1 whitespace-nowrap shrink-0">
+            <Icon name="receipt" size={12} /><span>{lang === 'uz' ? "Vozvrat" : "Возврат"}</span>
           </button>
-          <button type="button" onClick={parkCurrentCart} disabled={cart.length === 0} className="px-3 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft disabled:opacity-40 flex items-center gap-1 whitespace-nowrap shrink-0">
+          <button type="button" onClick={parkCurrentCart} disabled={cart.length === 0} className="px-2.5 py-1 rounded-full text-[11px] font-semibold atelier-btn-soft disabled:opacity-40 flex items-center gap-1 whitespace-nowrap shrink-0">
             <Icon name="pause" size={12} /><span>{lang === 'uz' ? "Saqlash" : "Отложить"}</span>
           </button>
           {parkedCarts.length > 0 && (
-            <button type="button" onClick={() => setParkedModalOpen(true)} className="px-3 py-1 rounded-full text-[11px] font-bold atelier-btn-primary flex items-center gap-1 whitespace-nowrap shrink-0">
+            <button type="button" onClick={() => setParkedModalOpen(true)} className="px-2.5 py-1 rounded-full text-[11px] font-bold atelier-btn-primary flex items-center gap-1 whitespace-nowrap shrink-0">
               <Icon name="folder" size={12} /><span>{parkedCarts.length}</span>
             </button>
           )}
@@ -6541,7 +6637,7 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
               type="button"
               onClick={() => clearCart(true)}
               style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger-fg)' }}
-              className="px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 ml-auto"
+              className="px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 ml-auto"
             >
               <Icon name="trash" size={12} /><span>{lang === 'uz' ? "Tozalash" : "Очистить"}</span>
             </button>
@@ -6950,7 +7046,21 @@ function PosScreen({ token, notify, isOwner, t, lang: propLang, setLang: propSet
           onOpenScanner={() => setScannerActive(true)}
           onOpenCheckout={() => { if (cart.length > 0) setCheckoutModalOpen(true); }}
           onClearCart={clearCart}
-          onOpenDebt={() => { if (cart.length > 0) handleDirectCheckout('DEBT'); }}
+          onOpenDebt={() => {
+            if (cart.length > 0) handleDirectCheckout('DEBT');
+            else setVoiceDebtOpen(true);
+          }}
+          notify={notify}
+          t={t}
+          lang={lang}
+        />
+      )}
+
+      {voiceDebtOpen && (
+        <VoiceDebtModal
+          token={token}
+          onClose={() => setVoiceDebtOpen(false)}
+          onSuccess={() => { setVoiceDebtOpen(false); }}
           notify={notify}
           t={t}
           lang={lang}
@@ -7126,18 +7236,18 @@ function DebtsScreen({ token, notify, t, lang: propLang }) {
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="text-[11px] atelier-text-muted font-medium truncate">{t.totalOutstandingDebt} ({summary ? `${summary.active_debtors_with_debt}/${summary.debtors_count}` : '0/0'})</div>
-            <div style={{ color: 'var(--danger-fg)' }} className="text-xl sm:text-2xl font-bold font-nums leading-tight mt-0.5">
-              -{summary ? formatMoney(summary.total_outstanding_debt) : "0 so'm"}
+            <div style={{ color: Number(summary?.total_outstanding_debt || 0) > 0 ? 'var(--danger-fg)' : 'var(--accent)' }} className="text-xl sm:text-2xl font-bold font-nums leading-tight mt-0.5">
+              {summary && Number(summary.total_outstanding_debt) > 0 ? `-${formatMoney(summary.total_outstanding_debt)}` : "0 so'm"}
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <button type="button" onClick={() => setCreateDebtorModalOpen(true)} className="px-3 py-2 atelier-btn-cta font-bold rounded-2xl text-xs flex items-center gap-1">
               <Icon name="plus" size={14} /><span>{lang === 'uz' ? "Yangi" : "Новый"}</span>
             </button>
-            <button type="button" onClick={() => setVoiceDebtOpen(true)} className="px-2.5 py-2 atelier-btn-primary font-semibold rounded-2xl text-xs flex items-center gap-1" title={t.voiceDebtBtn}>
+            <button type="button" onClick={() => setVoiceDebtOpen(true)} aria-label={t.voiceDebtBtn} className="px-2.5 py-2 atelier-btn-primary font-semibold rounded-2xl text-xs flex items-center gap-1" title={t.voiceDebtBtn}>
               <Icon name="mic" size={14} /><span className="hidden sm:inline">{lang === 'uz' ? "Ovoz" : "Голос"}</span>
             </button>
-            <button type="button" onClick={() => setOcrDebtOpen(true)} className="px-2.5 py-2 atelier-btn-amber font-bold rounded-2xl text-xs flex items-center gap-1" title={t.scanPaperNotebookBtn}>
+            <button type="button" onClick={() => setOcrDebtOpen(true)} aria-label={t.scanPaperNotebookBtn} className="px-2.5 py-2 atelier-btn-amber font-bold rounded-2xl text-xs flex items-center gap-1" title={t.scanPaperNotebookBtn}>
               <Icon name="camera" size={14} /><span className="hidden sm:inline">OCR</span>
             </button>
           </div>
@@ -7337,7 +7447,7 @@ function PrintPriceTagModal({ token, product, onClose, notify, lang = 'uz' }) {
           <form onSubmit={generateTag} className="grid grid-cols-2 gap-2">
             <div>
               <label className="block font-semibold mb-1">{lang === 'uz' ? 'Narx (so\'m):' : 'Цена:'}</label>
-              <input type="number" step="100" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-bold" />
+              <input type="number" min="0" step="any" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-bold" />
             </div>
             <div>
               <label className="block font-semibold mb-1">{lang === 'uz' ? 'Nusxa soni:' : 'Копий:'}</label>
@@ -8624,7 +8734,7 @@ function AnalyticsScreen({ token, notify, t }) {
               <div className="atelier-card rounded-[24px] p-3.5">
                 <div className="text-[11px] atelier-text-muted font-medium">{lang === 'uz' ? 'Soliq bazasi (Sof savdo)' : 'Налоговая база'}</div>
                 <div style={{ color: 'var(--accent)' }} className="text-base sm:text-lg font-bold font-nums mt-0.5">{formatMoney(taxReport.summary.net_taxable_revenue)}</div>
-                <div className="text-[11px] atelier-text-muted font-nums">{taxReport.summary.receipts_count} {lang === 'uz' ? 'chek' : 'чеков'} • -{formatMoney(taxReport.summary.refunds_total)} {lang === 'uz' ? 'qaytarish' : 'возвр.'}</div>
+                <div className="text-[11px] atelier-text-muted font-nums">{taxReport.summary.receipts_count} {lang === 'uz' ? 'chek' : 'чеков'} • {Number(taxReport.summary.refunds_total) > 0 ? `-${formatMoney(taxReport.summary.refunds_total)}` : "0 so'm"} {lang === 'uz' ? 'qaytarish' : 'возвр.'}</div>
               </div>
               <div className="atelier-card rounded-[24px] p-3.5">
                 <div className="text-[11px] atelier-text-muted font-medium">{lang === 'uz' ? 'Hisoblangan soliq' : 'К уплате налог'} ({taxReport.summary.tax_rate_percent}%)</div>
@@ -8724,7 +8834,7 @@ function AnalyticsScreen({ token, notify, t }) {
           <div className="space-y-2.5 text-xs">
             <div className="atelier-card rounded-[24px] p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold">Telegram Bot Hisobotlar</h3>
+                <h3 className="font-bold">{lang === 'uz' ? 'Telegram Bot Hisobotlar' : 'Отчёты в Telegram'}</h3>
                 <span
                   style={{
                     backgroundColor: tgStatus?.configured ? 'var(--accent-soft)' : 'var(--warm-bg)',
@@ -8736,9 +8846,9 @@ function AnalyticsScreen({ token, notify, t }) {
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('test-send')} className="py-2.5 rounded-2xl atelier-btn-soft font-semibold">Test xabar</button>
-                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('z-report')} className="py-2.5 rounded-2xl atelier-btn-cta font-bold">Z-Hisobot yuborish</button>
-                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('alert-low-stock')} className="py-2.5 rounded-2xl atelier-btn-primary font-semibold">Kam qoldiq alert</button>
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('test-send')} className="py-2.5 rounded-2xl atelier-btn-soft font-semibold">{lang === 'uz' ? 'Test xabar' : 'Тест-сообщение'}</button>
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('z-report')} className="py-2.5 rounded-2xl atelier-btn-cta font-bold">{lang === 'uz' ? 'Z-Hisobot yuborish' : 'Отправить Z-отчёт'}</button>
+                <button type="button" disabled={tgSending} onClick={() => triggerTgAction('alert-low-stock')} className="py-2.5 rounded-2xl atelier-btn-primary font-semibold">{lang === 'uz' ? 'Kam qoldiq alert' : 'Срочные остатки'}</button>
               </div>
             </div>
 
@@ -8747,7 +8857,7 @@ function AnalyticsScreen({ token, notify, t }) {
               <input type="password" required placeholder="Bot Token (123456:ABC...)" value={tgToken} onChange={(e) => setTgToken(e.target.value)} className="w-full atelier-input rounded-2xl px-3.5 py-2.5 font-nums text-xs" />
               <div className="flex gap-2">
                 <input type="number" required placeholder="Owner Chat ID (masalan: 123456789)" value={tgChatId} onChange={(e) => setTgChatId(e.target.value)} className="flex-1 atelier-input rounded-2xl px-3.5 py-2.5 font-nums text-xs" />
-                <button type="submit" disabled={tgSending} className="px-5 py-2.5 rounded-2xl atelier-btn-primary font-semibold">{tgSending ? '...' : 'Saqlash'}</button>
+                <button type="submit" disabled={tgSending} className="px-5 py-2.5 rounded-2xl atelier-btn-primary font-semibold">{tgSending ? '...' : (lang === 'uz' ? 'Saqlash' : 'Сохранить')}</button>
               </div>
             </form>
           </div>

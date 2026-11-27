@@ -52,7 +52,7 @@ class Settings(BaseModel):
     # Security
     SECRET_KEY: str = load_secret_key()
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8  # 8 hours
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days for POS sessions
     
     # Default initial accounts
     DEFAULT_OWNER_USERNAME: str = os.getenv("DEFAULT_OWNER_USERNAME", "")

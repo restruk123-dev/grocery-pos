@@ -189,6 +189,119 @@ class PriceTagBatchCreate(BaseModel):
     products: List[PriceTagCreate]
 
 
+def _render_price_tag_html(product_name: str, barcode: str, price: float, unit: str, quantity: float) -> str:
+    """Render printable A4 price-tag HTML without unescaped f-string CSS braces."""
+    import html as _html
+    safe_name = _html.escape(product_name[:40])
+    safe_code = _html.escape(barcode)
+    safe_unit = _html.escape(unit)
+    return f"""
+    <!DOCTYPE html>
+    <html lang="uz">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Price Tag - {safe_name}</title>
+        <style>
+            @page {{
+                size: A4;
+                margin: 20mm 15mm;
+            }}
+            body {{
+                font-family: system-ui, sans-serif;
+                font-size: 11pt;
+                line-height: 1.3;
+                padding: 0;
+                margin: 0;
+            }}
+            .price-tag {{
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 10px;
+                margin-bottom: 15px;
+                width: 190mm;
+                min-height: 50mm;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                background: white;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }}
+            .barcode-section {{
+                width: 100%;
+                height: 30mm;
+                background: #f8f9fa;
+                margin: 5px 0;
+                position: relative;
+            }}
+            .barcode {{
+                width: 100%;
+                height: 25mm;
+                font-size: 1;
+                text-align: center;
+                line-height: 1;
+            }}
+            .product-name {{
+                font-weight: bold;
+                font-size: 12pt;
+                margin: 5px 0;
+                text-align: center;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }}
+            .product-code {{
+                font-size: 9pt;
+                color: #6c757d;
+                text-align: center;
+                margin: 2px 0;
+            }}
+            .price-section {{
+                border-top: 1px solid #dee2e6;
+                padding-top: 8px;
+                margin-top: 5px;
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+            }}
+            .price-amount {{
+                font-weight: bold;
+                font-size: 14pt;
+                color: #28a745;
+            }}
+            .price-currency {{
+                font-size: 9pt;
+                color: #6c757d;
+            }}
+            .notes {{
+                font-size: 8pt;
+                color: #868e9f;
+                margin-top: 3px;
+                text-align: center;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="price-tag">
+            <div class="barcode-section">
+                <div class="barcode">{safe_code}</div>
+                <div class="product-code">{safe_code}</div>
+            </div>
+            <div class="product-name">{safe_name}</div>
+            <div class="product-code">Код: {safe_code}</div>
+            <div class="price-section">
+                <span class="price-amount">{price:,.0f}</span>
+                <span class="price-currency">сум</span>
+            </div>
+            <div class="notes">
+                {safe_unit} • {quantity} dona
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+
 @router.post("/price-tag", response_model=PriceTagResponse)
 def generate_price_tag(
     data: PriceTagCreate,
@@ -207,113 +320,7 @@ def generate_price_tag(
     barcode = product.barcode if product.barcode else f"48{data.product_id:012d}"
     
     total = round(data.price * data.quantity, 2)
-    
-    # Generate HTML template for A4 price tag printing
-    template = f"""
-    <!DOCTYPE html>
-    <html lang="uz">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Price Tag - {product.name}</title>
-        <style>
-            @page {
-                size: A4;
-                margin: 20mm 15mm;
-            }
-            body {
-                font-family: system-ui, sans-serif;
-                font-size: 11pt;
-                line-height: 1.3;
-                padding: 0;
-                margin: 0;
-            }
-            .price-tag {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 10px;
-                margin-bottom: 15px;
-                width: 190mm;
-                min-height: 50mm;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                background: white;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-            }
-            .barcode-section {
-                width: 100%;
-                height: 30mm;
-                background: #f8f9fa;
-                margin: 5px 0;
-                position: relative;
-            }
-            .barcode {
-                width: 100%;
-                height: 25mm;
-                font-size: 1;
-                text-align: center;
-                line-height: 1;
-            }
-            .product-name {
-                font-weight: bold;
-                font-size: 12pt;
-                margin: 5px 0;
-                text-align: center;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-            .product-code {
-                font-size: 9pt;
-                color: #6c757d;
-                text-align: center;
-                margin: 2px 0;
-            }
-            .price-section {
-                border-top: 1px solid #dee2e6;
-                padding-top: 8px;
-                margin-top: 5px;
-                display: flex;
-                justify-content: space-between;
-                align-items: baseline;
-            }
-            .price-amount {
-                font-weight: bold;
-                font-size: 14pt;
-                color: #28a745;
-            }
-            .price-currency {
-                font-size: 9pt;
-                color: #6c757d;
-            }
-            .notes {
-                font-size: 8pt;
-                color: #868e9f;
-                margin-top: 3px;
-                text-align: center;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="price-tag">
-            <div class="barcode-section">
-                <div class="barcode">{barcode}</div>
-                <div class="product-code">{barcode}</div>
-            </div>
-            <div class="product-name">{product.name[:40]}</div>
-            <div class="product-code">Код: {barcode}</div>
-            <div class="price-section">
-                <span class="price-amount">{data.price:,.0f}</span>
-                <span class="price-currency">сум</span>
-            </div>
-            <div class="notes">
-                {product.unit} • {data.quantity} dona
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+    template = _render_price_tag_html(product.name, barcode, data.price, product.unit, data.quantity)
     
     return PriceTagResponse(
         id=str(product.id),
@@ -334,58 +341,13 @@ def generate_batch_price_tags(
     session: Session = Depends(get_session),
 ):
     """Generate price tags for multiple products (Owner only)."""
-    from pydantic import BaseModel
-    from typing import List
-    
-    class ProductPriceData(BaseModel):
-        product_id: int
-        price: float
-        quantity: float = 1.0
-    
     tags = []
     for item in data.products:
         product = session.get(Product, item.product_id)
         if product and product.is_active:
             barcode = product.barcode if product.barcode else f"48{item.product_id:012d}"
             total = round(item.price * item.quantity, 2)
-            template = f"""
-            <!DOCTYPE html>
-            <html lang="uz">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Price Tag - {product.name}</title>
-                <style>
-                    @page { size: A4; margin: 20mm 15mm; }
-                    body {{ font-family: system-ui, sans-serif; font-size: 11pt; line-height: 1.3; padding: 0; margin: 0; }}
-                    .price-tag {{ border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; margin-bottom: 15px; width: 190mm; min-height: 50mm; box-shadow: 0 2px 4px rgba(0,0,0,0.1); background: white; display: flex; flex-direction: column; justify-content: space-between; }}
-                    .barcode-section {{ width: 100%; height: 30mm; background: #f8f9fa; margin: 5px 0; position: relative; }}
-                    .barcode {{ width: 100%; height: 25mm; font-size: 1; text-align: center; line-height: 1; }}
-                    .product-name {{ font-weight: bold; font-size: 12pt; margin: 5px 0; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-                    .product-code {{ font-size: 9pt; color: #6c757d; text-align: center; margin: 2px 0; }}
-                    .price-section {{ border-top: 1px solid #dee2e6; padding-top: 8px; margin-top: 5px; display: flex; justify-content: space-between; align-items: baseline; }}
-                    .price-amount {{ font-weight: bold; font-size: 14pt; color: #28a745; }}
-                    .price-currency {{ font-size: 9pt; color: #6c757d; }}
-                    .notes {{ font-size: 8pt; color: #868e9f; margin-top: 3px; text-align: center; }}
-                </style>
-            </head>
-            <body>
-                <div class="price-tag">
-                    <div class="barcode-section">
-                        <div class="barcode">{barcode}</div>
-                        <div class="product-code">{barcode}</div>
-                    </div>
-                    <div class="product-name">{product.name[:40]}</div>
-                    <div class="product-code">Код: {barcode}</div>
-                    <div class="price-section">
-                        <span class="price-amount">{item.price:,.0f}</span>
-                        <span class="price-currency">сум</span>
-                    </div>
-                    <div class="notes">{product.unit} • {item.quantity} dona</div>
-                </div>
-            </body>
-            </html>
-            """
+            template = _render_price_tag_html(product.name, barcode, item.price, product.unit, item.quantity)
             tags.append({
                 "product_id": product.id,
                 "product_name": product.name,

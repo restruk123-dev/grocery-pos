@@ -110,7 +110,11 @@ def fuzzy_match_score(s1: str, s2: str) -> float:
 # ---------- Voice Parse Endpoint ----------
 
 @router.post("/voice-parse", response_model=VoiceParseResponse)
-def voice_parse(request: VoiceParseRequest, session: Session = Depends(get_session)):
+def voice_parse(
+    request: VoiceParseRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
     """Free local NLP parser: extract quantity, product name, or debtor name from speech text.
     No paid LLM API used - only local algorithms and fuzzy matching."""
     text = request.speech_text.strip()
@@ -609,6 +613,13 @@ def parse_debt_voice(
     request: DebtVoiceParseRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
+):
+    return _parse_debt_voice_impl(request=request, session=session)
+
+
+def _parse_debt_voice_impl(
+    request: DebtVoiceParseRequest,
+    session: Session,
 ):
     """High-accuracy local NLP (haqqim.uz style): extracts debtor name, phone, intent (increase vs payment), amount, note, and deadline from spoken Uzbek/Russian text."""
     text = request.speech_text.strip()
@@ -1137,7 +1148,15 @@ class StoreAiQueryResponse(BaseModel):
     action_type: Optional[str] = None
 
 @router.post("/assistant", response_model=StoreAiQueryResponse)
-def store_ai_assistant(req: StoreAiQueryRequest, session: Session = Depends(get_session)):
+def store_ai_assistant(
+    req: StoreAiQueryRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    return _store_ai_assistant_impl(req=req, session=session)
+
+
+def _store_ai_assistant_impl(req: StoreAiQueryRequest, session: Session):
     """Intelligent context-aware AI assistant for grocery and convenience store management."""
     raw_q = req.query.strip()
     q = raw_q.lower()
@@ -1404,7 +1423,11 @@ def store_ai_assistant(req: StoreAiQueryRequest, session: Session = Depends(get_
 # ---------- Voice Command Router (Actions & Speech Response) ----------
 
 @router.post("/voice-command", response_model=VoiceCommandResponse)
-def voice_command(req: VoiceCommandRequest, session: Session = Depends(get_session)):
+def voice_command(
+    req: VoiceCommandRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
     """Executes high-accuracy voice commands (open scanner, add to cart, debt record, financial breakdown)
     and returns both the action payload and clean natural speech for browser SpeechSynthesis.
     100% free, reliable, zero external API cost or latency."""
@@ -1445,7 +1468,7 @@ def voice_command(req: VoiceCommandRequest, session: Session = Depends(get_sessi
     # 4. Debt Record (Qarz yozish / Записать долг)
     if any(w in q for w in ["qarz", "долг", "nasiya", "haqqim", "запиши долг", "qarz yoz"]):
         try:
-            parsed_debt = parse_debt_voice(DebtVoiceParseRequest(speech_text=raw_text, language=lang), session=session)
+            parsed_debt = _parse_debt_voice_impl(DebtVoiceParseRequest(speech_text=raw_text, language=lang), session=session)
             if parsed_debt and parsed_debt.amount > 0:
                 d_name = parsed_debt.debtor_name or ("Noma'lum" if lang == "uz" else "Клиент")
                 ans = f"📓 **Qarz daftari:** {d_name}ga {parsed_debt.amount:,.0f} so'm qarz yozildi" if lang == "uz" else f"📓 **Тетрадь долгов:** долг {d_name} на сумму {parsed_debt.amount:,.0f} сум"
@@ -1571,7 +1594,7 @@ def voice_command(req: VoiceCommandRequest, session: Session = Depends(get_sessi
             )
 
     # 7. General AI Assistant Query Fallback
-    assistant_resp = store_ai_assistant(StoreAiQueryRequest(query=raw_text, language=lang), session=session)
+    assistant_resp = _store_ai_assistant_impl(StoreAiQueryRequest(query=raw_text, language=lang), session=session)
     # Extract first 2 sentences for natural voice speech
     first_lines = [line.strip() for line in assistant_resp.answer.split('\n') if line.strip() and not line.strip().startswith('**') and not line.strip().startswith('•')]
     voice_summary = ". ".join(first_lines[:2])
